@@ -1,0 +1,42 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Start mock server
+        env:
+          WEBHOOK_SECRET: test-secret
+          MOCK_INCLUDE_THREADID: "1"
+          MOCK_PORT: "8787"
+        run: |
+          node ./scripts/mock-server.js &
+          sleep 1
+          curl -sSf http://localhost:8787/status/200 >/dev/null
+
+      - name: Smoke vectors (strict)
+        env:
+          WEBHOOK_SECRET: test-secret
+          STRICT_AGENT_OUTPUT: "1"
+          VALIDATION_WEBHOOK_URL: http://localhost:8787/validation
+          PLANNER_WEBHOOK_URL: http://localhost:8787/planner
+          THREAD_ID: local_test_001
+        run: npm run smoke:vectors:trim

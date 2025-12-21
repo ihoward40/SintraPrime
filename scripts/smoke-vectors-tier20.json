@@ -1,0 +1,26 @@
+[
+  {
+    "name": "tier20-delegated-class-autorun",
+    "stage": "cli",
+    "command": "/notion set pg_999 Status=Done",
+    "env": {
+      "AUTONOMY_MODE": "APPROVAL_GATED_AUTONOMY",
+      "ALLOWED_DOMAINS": null,
+      "ALLOWED_METHODS": null,
+      "NODE_ENV": null,
+      "CONFIRM_PROD": null
+    }
+  },
+  {
+    "name": "tier20-delegation-suspended-on-regression",
+    "stage": "cli",
+    "command": "/notion set pg_999 Status=Done",
+    "env": {
+      "AUTONOMY_MODE": "APPROVAL_GATED_AUTONOMY",
+      "ALLOWED_DOMAINS": null,
+      "ALLOWED_METHODS": null,
+      "NODE_ENV": null,
+      "CONFIRM_PROD": null
+    }
+  }
+]

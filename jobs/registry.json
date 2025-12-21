@@ -1,0 +1,24 @@
+[
+  {
+    "job_id": "notion_tax_cases_daily_scan",
+    "schedule": "RRULE:FREQ=DAILY;BYHOUR=9;BYMINUTE=15",
+    "command": "/template run tax_case_daily_scan {\"database_id\":\"db_tax_cases\"}",
+    "mode": "PROPOSE_ONLY_AUTONOMY",
+    "budgets": {
+      "max_steps": 12,
+      "max_runtime_ms": 90000,
+      "max_runs_per_day": 3
+    }
+  },
+  {
+    "job_id": "budget_overflow_job",
+    "schedule": "RRULE:FREQ=DAILY;BYHOUR=0;BYMINUTE=0",
+    "command": "/intake ./docs",
+    "mode": "PROPOSE_ONLY_AUTONOMY",
+    "budgets": {
+      "max_steps": 0,
+      "max_runtime_ms": 90000,
+      "max_runs_per_day": 999
+    }
+  }
+]

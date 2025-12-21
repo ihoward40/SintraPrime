@@ -1,0 +1,31 @@
+{
+  "name": "agent-mode-engine",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "clean": "rimraf dist",
+    "build": "npm run clean && tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "dev": "tsx src/cli/run-command.ts",
+    "start": "node dist/cli/run-command.js",
+    "smoke": "node ./scripts/smoke.js",
+    "smoke:trim": "node ./scripts/smoke.js | node ./scripts/trim-output.js",
+    "smoke:vectors": "node ./scripts/smoke-vectors.js",
+    "smoke:vectors:trim": "node ./scripts/smoke-vectors.js | node ./scripts/trim-output.js",
+    "mock:server": "node ./scripts/mock-server.js",
+    "autonomy": "node --loader tsx ./src/cli/run-autonomy.ts"
+  },
+  "dependencies": {
+    "rrule": "^2.8.1",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "rimraf": "^6.0.1",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}

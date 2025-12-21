@@ -1,0 +1,42 @@
+[
+  {
+    "name": "tier23-confidence-decays-to-probation",
+    "stage": "cli",
+    "command": "/tier23 ping",
+    "env": {
+      "SMOKE_FIXED_NOW_ISO": "2025-01-01T00:00:00.000Z",
+      "REQUALIFICATION_ENABLED": "1",
+      "CONFIDENCE_DECAY_HOURS": "72",
+      "CONFIDENCE_MIN_SUCCESS": "1",
+      "AUTONOMY_MODE": "OFF",
+      "ALLOWED_DOMAINS": null,
+      "ALLOWED_METHODS": null,
+      "NODE_ENV": null,
+      "CONFIRM_PROD": null
+    },
+    "precondition": {
+      "requalification_state": {
+        "command": "/tier23 ping",
+        "fingerprint": "916b8ac414809fd92c7b0ed199abf76d064487029c55321c6d3af39fa5b7fe60",
+        "state": "ACTIVE",
+        "cause": "seeded",
+        "since": "2024-12-01T00:00:00.000Z",
+        "cooldown_until": null
+      }
+    },
+    "expect": {
+      "kind": "ConfidenceDecayed",
+      "to": "PROBATION",
+      "reason": "STALE_CONFIDENCE"
+    },
+    "expect_exit_code": 4,
+    "post_assert": {
+      "artifact_dir": "runs/confidence/events",
+      "contains_subset": {
+        "from": "ACTIVE",
+        "to": "PROBATION",
+        "reason": "STALE_CONFIDENCE"
+      }
+    }
+  }
+]

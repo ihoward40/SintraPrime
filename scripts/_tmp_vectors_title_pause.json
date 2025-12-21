@@ -1,0 +1,10 @@
+[
+  {
+    "name": "tmp-notion-title-write-pauses",
+    "stage": "cli",
+    "command": "/notion title pg_001 \"New Title\"",
+    "expect": { "kind": "ApprovalRequired" },
+    "expect_exit_code": 4,
+    "post_assert": { "approval_state": true }
+  }
+]

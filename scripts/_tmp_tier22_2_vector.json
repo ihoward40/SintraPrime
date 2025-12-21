@@ -1,0 +1,40 @@
+[
+  {
+    "name": "tier22-probation-success-recommends-eligible",
+    "stage": "cli",
+    "repeat": 3,
+    "command": "/notion live db db_001",
+    "env": {
+      "REQUALIFICATION_ENABLED": "1",
+      "PROBATION_SUCCESS_REQUIRED": "3",
+      "PROBATION_WINDOW_HOURS": "24",
+      "SMOKE_FIXED_NOW_ISO": "2025-01-02T00:00:00.000Z",
+      "AUTONOMY_MODE": "OFF",
+      "ALLOWED_DOMAINS": null,
+      "ALLOWED_METHODS": null,
+      "NODE_ENV": null,
+      "CONFIRM_PROD": null,
+      "NOTION_API_BASE": "http://localhost:8787",
+      "NOTION_API_VERSION": "2022-06-28",
+      "NOTION_TOKEN": "local_mock_token",
+      "NOTION_REDACT_KEYS": "title,name"
+    },
+    "precondition": {
+      "requalification_state": {
+        "fingerprint": "notion.write.page",
+        "state": "PROBATION",
+        "cause": "seeded",
+        "since": "2025-01-02T00:00:00.000Z",
+        "cooldown_until": null
+      }
+    },
+    "expect": { "status": "success" },
+    "post_assert": {
+      "receipt_subset": {
+        "kind": "RequalificationRecommended",
+        "fingerprint": "notion.write.page",
+        "recommendation": "ELIGIBLE"
+      }
+    }
+  }
+]

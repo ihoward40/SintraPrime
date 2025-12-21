@@ -1,0 +1,42 @@
+[
+  {
+    "name": "tier10-notion-live-read-redacted",
+    "stage": "cli",
+    "command": "/notion live db db_001",
+    "env": {
+      "ALLOWED_DOMAINS": null,
+      "ALLOWED_METHODS": null,
+      "ENVIRONMENT": null,
+      "NODE_ENV": null,
+      "CONFIRM_PROD": null,
+      "NOTION_API_BASE": "http://localhost:8787",
+      "NOTION_API_VERSION": "2022-06-28",
+      "NOTION_TOKEN": "local_mock_token",
+      "NOTION_REDACT_KEYS": "title,name"
+    },
+    "expect": { "status": "success" },
+    "post_assert": {
+      "artifact_dir": "runs/notion-live-read",
+      "contains_keys": ["execution_id", "step_id", "notion_path", "http_status", "response"],
+      "contains_subset": { "response": { "title": "[REDACTED]", "name": "[REDACTED]" } }
+    }
+  },
+  {
+    "name": "tier10-notion-live-write-denied",
+    "stage": "cli",
+    "command": "/notion live write db_001",
+    "env": {
+      "ALLOWED_DOMAINS": null,
+      "ALLOWED_METHODS": null,
+      "ENVIRONMENT": null,
+      "NODE_ENV": null,
+      "CONFIRM_PROD": null,
+      "NOTION_API_BASE": "http://localhost:8787",
+      "NOTION_API_VERSION": "2022-06-28",
+      "NOTION_TOKEN": "local_mock_token",
+      "NOTION_REDACT_KEYS": "title,name"
+    },
+    "expect_exit_code": 3,
+    "expect": { "kind": "PolicyDenied", "code": "NOTION_LIVE_REQUIRES_READ_ONLY" }
+  }
+]
