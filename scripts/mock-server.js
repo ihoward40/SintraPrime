@@ -145,6 +145,20 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    // Echo endpoint for workflow/emitter testing (no secret required)
+    if (req.method === "POST" && url.pathname === "/echo") {
+      const body = await readJson(req);
+      try {
+        const keys = body && typeof body === "object" ? Object.keys(body) : [];
+        // Log only keys (avoid leaking secrets into logs).
+        console.log("[echo]", JSON.stringify({ path: url.pathname, keys }));
+      } catch {
+        // ignore
+      }
+      sendJson(res, 200, { ok: true, headers: req.headers, body });
+      return;
+    }
+
     // Notion mock read endpoints (Tier 6.0)
     const notionLiveDbId = matchPathParam(url.pathname, "/v1/databases/");
     if (req.method === "GET" && notionLiveDbId) {

@@ -21,6 +21,14 @@ import {
 import { compareConfidence } from "../policy/compareConfidence.js";
 import type { ConfidenceScoreWithRegressionOutput } from "../policy/typesConfidenceRegression.js";
 import { explainPolicyCode } from "./run-policy-explain.js";
+import { speak } from "../speech/speak.js";
+import { getAlertPolicy } from "../speech/alertPolicies.js";
+import { evaluatePolicy } from "../policy/evaluatePolicy.js";
+import { detectConfidenceRegression } from "../policy/detectConfidenceRegression.js";
+import { renderConfidenceCurve } from "../operator/viz/renderConfidenceCurve.js";
+import { suspendFingerprint } from "../requalification/suspendFingerprint.js";
+import { isRequalificationEnabled } from "../requalification/requalification.js";
+import { updateProbationCounter } from "../requalification/updateProbationCounter.js";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object" && !Array.isArray(value);
@@ -110,7 +118,8 @@ function parsePolicySimulateCommand(command: string): {
   approval?: boolean;
 } | null {
   const trimmed = String(command ?? "").trim();
-  if (!/^\/policy\s+simulate\b/i.test(trimmed)) return null;
+  if (/^\/policy\s+simulate-variants\b/i.test(trimmed)) return null;
+  if (!/^\/policy\s+(?:simulate|sim)\b/i.test(trimmed)) return null;
 
   const tokens = trimmed.split(/\s+/).slice(2);
   const cmdTokens: string[] = [];
@@ -124,7 +133,7 @@ function parsePolicySimulateCommand(command: string): {
 
     if (t === "--at") {
       const v = tokens[i + 1];
-      if (!v) throw new Error("Usage: /policy simulate <command> [--at <timestamp>] [--autonomy <mode>] [--approval <true|false>]");
+      if (!v) throw new Error("Usage: /policy sim <command> [--at <timestamp>] [--autonomy <mode>] [--approval <true|false>]");
       const d = new Date(v);
       if (!Number.isFinite(d.getTime())) throw new Error("--at must be a valid ISO timestamp");
       at = d;
@@ -134,7 +143,7 @@ function parsePolicySimulateCommand(command: string): {
 
     if (t === "--autonomy") {
       const v = tokens[i + 1];
-      if (!v) throw new Error("Usage: /policy simulate <command> [--at <timestamp>] [--autonomy <mode>] [--approval <true|false>]");
+      if (!v) throw new Error("Usage: /policy sim <command> [--at <timestamp>] [--autonomy <mode>] [--approval <true|false>]");
       autonomy_mode = v;
       i += 1;
       continue;
@@ -142,7 +151,7 @@ function parsePolicySimulateCommand(command: string): {
 
     if (t === "--approval") {
       const v = tokens[i + 1];
-      if (!v) throw new Error("Usage: /policy simulate <command> [--at <timestamp>] [--autonomy <mode>] [--approval <true|false>]");
+      if (!v) throw new Error("Usage: /policy sim <command> [--at <timestamp>] [--autonomy <mode>] [--approval <true|false>]");
       if (v !== "true" && v !== "false") throw new Error("--approval must be true or false");
       approval = v === "true";
       i += 1;
@@ -153,7 +162,7 @@ function parsePolicySimulateCommand(command: string): {
   }
 
   if (!cmdTokens.length) {
-    throw new Error("Usage: /policy simulate <command> [--at <timestamp>] [--autonomy <mode>] [--approval <true|false>]");
+    throw new Error("Usage: /policy sim <command> [--at <timestamp>] [--autonomy <mode>] [--approval <true|false>]");
   }
 
   return {
@@ -165,12 +174,65 @@ function parsePolicySimulateCommand(command: string): {
   };
 }
 
+function parsePolicySimulateVariantsCommand(command: string): {
+  kind: "PolicySimulateVariants";
+  fingerprint: string;
+  confidences: number[];
+} | null {
+  const trimmed = String(command ?? "").trim();
+  if (!/^\/policy\s+simulate-variants\b/i.test(trimmed)) return null;
+
+  const tokens = trimmed.split(/\s+/).slice(2);
+  const fpTokens: string[] = [];
+  let confRaw = "";
+
+  for (let i = 0; i < tokens.length; i += 1) {
+    const t = tokens[i]!;
+    if (t === "--confidence") {
+      const v = tokens[i + 1];
+      if (!v) throw new Error("Usage: /policy simulate-variants <fingerprint> --confidence <0.1,0.9,...>");
+      confRaw = String(v);
+      i += 1;
+      continue;
+    }
+    fpTokens.push(t);
+  }
+
+  const fingerprint = fpTokens.join(" ").trim();
+  if (!fingerprint) throw new Error("Usage: /policy simulate-variants <fingerprint> --confidence <0.1,0.9,...>");
+
+  const confidences = String(confRaw)
+    .split(",")
+    .map((c) => Number(String(c).trim()))
+    .filter((n) => Number.isFinite(n));
+
+  return {
+    kind: "PolicySimulateVariants",
+    fingerprint,
+    confidences,
+  };
+}
+
 function parsePolicyExplainCommand(command: string): {
   kind: "PolicyExplain";
 } | null {
   const trimmed = String(command ?? "").trim();
   if (!/^\/policy\s+explain\b/i.test(trimmed)) return null;
   return { kind: "PolicyExplain" };
+}
+
+function parsePolicyAlertSimCommand(command: string): {
+  kind: "PolicyAlertSim";
+  base: "billing_due" | "service_cutoff";
+} | null {
+  const trimmed = String(command ?? "").trim();
+  if (!/^\/policy\s+alert-sim\b/i.test(trimmed)) return null;
+  const tokens = trimmed.split(/\s+/).slice(2);
+  const base = String(tokens[0] ?? "").trim();
+  if (base !== "billing_due" && base !== "service_cutoff") {
+    throw new Error("Usage: /policy alert-sim <billing_due|service_cutoff>");
+  }
+  return { kind: "PolicyAlertSim", base };
 }
 
 function parsePolicyScoreCommand(command: string): {
@@ -573,14 +635,28 @@ function inferApprovalRequiredFromPlan(plan: any): boolean {
   return steps.some((s: any) => s?.approval_scoped === true && s?.read_only === false);
 }
 
+function envEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
+  const v = env.SPEECH_ENABLED;
+  if (v == null || v === "") return true;
+  return v === "1" || v.toLowerCase() === "true" || v.toLowerCase() === "yes";
+}
+
+function shouldSpeakPolicySim(env: NodeJS.ProcessEnv = process.env): boolean {
+  const v = env.SPEECH_POLICY_SIM_SPEAK;
+  if (v == null || v === "") return true;
+  return v === "1" || v.toLowerCase() === "true" || v.toLowerCase() === "yes";
+}
+
 (async () => {
   try {
     const raw = getArgCommand();
     const parsedExplain = parsePolicyExplainCommand(raw);
+    const parsedAlertSim = parsePolicyAlertSimCommand(raw);
+    const parsedVariants = parsePolicySimulateVariantsCommand(raw);
     const parsedSim = parsePolicySimulateCommand(raw);
     const parsedScore = parsePolicyScoreCommand(raw);
     const parsedBaseline = parsePolicyBaselineCommand(raw);
-    const parsed = parsedExplain ?? parsedSim ?? parsedScore ?? parsedBaseline;
+    const parsed = parsedExplain ?? parsedAlertSim ?? parsedVariants ?? parsedSim ?? parsedScore ?? parsedBaseline;
     if (!parsed) {
       throw new Error(
         "Usage: /policy explain <CODE> | /policy simulate <command> [--at <timestamp>] [--autonomy <mode>] [--approval <true|false>] | /policy score <command> [--at <timestamp>] [--autonomy <mode>] [--approval <true|false>] [--compare] [--ack-regression] | /policy baseline <command> [--at <timestamp>] [--autonomy <mode>] [--approval <true|false>] [--override]"
@@ -599,12 +675,178 @@ function inferApprovalRequiredFromPlan(plan: any): boolean {
     const autonomyMode = (parsed as any).autonomy_mode ?? (process.env.AUTONOMY_MODE || "OFF");
     const approval = (parsed as any).approval ?? false;
 
+    if ((parsed as any).kind === "PolicyAlertSim") {
+      const base = (parsed as any).base as "billing_due" | "service_cutoff";
+      const kind = `${base}_sim`;
+      const policy = getAlertPolicy(kind);
+      const autoplayRequested = policy.autoplay === true;
+
+      // Intentionally rely on sink-side gating (no simulation mode here).
+      try {
+        if (envEnabled(process.env) && shouldSpeakPolicySim(process.env)) {
+          speak({
+            text: base === "billing_due" ? "Billing due (simulation)." : "Service cutoff risk (simulation).",
+            category: "policy-sim",
+            threadId,
+            meta: {
+              autoplay_requested: autoplayRequested,
+              source: "alert",
+              alert_kind: kind,
+              alert_priority: policy.priority,
+            },
+          });
+        }
+      } catch {
+        // fail-open
+      }
+
+      console.log(JSON.stringify({ kind: "PolicyAlertSim", base, alert_kind: kind, autoplay_requested: autoplayRequested }, null, 2));
+      process.exitCode = 0;
+      return;
+    }
+
     const policyVersion = normalizePolicyVersion(process.env.POLICY_VERSION);
 
     const env: NodeJS.ProcessEnv = {
       ...process.env,
       AUTONOMY_MODE: autonomyMode,
     };
+
+    if ((parsed as any).kind === "PolicySimulateVariants") {
+      const fingerprint = String((parsed as any).fingerprint ?? "").trim();
+      const confidences = Array.isArray((parsed as any).confidences) ? (parsed as any).confidences : [];
+
+      if (!confidences.length) {
+        console.log(
+          JSON.stringify(
+            {
+              kind: "PolicySimulationVariants",
+              error: "No confidence values provided",
+            },
+            null,
+            2
+          )
+        );
+        process.exitCode = 2;
+        return;
+      }
+
+      const variants = confidences.map((confidence: number, idx: number) => {
+        const r = evaluatePolicy({
+          fingerprint,
+          confidence,
+          simulation: true,
+          at,
+          env,
+        });
+
+        // Tier-22.1: probation success counters accrue on every evaluation, including simulation.
+        // This is governance (not policy logic) and is deterministic via SMOKE_FIXED_NOW_ISO.
+        if (isRequalificationEnabled()) {
+          const nowIso = new Date(at.getTime() + idx).toISOString();
+          updateProbationCounter({
+            fingerprint,
+            runResult: {
+              status: "success",
+              now_iso: nowIso,
+              confidence,
+              governor_decision: r.decision === "ALLOW" ? "ALLOW" : "DENY",
+              policy_denied: r.decision !== "ALLOW",
+              throttled: false,
+              rollback_recorded: false,
+              approval_required: false,
+              autonomy_mode: String(process.env.AUTONOMY_MODE || "OFF"),
+              autonomy_mode_effective: String(process.env.AUTONOMY_MODE || "OFF"),
+              steps: [],
+            },
+          });
+        }
+
+        return {
+          confidence,
+          decision: r.decision,
+          code: r.code ?? null,
+          explain: r.explain,
+        };
+      });
+
+      const regression = detectConfidenceRegression(
+        variants.map((v: any) => ({ confidence: v.confidence, decision: v.decision, code: v.code }))
+      );
+
+      const confidence_curve_ascii = renderConfidenceCurve(
+        variants.map((v: any) => ({ confidence: v.confidence, decision: v.decision }))
+      );
+
+      const firstDecision = variants.length ? String(variants[0]?.decision ?? "") : "";
+      const lastDecision = variants.length ? String(variants[variants.length - 1]?.decision ?? "") : "";
+      const monotonicBrokenAt = regression ? (() => {
+        const idx = variants.findIndex((v: any) => Number(v.confidence) === Number(regression.at_confidence));
+        return idx >= 0 ? `t${idx}` : null;
+      })() : null;
+
+      // Tier-22: regressions immediately suspend the fingerprint (governance state).
+      // This must happen before printing output, and must not depend on speech.
+      if (regression) {
+        await suspendFingerprint(fingerprint, "CONFIDENCE_REGRESSION", {
+          at_confidence: regression.at_confidence,
+          from: regression.from,
+          to: regression.to,
+        });
+      }
+
+      // One spoken alert only if a regression is detected.
+      try {
+        const speechEnabled = process.env.SPEECH_ENABLED === "1";
+        const cats = String(process.env.SPEECH_CATEGORIES ?? "")
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean);
+        const catAllowed = cats.length ? cats.includes("policy") : false;
+
+        const kind = "policy_regression";
+        const alertPolicy = getAlertPolicy(kind);
+        const autoplayRequested = alertPolicy.autoplay === true;
+
+        if (speechEnabled && catAllowed && regression) {
+            speak({
+              text: `Policy regression detected at confidence ${regression.at_confidence}.`,
+              category: "policy",
+              threadId,
+              meta: {
+                confidence: regression.at_confidence,
+                autoplay_requested: autoplayRequested,
+                source: "alert",
+                alert_kind: kind,
+                alert_priority: alertPolicy.priority,
+              },
+            });
+        }
+      } catch {
+        // fail-open
+      }
+
+      console.log(
+        JSON.stringify(
+          {
+            kind: "PolicySimulationVariants",
+            fingerprint,
+            variants,
+            regression,
+            explain: {
+              first_decision: firstDecision || null,
+              last_decision: lastDecision || null,
+              monotonic_broken_at: monotonicBrokenAt,
+            },
+            confidence_curve_ascii,
+          },
+          null,
+          2
+        )
+      );
+      process.exitCode = 0;
+      return;
+    }
 
     const baseUrl = String(process.env.NOTION_API_BASE || "http://localhost:8787").trim() || "http://localhost:8787";
     const inner = (parsed as any).inner_command;
@@ -668,6 +910,40 @@ function inferApprovalRequiredFromPlan(plan: any): boolean {
         would_execute_steps: countPlannedSteps(plan),
         notes,
       };
+
+      // Optional spoken summary (fail-open). Does not affect JSON-only stdout.
+      try {
+        if (envEnabled(process.env) && shouldSpeakPolicySim(process.env)) {
+          const autoplayRequested = false;
+
+          const explain = denial_code ? explainPolicyCode(`/policy explain ${denial_code}`) : null;
+          const spoken =
+            decision === "ALLOW"
+              ? "Policy simulation allowed."
+              : decision === "REQUIRE_APPROVAL"
+                ? "Policy simulation requires approval."
+                : decision === "THROTTLE"
+                  ? "Policy simulation throttled by governor."
+                  : explain
+                    ? `Policy simulation denied: ${explain.title}.`
+                    : denial_code
+                      ? `Policy simulation denied: ${denial_code}.`
+                      : "Policy simulation denied.";
+
+          speak({
+            text: spoken,
+            category: "policy-sim",
+            threadId,
+            meta: {
+              autoplay_requested: autoplayRequested,
+              source: "operator",
+            },
+            simulation: true,
+          });
+        }
+      } catch {
+        // fail-open
+      }
 
       console.log(JSON.stringify(result, null, 2));
       process.exitCode = 0;

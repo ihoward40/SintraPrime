@@ -1,10 +1,47 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { simulatePolicy } from "../policy/simulatePolicy.js";
-import { extractScoreFeatures } from "../policy/extractScoreFeatures.js";
-import { scorePolicy } from "../policy/scorePolicy.js";
 import { loadAgentRegistry, findAgentsProvidingCapability } from "../agents/agentRegistry.js";
+import { getOperatorStatePath, readOperatorState, writeOperatorSpeechSink, type SpeechSinkName } from "../operator/state.js";
+import { loadSpeechSinks } from "../speech/sinks/index.js";
+import { writeOperatorSpeechSinkArtifact } from "../artifacts/writeOperatorSpeechSinkArtifact.js";
+import { getSpeechGateStatus, speak } from "../speech/speak.js";
+import { confidenceDecisionView, type RequalificationEvent } from "../operator/views/confidenceDecisionView.js";
+import { renderConfidenceCurve } from "../operator/viz/renderConfidenceCurve.js";
+import { readRequalificationState } from "../requalification/requalification.js";
+import { loadConfidenceHistory } from "../speech/confidenceHistory.js";
+import { persistRun } from "../persist/persistRun.js";
+import { cmdCourtExport } from "../operator/commands/courtExport.js";
+import { getRepoStatus } from "../operator/repoStatus.js";
+import { getEffectiveConfidence } from "../confidence/confidenceStore.js";
+import { computeOperatorRanking } from "../operator/ranking.js";
+import { writeOperatorRankingArtifact } from "../artifacts/writeOperatorRankingArtifact.js";
+import { operatorSpeechPlay, type SpeechPlayArgs, type OperatorContext } from "../operator/speechPlay.js";
+import { findRepoRoot } from "../util/findRepoRoot.js";
+
+if (process.env.WARN_NON_CANONICAL_REPO === "1") {
+  try {
+    const rs = getRepoStatus(process.cwd());
+    if (rs.canonical_repo_root && rs.non_canonical) {
+      // stderr only — never pollute stdout JSON
+      process.stderr.write(
+        JSON.stringify(
+          {
+            kind: "StartupWarning",
+            code: "NON_CANONICAL_REPO",
+            cwd: rs.cwd,
+            repo_root: rs.repo_root,
+            canonical_repo_root: rs.canonical_repo_root,
+          },
+          null,
+          2
+        ) + "\n"
+      );
+    }
+  } catch {
+    // fail-open
+  }
+}
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return !!v && typeof v === "object" && !Array.isArray(v);
@@ -18,6 +55,154 @@ function getArgCommand() {
 
 function nowIso() {
   return new Date().toISOString();
+}
+
+function deterministicNowIso() {
+  const fixed = String(process.env.SMOKE_FIXED_NOW_ISO ?? "").trim();
+  if (fixed) {
+    const t = new Date(fixed).getTime();
+    // Important: preserve the exact fixed ISO string for deterministic IDs/paths
+    // (Date#toISOString() would inject millisecond precision like ".000Z").
+    if (Number.isFinite(t)) return fixed;
+  }
+  return nowIso();
+}
+
+function envEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
+  const v = env.SPEECH_ENABLED;
+  if (v == null || v === "") return true;
+  return v === "1" || v.toLowerCase() === "true" || v.toLowerCase() === "yes";
+}
+
+function parseCurrentSink(env: NodeJS.ProcessEnv = process.env): string {
+  const raw = String(env.SPEECH_SINKS ?? "").trim();
+  if (!raw) return "console";
+  return raw.split(",")[0]!.trim() || "console";
+}
+
+function effectiveSinkName(desired: string): string {
+  try {
+    const sinks = loadSpeechSinks({ ...process.env, SPEECH_SINKS: desired });
+    return sinks[0]?.name || "console";
+  } catch {
+    return "console";
+  }
+}
+
+function deny(code: string, reason: string) {
+  const out = { kind: "PolicyDenied" as const, code, reason };
+  console.log(JSON.stringify(out, null, 2));
+  process.exitCode = 3;
+}
+
+function parseSpeechSinkName(value: string): SpeechSinkName | null {
+  const v = String(value ?? "").trim();
+  if (v === "console" || v === "os-tts" || v === "elevenlabs") return v;
+  return null;
+}
+
+function parseCsv(value: string | undefined | null): string[] {
+  const raw = String(value ?? "").trim();
+  if (!raw) return [];
+  return raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+function resolveSpeechFallbackOrder(params: { operator_sink: string | null; env: NodeJS.ProcessEnv }): string[] {
+  const canonical = ["elevenlabs", "os-tts", "console"];
+  const raw = params.operator_sink ? [params.operator_sink] : parseCsv(params.env.SPEECH_SINKS);
+  const base = raw.length ? raw : canonical;
+
+  const out: string[] = [];
+  for (const s of base) {
+    const v = String(s ?? "").trim();
+    if (!v) continue;
+    if (!out.includes(v)) out.push(v);
+  }
+  for (const s of canonical) {
+    if (!out.includes(s)) out.push(s);
+  }
+  return out;
+}
+
+function canWriteDir(dir: string): { ok: boolean; dir: string; error?: string } {
+  try {
+    fs.mkdirSync(dir, { recursive: true });
+    const p = path.join(dir, `.writecheck.${Date.now()}.${Math.random().toString(16).slice(2)}.tmp`);
+    fs.writeFileSync(p, "ok", { encoding: "utf8" });
+    try {
+      fs.unlinkSync(p);
+    } catch {
+      // ignore
+    }
+    return { ok: true, dir };
+  } catch (err: any) {
+    const msg = err && typeof err === "object" && "message" in err ? String(err.message) : String(err);
+    return { ok: false, dir, error: msg };
+  }
+}
+
+function resolveElevenLabsConfigSummary(env: NodeJS.ProcessEnv = process.env): {
+  api_key_present: boolean;
+  voice_id: string;
+  voice_source:
+    | "ELEVENLABS_VOICE_ID"
+    | "LAST_KNOWN_GOOD"
+    | "ELEVENLABS_DEFAULT_VOICE_ID"
+    | "DEFAULT_SINTRAPRIME_VOICE_ID";
+  model_id_set: boolean;
+  use_last_known_good: boolean;
+  last_known_good: { present: boolean; voice_id: string | null; error: string | null };
+} {
+  const apiKey = String(env.ELEVENLABS_API_KEY ?? "").trim();
+  const explicitVoiceId = String(env.ELEVENLABS_VOICE_ID ?? "").trim();
+  const defaultVoiceId = String(env.ELEVENLABS_DEFAULT_VOICE_ID ?? "").trim();
+  const use_last_known_good = String(env.ELEVENLABS_USE_LAST_KNOWN_GOOD ?? "").trim() === "1";
+
+  const lastKnownGood = (() => {
+    const p = path.join(process.cwd(), "runs", "speech", "elevenlabs_last_known_good_voice.json");
+    try {
+      if (!fs.existsSync(p)) return { present: false, voice_id: null, error: null };
+      const raw = JSON.parse(fs.readFileSync(p, "utf8"));
+      const vid = raw && typeof raw === "object" && typeof (raw as any).voice_id === "string" ? String((raw as any).voice_id) : "";
+      return { present: true, voice_id: vid.trim() || null, error: null };
+    } catch (err: any) {
+      const msg = err && typeof err === "object" && "message" in err ? String(err.message) : String(err);
+      return { present: true, voice_id: null, error: msg };
+    }
+  })();
+
+  const resolved = (() => {
+    if (explicitVoiceId) {
+      return { voice_id: explicitVoiceId, voice_source: "ELEVENLABS_VOICE_ID" as const };
+    }
+    if (use_last_known_good && lastKnownGood.voice_id) {
+      return { voice_id: lastKnownGood.voice_id, voice_source: "LAST_KNOWN_GOOD" as const };
+    }
+    if (defaultVoiceId) {
+      return { voice_id: defaultVoiceId, voice_source: "ELEVENLABS_DEFAULT_VOICE_ID" as const };
+    }
+    return { voice_id: "vcAk4fzFbxFxhOhfG9EI", voice_source: "DEFAULT_SINTRAPRIME_VOICE_ID" as const };
+  })();
+  const model_id_set = Boolean(String(env.ELEVENLABS_MODEL_ID ?? "").trim());
+  return {
+    api_key_present: Boolean(apiKey),
+    voice_id: resolved.voice_id,
+    voice_source: resolved.voice_source,
+    model_id_set,
+    use_last_known_good,
+    last_known_good: lastKnownGood,
+  };
+}
+
+function parseIntOrNull(value: string | undefined | null): number | null {
+  const raw = String(value ?? "").trim();
+  if (!raw) return null;
+  const n = Number.parseInt(raw, 10);
+  if (!Number.isFinite(n)) return null;
+  return n;
 }
 
 type JobCard = {
@@ -37,6 +222,58 @@ function readJsonSafe(p: string): unknown | null {
   } catch {
     return null;
   }
+}
+
+function safeFilePart(input: string): string {
+  const s = String(input ?? "");
+  const cleaned = s.replace(/[\\/<>:\"|?*\x00-\x1F]/g, "_");
+  return cleaned.slice(0, 120);
+}
+
+function listRequalificationEventsForFingerprint(fingerprint: string): RequalificationEvent[] {
+  const fp = String(fingerprint ?? "").trim();
+  if (!fp) return [];
+
+  const dir = path.join(process.cwd(), "runs", "requalification", "events");
+  if (!fs.existsSync(dir)) return [];
+
+  const prefix = `${safeFilePart(fp)}.`;
+  const files = fs
+    .readdirSync(dir)
+    .filter((f) => f.startsWith(prefix) && f.endsWith(".json"))
+    .map((f) => {
+      const m = f.match(/\.(\d+)\.json$/);
+      const ts = m ? Number(m[1]) : Number.NaN;
+      return { f, ts: Number.isFinite(ts) ? ts : Number.MAX_SAFE_INTEGER };
+    })
+    .sort((a, b) => a.ts - b.ts)
+    .map((x) => x.f);
+
+  const out: RequalificationEvent[] = [];
+  for (const f of files) {
+    const full = path.join(dir, f);
+    const raw = readJsonSafe(full);
+    if (!raw || typeof raw !== "object") continue;
+    const kind = typeof (raw as any).kind === "string" ? String((raw as any).kind) : "";
+    if (!kind) continue;
+    out.push(raw as any);
+  }
+  return out;
+}
+
+function formatConfidenceViewAscii(rows: Array<{ confidence: number; decision: string; success: string; monotonic: boolean }>) {
+  const header = ["Confidence", "Decision", "Success", "Monotonic"] as const;
+  const lines: string[] = [];
+  lines.push(`${header[0].padEnd(10)}  ${header[1].padEnd(8)}  ${header[2].padEnd(7)}  ${header[3]}`);
+  lines.push("----------------------------------------");
+  for (const r of rows) {
+    const c = r.confidence.toFixed(2).padEnd(10);
+    const d = String(r.decision ?? "").padEnd(8);
+    const s = String(r.success ?? "").padEnd(7);
+    const m = r.monotonic ? "true" : "false";
+    lines.push(`${c}  ${d}  ${s}  ${m}`);
+  }
+  return lines.join("\n");
 }
 
 function listConfidenceChecks(): Array<{ execution_id: string; data: any }> {
@@ -295,7 +532,7 @@ function jobCardFromApproval(item: { execution_id: string; created_at: string | 
   };
 }
 
-function jobCardFromRegistry(job: { job_id: string; command: string; mode: string }): JobCard {
+async function jobCardFromRegistry(job: { job_id: string; command: string; mode: string }): Promise<JobCard> {
   const threadId = (process.env.THREAD_ID || "local_test_001").trim();
   const baseUrl = String(process.env.NOTION_API_BASE || "http://localhost:8787").trim() || "http://localhost:8787";
   const at = new Date(process.env.SMOKE_FIXED_NOW_ISO || nowIso());
@@ -319,6 +556,10 @@ function jobCardFromRegistry(job: { job_id: string; command: string; mode: strin
       rank: 0,
     };
   }
+
+  const { simulatePolicy } = await import("../policy/simulatePolicy.js");
+  const { extractScoreFeatures } = await import("../policy/extractScoreFeatures.js");
+  const { scorePolicy } = await import("../policy/scorePolicy.js");
 
   const sim = simulatePolicy({ plan, command: job.command, env, at, autonomy_mode: autonomyMode, approval: false });
   const policy_state = policyReasonFromSim(sim);
@@ -364,6 +605,19 @@ function parseOperatorCommand(command: string):
   | { kind: "OperatorQueue" }
   | { kind: "OperatorJob"; job_id: string }
   | { kind: "OperatorStats" }
+  | { kind: "OperatorRank"; window_days: number }
+  | { kind: "OperatorSpeechStatus" }
+  | { kind: "OperatorSpeechCheck" }
+  | { kind: "OperatorSpeechPing"; message: string | null }
+  | { kind: "OperatorSpeechPlay"; args: string }
+  | { kind: "OperatorSpeechSinkSet"; sink: string }
+  | { kind: "OperatorPolicyRegressions" }
+  | { kind: "OperatorConfidencePeek"; fingerprint: string }
+  | { kind: "OperatorConfidenceView"; fingerprint: string }
+  | { kind: "OperatorConfidenceCurve"; fingerprint: string }
+  | { kind: "OperatorPolicySimulate"; args: string }
+  | { kind: "OperatorCourtExport"; args: string }
+  | { kind: "OperatorRepoStatus" }
   | null {
   const trimmed = command.trim();
   const mQueue = trimmed.match(/^\/operator\s+queue\s*$/i);
@@ -372,7 +626,110 @@ function parseOperatorCommand(command: string):
   if (mJob) return { kind: "OperatorJob", job_id: mJob[1]! };
   const mStats = trimmed.match(/^\/operator\s+stats\s*$/i);
   if (mStats) return { kind: "OperatorStats" };
+  const mRank = trimmed.match(/^\/operator\s+rank(?:\s+(\d+))?\s*$/i);
+  if (mRank) {
+    const rawDays = mRank[1] ? Number.parseInt(mRank[1], 10) : 7;
+    const window_days = Number.isFinite(rawDays) && rawDays > 0 ? rawDays : 7;
+    return { kind: "OperatorRank", window_days };
+  }
+  const mSpeechStatus = trimmed.match(/^\/operator\s+speech-status\s*$/i);
+  if (mSpeechStatus) return { kind: "OperatorSpeechStatus" };
+  const mSpeechCheck = trimmed.match(/^\/operator\s+speech-check\s*$/i);
+  if (mSpeechCheck) return { kind: "OperatorSpeechCheck" };
+  const mSpeechPing = trimmed.match(/^\/operator\s+speech-ping(?:\s+([\s\S]+))?$/i);
+  if (mSpeechPing) return { kind: "OperatorSpeechPing", message: mSpeechPing[1] ? String(mSpeechPing[1]).trim() : null };
+  const mSpeechPlay = trimmed.match(/^\/operator\s+speech-play\b([\s\S]*)$/i);
+  if (mSpeechPlay) return { kind: "OperatorSpeechPlay", args: String(mSpeechPlay[1] ?? "").trim() };
+  const mSpeechSinkSet = trimmed.match(/^\/operator\s+speech-sink\s+set\s+(\S+)\s*$/i);
+  if (mSpeechSinkSet) return { kind: "OperatorSpeechSinkSet", sink: mSpeechSinkSet[1]! };
+  const mPolicyRegressions = trimmed.match(/^\/operator\s+policy-regressions\s*$/i);
+  if (mPolicyRegressions) return { kind: "OperatorPolicyRegressions" };
+  const mConfidencePeek = trimmed.match(/^\/operator\s+confidence\s+peek\s+([\s\S]+)$/i);
+  if (mConfidencePeek) return { kind: "OperatorConfidencePeek", fingerprint: String(mConfidencePeek[1] ?? "").trim() };
+  const mConfidenceView = trimmed.match(/^\/operator\s+confidence-view\s+([\s\S]+)$/i);
+  if (mConfidenceView) return { kind: "OperatorConfidenceView", fingerprint: String(mConfidenceView[1] ?? "").trim() };
+  const mConfidenceCurve = trimmed.match(/^\/operator\s+confidence-curve\s+([\s\S]+)$/i);
+  if (mConfidenceCurve) return { kind: "OperatorConfidenceCurve", fingerprint: String(mConfidenceCurve[1] ?? "").trim() };
+  const mPolicySim = trimmed.match(/^\/operator\s+policy-simulate\b([\sS]*)$/i);
+  if (mPolicySim) return { kind: "OperatorPolicySimulate", args: String(mPolicySim[1] ?? "").trim() };
+  const mCourtExport = trimmed.match(/^\/operator\s+court-export\b([\sS]*)$/i);
+  if (mCourtExport) return { kind: "OperatorCourtExport", args: String(mCourtExport[1] ?? "").trim() };
+  const mRepoStatus = trimmed.match(/^\/operator\s+repo-status\s*$/i);
+  if (mRepoStatus) return { kind: "OperatorRepoStatus" };
   return null;
+}
+
+function parseFlagValue(args: string, flag: string): string | null {
+  const raw = String(args ?? "");
+  const f = String(flag ?? "");
+  if (!f) return null;
+
+  const eq = raw.match(new RegExp(`(?:^|\\s)${f}=([^\\s]+)`));
+  if (eq?.[1]) return String(eq[1]).trim();
+
+  const spaced = raw.match(new RegExp(`(?:^|\\s)${f}\\s+([^\\s]+)`));
+  if (spaced?.[1]) return String(spaced[1]).trim();
+
+  return null;
+}
+
+function parseSpeechPlayArgs(rawArgs: string): SpeechPlayArgs {
+  const args = String(rawArgs ?? "").trim();
+  const dryRun = /(?:^|\s)--dry-run(?:\s|$)/i.test(args);
+
+  // Accept either:
+  //   latest
+  //   --since <ISO>
+  //   --since=<ISO>
+  const since = parseFlagValue(args, "--since");
+
+  const tokens = args
+    .split(/\s+/)
+    .map((t) => t.trim())
+    .filter(Boolean);
+  const sub = tokens.find((t) => !t.startsWith("--"));
+
+  if (String(sub ?? "").toLowerCase() === "latest") {
+    return { mode: "latest", dryRun, source: "operator" };
+  }
+
+  if (since) {
+    return { mode: "since", since, dryRun, source: "operator" };
+  }
+
+  throw new Error("Usage: /operator speech-play latest | /operator speech-play --since <ISO-8601> [--dry-run]");
+}
+
+function parseOperatorSpeechPingArgs(rawMessage: string | null): {
+  emit: boolean;
+  text: string;
+} {
+  const raw = String(rawMessage ?? "").trim();
+
+  // Safe default: speech-ping is simulation unless explicitly overridden.
+  // Supports either:
+  //   /operator speech-ping --emit Your message
+  //   /operator speech-ping Your message --emit
+  const parts = raw.split(/\s+/).filter(Boolean);
+  const normalize = (p: string) =>
+    p
+      .toLowerCase()
+      .trim()
+      // Allow quotes / punctuation around flags (common when invoked through multiple shells).
+      .replace(/^["']+/, "")
+      .replace(/["']+$/, "")
+      .replace(/[,:;]+$/, "");
+
+  const emit = parts.some((p) => normalize(p) === "--emit");
+  const text = parts
+    .filter((p) => normalize(p) !== "--emit")
+    .join(" ")
+    .trim();
+
+  return {
+    emit,
+    text: text || "Speech system online.",
+  };
 }
 
 (async () => {
@@ -380,13 +737,262 @@ function parseOperatorCommand(command: string):
     const raw = getArgCommand();
     const parsed = parseOperatorCommand(raw);
     if (!parsed) {
-      throw new Error("Usage: /operator queue | /operator job <job_id> | /operator stats");
+      throw new Error(
+        "Usage: /operator queue | /operator job <job_id> | /operator stats | /operator rank [days] | /operator speech-status | /operator speech-check | /operator speech-ping [--emit] [message] | /operator speech-play latest | /operator speech-play --since <ISO-8601> [--dry-run] | /operator speech-sink set <console|os-tts|elevenlabs> | /operator policy-regressions | /operator confidence peek <fingerprint> | /operator confidence-view <fingerprint> | /operator confidence-curve <fingerprint> | /operator policy-simulate --policy <name> --confidence <csv> | /operator court-export | /operator repo-status"
+      );
+    }
+
+    if (parsed.kind === "OperatorRank") {
+      const ranking = computeOperatorRanking({ windowDays: parsed.window_days });
+      const artifact = writeOperatorRankingArtifact(ranking);
+      process.stdout.write(JSON.stringify({ ...ranking, artifact }, null, 0));
+      process.exitCode = 0;
+      return;
+    }
+
+    if (parsed.kind === "OperatorRepoStatus") {
+      const out = getRepoStatus(process.cwd());
+      console.log(JSON.stringify(out, null, 2));
+      process.exitCode = 0;
+      return;
+    }
+
+    if (parsed.kind === "OperatorCourtExport") {
+      const started_at = deterministicNowIso();
+      const args = String((parsed as any).args ?? "");
+
+      const capability = parseFlagValue(args, "--capability");
+      const as_of = parseFlagValue(args, "--as-of") ?? "latest";
+      const format = parseFlagValue(args, "--format") ?? "pdf";
+      const seal = /(?:^|\s)--seal(?:\s|$)/i.test(args);
+
+      const res = await cmdCourtExport({
+        at_iso: started_at,
+        capability: capability ?? undefined,
+        as_of,
+        format,
+        seal,
+      } as any);
+      const finished_at = deterministicNowIso();
+
+      const status = res.ok ? ("success" as const) : ("denied" as const);
+      const artifacts = {
+        court_export: {
+          export_id: res.export_id,
+          out_dir: res.out_dir,
+          manifest_path: res.manifest_path,
+          index_pdf_path: res.ok ? res.index_pdf_path : null,
+          denial_path: res.ok ? null : ((res as any).denial_path ?? null),
+          latest_written: res.ok ? res.latest_written : null,
+        },
+      };
+
+      await persistRun({
+        kind: "CourtExportReceipt" as any,
+        execution_id: res.export_id as any,
+        threadId: null as any,
+        status: status as any,
+        started_at,
+        finished_at,
+        artifacts: artifacts as any,
+        receipt: {
+          tier: "24.2",
+          domain: "court-export",
+          input_sources: res.input_sources,
+          files: res.files,
+        },
+      } as any);
+
+      if (!res.ok) {
+        console.log(
+          JSON.stringify(
+            {
+              kind: "PolicyDenied",
+              code: "COURT_EXPORT_MISSING_LATEST",
+              reason: (res as any).reason,
+              export_id: res.export_id,
+              artifacts,
+            },
+            null,
+            2
+          )
+        );
+        process.exitCode = 3;
+        return;
+      }
+
+      console.log(
+        JSON.stringify(
+          {
+            kind: "CourtExport",
+            ok: true,
+            export_id: res.export_id,
+            out_dir: res.out_dir,
+            manifest_path: res.manifest_path,
+            index_pdf_path: res.index_pdf_path,
+            latest_written: res.latest_written,
+            artifacts,
+          },
+          null,
+          2
+        )
+      );
+      process.exitCode = 0;
+      return;
+    }
+
+    if (parsed.kind === "OperatorPolicyRegressions") {
+      const { runOperatorPolicyRegressions } = await import("./run-operator-policy-regressions.js");
+      const code = runOperatorPolicyRegressions();
+      process.exitCode = code;
+      return;
+    }
+
+    if (parsed.kind === "OperatorConfidencePeek") {
+      const fp = String(parsed.fingerprint ?? "").trim();
+      if (!fp) throw new Error("Usage: /operator confidence peek <fingerprint>");
+
+      const runsDir = String(process.env.RUNS_DIR ?? "runs").trim() || "runs";
+      const eff = getEffectiveConfidence(runsDir, fp);
+
+      console.log(
+        JSON.stringify(
+          {
+            kind: "ConfidencePeek",
+            fingerprint: fp,
+            raw_confidence: eff.raw_confidence,
+            decayed_confidence: eff.decayed_confidence,
+            age_ms: eff.age_ms,
+            updated_at: eff.updated_at,
+          },
+          null,
+          2
+        )
+      );
+      process.exitCode = 0;
+      return;
+    }
+
+    if (parsed.kind === "OperatorConfidenceView") {
+      const fp = String(parsed.fingerprint ?? "").trim();
+      if (!fp) throw new Error("Usage: /operator confidence-view <fingerprint>");
+
+      const events = listRequalificationEventsForFingerprint(fp);
+      const view = confidenceDecisionView(events);
+
+      // Keep JSON as the source of truth; embed a deterministic ASCII rendering for humans.
+      const ascii = formatConfidenceViewAscii(
+        view.map((r) => ({
+          confidence: r.confidence,
+          decision: r.decision,
+          success: r.success,
+          monotonic: r.monotonic,
+        }))
+      );
+
+      console.log(
+        JSON.stringify(
+          {
+            kind: "OperatorConfidenceView",
+            generated_at: nowIso(),
+            fingerprint: fp,
+            rows: view,
+            ascii,
+          },
+          null,
+          2
+        )
+      );
+      process.exitCode = 0;
+      return;
+    }
+
+    if (parsed.kind === "OperatorConfidenceCurve") {
+      const fp = String(parsed.fingerprint ?? "").trim();
+      if (!fp) {
+        deny("MISSING_FINGERPRINT", "Fingerprint required for confidence-curve");
+        return;
+      }
+
+      const history = loadConfidenceHistory(fp);
+      const events = history.map((h) => ({
+        confidence: h.confidence,
+        decision: h.allowed ? ("ALLOW" as const) : ("DENY" as const),
+      }));
+
+      console.log(
+        JSON.stringify(
+          {
+            kind: "OperatorView",
+            fingerprint: fp,
+            curve: renderConfidenceCurve(events),
+            status: history.at(-1)?.status ?? "UNKNOWN",
+          },
+          null,
+          2
+        )
+      );
+
+      process.exitCode = 0;
+      return;
+    }
+
+    if (parsed.kind === "OperatorPolicySimulate") {
+      const policy = parseFlagValue(parsed.args, "--policy");
+      const csv = parseFlagValue(parsed.args, "--confidence");
+
+      if (!policy) {
+        deny("MISSING_POLICY", "--policy is required");
+        return;
+      }
+
+      if (!csv) {
+        deny("MISSING_CONFIDENCE", "--confidence is required");
+        return;
+      }
+
+      const confidences = csv
+        .split(",")
+        .map((s) => Number(String(s).trim()))
+        .filter((n) => Number.isFinite(n));
+
+      if (!confidences.length) {
+        deny("MISSING_CONFIDENCE", "--confidence must contain at least one number");
+        return;
+      }
+
+      const { simulateOperatorPolicy } = await import("../policy/simulateOperatorPolicy.js");
+      const results = confidences.map((c) => simulateOperatorPolicy({ policy, confidence: c }));
+
+      const curve = results.map((r) => ({
+        x: r.confidence,
+        y: r.decision === "ALLOW" ? 1 : 0,
+        reason: r.reason,
+      }));
+
+      const curve_ascii = renderConfidenceCurve(results.map((r) => ({ confidence: r.confidence, decision: r.decision })));
+
+      console.log(
+        JSON.stringify(
+          {
+            kind: "PolicySimulation",
+            policy,
+            results,
+            curve,
+            curve_ascii,
+          },
+          null,
+          2
+        )
+      );
+      process.exitCode = 0;
+      return;
     }
 
     if (parsed.kind === "OperatorQueue") {
       const checks = listConfidenceChecks().map(jobCardFromConfidenceCheck).filter(Boolean) as JobCard[];
       const approvals = listApprovalsAwaiting().map(jobCardFromApproval);
-      const jobs = listJobsRegistry().map(jobCardFromRegistry);
+      const jobs = (await Promise.all(listJobsRegistry().map(jobCardFromRegistry))).filter(Boolean) as JobCard[];
 
       const ranked = rankJobs([...checks, ...approvals, ...jobs]);
 
@@ -420,6 +1026,231 @@ function parseOperatorCommand(command: string):
       return;
     }
 
+    if (parsed.kind === "OperatorSpeechStatus") {
+      const state = readOperatorState();
+      const desiredSink = state.speech_sink ?? parseCurrentSink();
+      const sink = effectiveSinkName(desiredSink);
+      const fingerprint = String(process.env.THREAD_ID ?? "speech").trim() || "speech";
+      const gate = getSpeechGateStatus(fingerprint);
+
+      const prime_speech_tier = String(process.env.PRIME_SPEECH_TIER ?? "local").trim() || "local";
+
+      const out = {
+        kind: "OperatorSpeechStatus",
+        generated_at: nowIso(),
+        cwd: process.cwd(),
+        operator_state_path: getOperatorStatePath(),
+        enabled: envEnabled(),
+        prime_speech_tier,
+        desired_sink: desiredSink,
+        sink,
+        operator_state_updated_at: state.updated_at,
+        budget_remaining: gate.budget_remaining,
+        silence_until: gate.silence_until,
+        last_deny_reason: gate.last_deny_reason,
+        debug_enabled: process.env.SPEECH_DEBUG === "1",
+      };
+
+      console.log(JSON.stringify(out, null, 2));
+      process.exitCode = 0;
+      return;
+    }
+
+    if (parsed.kind === "OperatorSpeechCheck") {
+      const state = readOperatorState();
+      const operator_sink = state.speech_sink ?? null;
+
+      const prime_speech_tier = String(process.env.PRIME_SPEECH_TIER ?? "local").trim() || "local";
+      const elevenlabs_tier_enabled = prime_speech_tier.toLowerCase() === "elevenlabs";
+
+      const requested_order = resolveSpeechFallbackOrder({ operator_sink, env: process.env });
+      const sinks = (() => {
+        try {
+          return loadSpeechSinks({ ...process.env, SPEECH_SINKS: requested_order.join(",") });
+        } catch {
+          return loadSpeechSinks({ ...process.env, SPEECH_SINKS: "console" });
+        }
+      })();
+
+      const fingerprint = String(process.env.THREAD_ID ?? "speech").trim() || "speech";
+      const gate = getSpeechGateStatus(fingerprint);
+
+      const el = resolveElevenLabsConfigSummary(process.env);
+      const artifacts = {
+        runs: canWriteDir(path.join(process.cwd(), "runs")),
+        speech_audio: canWriteDir(path.join(process.cwd(), "runs", "speech-audio")),
+        speech_delta: canWriteDir(path.join(process.cwd(), "runs", "speech-delta")),
+      };
+
+      const out = {
+        kind: "OperatorSpeechCheck",
+        generated_at: nowIso(),
+        cwd: process.cwd(),
+        operator_state_path: getOperatorStatePath(),
+        operator_state_updated_at: state.updated_at,
+        enabled: envEnabled(),
+        prime_speech_tier,
+        fingerprint,
+        gate,
+        sinks: {
+          operator_sink,
+          env_speech_sinks: String(process.env.SPEECH_SINKS ?? "").trim() || null,
+          requested_order,
+          configured_order: sinks.map((s) => s.name),
+        },
+        elevenlabs: el,
+        elevenlabs_tier_enabled,
+        budgets: {
+          voice_budget: parseIntOrNull(process.env.SPEECH_VOICE_BUDGET),
+          max_per_minute: parseIntOrNull(process.env.SPEECH_MAX_PER_MINUTE),
+          sink_fallback_timeout_ms: parseIntOrNull(process.env.SPEECH_SINK_FALLBACK_TIMEOUT_MS) ?? 2500,
+        },
+        speech_delta: {
+          delta_only: process.env.SPEECH_DELTA_ONLY === "1",
+          persist: process.env.SPEECH_DELTA_PERSIST === "1",
+          ttl_ms: parseIntOrNull(process.env.SPEECH_DELTA_TTL_MS) ?? 24 * 60 * 60 * 1000,
+        },
+        artifacts,
+        debug_enabled: process.env.SPEECH_DEBUG === "1",
+      };
+
+      console.log(JSON.stringify(out, null, 2));
+      process.exitCode = 0;
+      return;
+    }
+
+    if (parsed.kind === "OperatorSpeechPing") {
+      const state = readOperatorState();
+      const operator_sink = state.speech_sink ?? null;
+
+      const requested_order = resolveSpeechFallbackOrder({ operator_sink, env: process.env });
+      const sinks = (() => {
+        try {
+          return loadSpeechSinks({ ...process.env, SPEECH_SINKS: requested_order.join(",") });
+        } catch {
+          return loadSpeechSinks({ ...process.env, SPEECH_SINKS: "console" });
+        }
+      })();
+
+      // Pick a category that is allowed under SPEECH_CATEGORIES allowlist, if one is set.
+      const allowCats = parseCsv(process.env.SPEECH_CATEGORIES);
+      const category = allowCats.length ? allowCats[0]! : "confidence";
+
+      const allowEmitEnv = String(process.env.OPERATOR_ALLOW_SPEECH ?? "").trim() === "1";
+      const ping = parseOperatorSpeechPingArgs(parsed.message);
+      const allowEmit = allowEmitEnv || ping.emit;
+      const text = ping.text;
+      const fingerprint = "operator_speech_ping";
+      const threadId = String(process.env.THREAD_ID ?? "operator_speech_ping").trim() || "operator_speech_ping";
+
+      const enabled = envEnabled();
+      const out = {
+        kind: "OperatorSpeechPing",
+        generated_at: nowIso(),
+        enabled,
+        requested: {
+          operator_sink,
+          env_speech_sinks: String(process.env.SPEECH_SINKS ?? "").trim() || null,
+          requested_order,
+        },
+        resolved: {
+          configured_order: sinks.map((s) => s.name),
+        },
+        emitted: {
+          attempted: enabled,
+          category,
+          threadId,
+          fingerprint,
+          text_preview: text.slice(0, 140),
+          simulation: !allowEmit,
+          allow_emit_env: allowEmitEnv,
+        },
+      };
+
+      // Emit speech via the existing choke point in simulation mode:
+      // - uses operator sink + fallback
+      // - no budgets/counters/artifacts
+      // - stderr-only output (stdout remains JSON-only)
+      try {
+        if (enabled) {
+          speak({
+            text,
+            category,
+            threadId,
+            fingerprint,
+            meta: { autoplay_requested: allowEmit, source: "operator" },
+            simulation: !allowEmit,
+          });
+        }
+      } catch {
+        // fail-open
+      }
+
+      console.log(JSON.stringify(out, null, 2));
+      process.exitCode = 0;
+      return;
+    }
+
+    if (parsed.kind === "OperatorSpeechPlay") {
+      const speechArgs = parseSpeechPlayArgs(parsed.args);
+      const ctx: OperatorContext = {
+        repoRoot: findRepoRoot(process.cwd()),
+        nowIso,
+      };
+
+      const res = await operatorSpeechPlay(speechArgs, ctx);
+      console.log(JSON.stringify(res, null, 2));
+      process.exitCode = 0;
+      return;
+    }
+
+    if (parsed.kind === "OperatorSpeechSinkSet") {
+      const desiredRaw = String(parsed.sink ?? "").trim();
+      const desired = parseSpeechSinkName(desiredRaw);
+      if (!desired) {
+        deny("UNKNOWN_SPEECH_SINK", `Unknown speech sink: ${desiredRaw}`);
+        return;
+      }
+
+      const available = (() => {
+        try {
+          const sinks = loadSpeechSinks({ ...process.env, SPEECH_SINKS: desired });
+          return sinks.some((s) => s.name === desired);
+        } catch {
+          return false;
+        }
+      })();
+
+      if (!available) {
+        deny("SPEECH_SINK_UNAVAILABLE", `Speech sink unavailable: ${desired}`);
+        return;
+      }
+
+      const prior = readOperatorState().speech_sink;
+      const updated_at = nowIso();
+      const execution_id = `operator_speech_sink_${Date.now()}`;
+
+      writeOperatorSpeechSink({ sink: desired, updated_at });
+      const artifact = writeOperatorSpeechSinkArtifact({
+        execution_id,
+        updated_at,
+        sink: desired,
+        prior_sink: prior,
+      });
+
+      const out = {
+        kind: "OperatorSpeechSinkSet",
+        execution_id,
+        updated_at,
+        sink: desired,
+        prior_sink: prior,
+        artifact: artifact.file,
+      };
+      console.log(JSON.stringify(out, null, 2));
+      process.exitCode = 0;
+      return;
+    }
+
     // OperatorJob: minimal drill-down (read-only)
     const out = {
       kind: "OperatorJob",
@@ -434,3 +1265,5 @@ function parseOperatorCommand(command: string):
     console.error(err?.message ? String(err.message) : String(err));
   }
 })();
+
+

@@ -78,3 +78,37 @@ export async function notionLivePatchWithIdempotency(
 
   return { http_status: res.status, redacted };
 }
+
+export async function notionLiveRequestWithIdempotency(input: {
+  method: "PATCH" | "POST";
+  path: string;
+  body: any;
+  idempotencyKey: string | null | undefined;
+}) {
+  const base = process.env.NOTION_API_BASE || "https://api.notion.com";
+  const token = process.env.NOTION_TOKEN;
+  if (!token) throw new Error("NOTION_TOKEN missing");
+
+  const version = process.env.NOTION_API_VERSION || "2022-06-28";
+  const url = `${base}${input.path}`;
+
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${token}`,
+    "Notion-Version": version,
+    Accept: "application/json",
+    "Content-Type": "application/json",
+  };
+  if (typeof input.idempotencyKey === "string" && input.idempotencyKey.trim()) {
+    headers["Idempotency-Key"] = input.idempotencyKey;
+  }
+
+  const res = await fetch(url, {
+    method: input.method,
+    headers,
+    body: JSON.stringify(input.body),
+  });
+
+  const raw = await res.json().catch(() => ({}));
+  const redacted = redact(raw, redactKeysFromEnv());
+  return { http_status: res.status, redacted };
+}

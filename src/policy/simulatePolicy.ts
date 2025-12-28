@@ -2,7 +2,10 @@ import crypto from "node:crypto";
 
 import type { ExecutionPlan, ExecutionStep } from "../schemas/ExecutionPlan.schema.js";
 import { checkPlanPolicy, checkPolicyWithMeta } from "./checkPolicy.js";
+import { createExplainTrace, PolicyExplainTrace } from "./policyExplain.js";
 import { materializePhaseSteps } from "../phases/materializePhaseSteps.js";
+import { evaluateProbationStep } from "../requalification/probationEnforcer.js";
+import { isExplainPass } from "./isExplainPass.js";
 
 export type PolicySimulationPhaseTrace = {
   phase_id: string;
@@ -24,6 +27,7 @@ export type PolicySimulationOutput = {
   primary_reason: string;
   policy: unknown;
   phases: PolicySimulationPhaseTrace[];
+  explain?: PolicyExplainTrace;
 };
 
 function stableFingerprint(obj: any) {
@@ -87,8 +91,12 @@ export function simulatePolicy(params: {
   at: Date;
   autonomy_mode: string;
   approval: boolean;
+  explain?: PolicyExplainTrace;
 }): PolicySimulationOutput {
   const { plan, env, at } = params;
+
+  // Tier-15: structured explain trace
+  const explain = params.explain || createExplainTrace();
 
   const phases: PolicySimulationPhaseTrace[] = [];
 
@@ -110,6 +118,7 @@ export function simulatePolicy(params: {
       primary_reason: summary.primary_reason,
       policy,
       phases,
+      explain
     };
   }
 
@@ -153,7 +162,7 @@ export function simulatePolicy(params: {
         ensureSimulatedPrestateForApprovedWrites(execPlan.steps);
       }
 
-      const policy = checkPolicyWithMeta(execPlan, env, at, meta);
+      const policy = checkPolicyWithMeta(execPlan, env, at, meta, { explain });
       phases.push({ phase_id: phaseId || "unknown", steps_count: phaseSteps.length, policy });
       finalPolicy = policy;
 
@@ -175,12 +184,27 @@ export function simulatePolicy(params: {
       ensureSimulatedPrestateForApprovedWrites(execPlan.steps);
     }
 
-    const policy = checkPolicyWithMeta(execPlan, env, at, meta);
+    const policy = checkPolicyWithMeta(execPlan, env, at, meta, { explain });
     phases.push({ phase_id: "single", steps_count: steps.length, policy });
     finalPolicy = policy;
   }
 
   const summary = summarizePolicyResult(finalPolicy);
+
+  // After policy simulation and explain/confidence calculation, wire in probation success tracking:
+  // Only if fingerprint and confidence are provided in params
+  if (params.env && typeof (params as any).fingerprint === "string" && typeof (params as any).confidence === "number") {
+    const runsDir = process.env.RUNS_DIR || "runs";
+    const fingerprint = (params as any).fingerprint;
+    const confidence = (params as any).confidence;
+    const explain = params.explain;
+    evaluateProbationStep(
+      runsDir,
+      fingerprint,
+      confidence,
+      isExplainPass(explain)
+    );
+  }
 
   return {
     kind: "PolicySimulation",
@@ -196,5 +220,6 @@ export function simulatePolicy(params: {
     primary_reason: summary.primary_reason,
     policy: finalPolicy,
     phases,
+    explain
   };
 }

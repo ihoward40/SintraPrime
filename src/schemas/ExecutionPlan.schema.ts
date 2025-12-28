@@ -16,6 +16,7 @@ export const ExecutionStepSchema = z.object({
   adapter: z.enum([
     "WebhookAdapter",
     "NotionAdapter",
+    "GmailAdapter",
     "GoogleDriveAdapter",
     "MakeAdapter",
     "SlackAdapter",
@@ -42,11 +43,49 @@ export const ExecutionStepSchema = z.object({
   rollback: z.any().optional(),
 });
 
+const ShellExpectedSchema = z
+  .object({
+    exit_code: z
+      .union([z.number().int(), z.array(z.number().int())])
+      .optional()
+      .transform((v) => {
+        if (v === undefined) return [0];
+        return Array.isArray(v) ? v : [v];
+      }),
+  })
+  .optional()
+  .transform((v) => v ?? { exit_code: [0] });
+
+export const ShellExecutionStepSchema = z.object({
+  step_id: z.string(),
+  adapter: z.literal("ShellAdapter"),
+  action: z.string().optional().default("shell.run"),
+  command: z.string().min(1),
+  shell: z.enum(["bash", "pwsh", "sh"]).optional().default("bash"),
+  cwd: z.string().optional(),
+  env: z.record(z.string()).optional(),
+  timeout_ms: z.number().int().min(1).max(3_600_000).optional(),
+  expects: ShellExpectedSchema,
+});
+
+export const BrowserExecutionStepSchema = z.object({
+  step_id: z.string(),
+  adapter: z.literal("BrowserAgent"),
+  action: z.string().optional().default("browser.goto"),
+  method: z.literal("goto"),
+  url: z.string().url(),
+  timeout_ms: z.number().int().min(1).max(3_600_000).optional(),
+  // Reserved for future (keep validation permissive but explicit)
+  expects: z.object({}).optional(),
+});
+
+export const AnyExecutionStepSchema = z.union([ExecutionStepSchema, ShellExecutionStepSchema, BrowserExecutionStepSchema]);
+
 export const ExecutionPhaseSchema = z.object({
   phase_id: z.string().min(1),
   required_capabilities: z.array(z.string()).min(1),
   inputs_from: z.array(z.string()).optional(),
-  steps: z.array(ExecutionStepSchema).min(1),
+  steps: z.array(AnyExecutionStepSchema).min(1),
   // Planner-declared outputs that should be captured into artifacts for later phases.
   outputs: z.array(z.string()).optional(),
 });
@@ -75,7 +114,7 @@ export const ExecutionPlanSchema = z
   // Tier 5.2: phased execution is optional and additive.
   phases: z.array(ExecutionPhaseSchema).optional(),
   // Legacy single-phase steps. If phases are present, steps may be omitted.
-  steps: z.array(ExecutionStepSchema).optional().default([]),
+  steps: z.array(AnyExecutionStepSchema).optional().default([]),
   })
   .refine(
     (plan) => !(plan.phases && Array.isArray(plan.steps) && plan.steps.length > 0),
@@ -109,7 +148,7 @@ export const ValidatorOutputSchema = z.union([ValidatedCommandSchema, NeedInputS
 export const PlannerOutputSchema = z.union([ExecutionPlanSchema, NeedInputSchema]);
 
 export type ExecutionPlan = z.infer<typeof ExecutionPlanSchema>;
-export type ExecutionStep = z.infer<typeof ExecutionStepSchema>;
+export type ExecutionStep = z.infer<typeof AnyExecutionStepSchema>;
 export type ExecutionPhase = z.infer<typeof ExecutionPhaseSchema>;
 export type NeedInput = z.infer<typeof NeedInputSchema>;
 export type ValidatedCommand = z.infer<typeof ValidatedCommandSchema>;

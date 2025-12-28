@@ -1,0 +1,8 @@
+{
+  "browser": {
+    "allow": []
+  },
+  "shell": {
+    "allow_plaintext_logs": false
+  }
+}

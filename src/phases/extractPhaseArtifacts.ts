@@ -21,8 +21,9 @@ export function extractPhaseArtifacts(params: {
   const lastStepLog = lastStepId ? phaseRun.steps.find((s) => s.step_id === lastStepId) : undefined;
 
   const lastResponse = isPlainObject(lastStepLog?.response) ? (lastStepLog!.response as Record<string, unknown>) : null;
-  const lastPayload = executedSteps.length && isPlainObject(executedSteps[executedSteps.length - 1]!.payload)
-    ? (executedSteps[executedSteps.length - 1]!.payload as Record<string, unknown>)
+  const last = executedSteps.length ? (executedSteps[executedSteps.length - 1] as any) : null;
+  const lastPayload = last && isPlainObject((last as any).payload)
+    ? ((last as any).payload as Record<string, unknown>)
     : null;
 
   for (const k of wanted) {

@@ -2,6 +2,7 @@ import type { SpeechSink } from "./types.js";
 import { consoleSink } from "./consoleSink.js";
 import { webhookSink } from "./webhookSink.js";
 import { osTtsSink } from "./osTtsSink.js";
+import { elevenLabsSink, isElevenLabsConfigured } from "./elevenLabsSink.js";
 
 function parseList(value: string | undefined): string[] {
   return String(value ?? "")
@@ -17,9 +18,25 @@ export function loadSpeechSinks(env: NodeJS.ProcessEnv = process.env): SpeechSin
     console: consoleSink,
     webhook: webhookSink,
     "os-tts": osTtsSink,
+    elevenlabs: elevenLabsSink,
   };
 
-  const selected = (names.length ? names : ["console"])
+  // Some sinks require runtime configuration to be considered "available".
+  // This is used by operator commands to deny selecting unavailable sinks.
+  if (!isElevenLabsConfigured(env)) {
+    delete all.elevenlabs;
+  }
+
+  // Tier gate: keep cloud speech explicitly opt-in.
+  // Default is local (no ElevenLabs) even if ELEVENLABS_API_KEY is present.
+  const tier = String(env.PRIME_SPEECH_TIER ?? "local").trim().toLowerCase();
+  if (tier !== "elevenlabs") {
+    delete all.elevenlabs;
+  }
+
+  // Default order (boring-reliable): ElevenLabs → OS TTS → console.
+  // Note: ElevenLabs is filtered out below when not configured.
+  const selected = (names.length ? names : ["elevenlabs", "os-tts", "console"])
     .map((n) => all[n])
     .filter((s): s is SpeechSink => Boolean(s));
 

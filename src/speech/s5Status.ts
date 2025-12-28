@@ -18,6 +18,11 @@ export function emitSpeechS5(input: {
   autonomy_mode: string;
   autonomy_mode_effective: string;
 }): { wrote?: { file: string } } {
+  // Tier-S5 contract: silent when autonomy is OFF.
+  if (String(input.autonomy_mode_effective || "OFF") === "OFF") {
+    return {};
+  }
+
   const confidence = (() => {
     try {
       return readConfidence(input.fingerprint).confidence;

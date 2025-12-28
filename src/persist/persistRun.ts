@@ -1,6 +1,7 @@
 import type { ExecutionRunLog } from "../executor/executePlan.js";
 import fs from "node:fs";
 import path from "node:path";
+import { evaluatePlaybooksForReceipt } from "../playbooks/evaluatePlaybooks.js";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object" && !Array.isArray(value);
@@ -82,6 +83,10 @@ export async function persistRun(runLog: ExecutionRunLog) {
     }
   }
 
+  // Tier-29: receipts can trigger conditional playbooks. Playbook-triggered
+  // receipts must NOT trigger playbooks again (avoid recursion).
+  const isPlaybookReceipt = typeof (receipt as any).playbook_id === "string" && String((receipt as any).playbook_id).trim();
+
   const persistLocal = process.env.PERSIST_LOCAL_RECEIPTS === "1";
 
   const writeLocal = () => {
@@ -94,11 +99,33 @@ export async function persistRun(runLog: ExecutionRunLog) {
   const url = process.env.NOTION_RUNS_WEBHOOK;
   if (!url) {
     writeLocal();
+
+    if (!isPlaybookReceipt) {
+      try {
+        const playbookRuns = await evaluatePlaybooksForReceipt({ receipt });
+        for (const r of playbookRuns) {
+          await persistRun(r);
+        }
+      } catch {
+        // ignore; playbooks must never affect the originating run
+      }
+    }
     return;
   }
 
   if (persistLocal) {
     writeLocal();
+  }
+
+  if (!isPlaybookReceipt) {
+    try {
+      const playbookRuns = await evaluatePlaybooksForReceipt({ receipt });
+      for (const r of playbookRuns) {
+        await persistRun(r);
+      }
+    } catch {
+      // ignore; playbooks must never affect the originating run
+    }
   }
 
   const res = await fetch(url, {

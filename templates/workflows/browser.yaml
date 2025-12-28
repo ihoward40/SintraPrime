@@ -1,0 +1,14 @@
+kind: WorkflowDefinition
+workflow_id: browser
+threadId: browser-demo
+
+dry_run: false
+
+goal: "BrowserAgent demo: goto + artifacts"
+
+nodes:
+  - id: open_github
+    step:
+      adapter: BrowserAgent
+      method: goto
+      url: https://github.com

@@ -1,7 +1,4 @@
-import fs from "node:fs";
-import path from "node:path";
-
-import { readRequalificationState } from "./requalification.js";
+import { readRequalificationState, writeRequalificationEvent, writeRequalificationState } from "./requalification.js";
 
 export type ProbationCounterArtifact = {
   fingerprint: string;
@@ -17,6 +14,9 @@ export type ProbationRunResult = {
   status: string;
   now_iso: string;
 
+  // Confidence for monotonic probation.
+  confidence: number;
+
   governor_decision: "ALLOW" | "DENY" | "DELAY";
 
   // Friction flags
@@ -31,50 +31,18 @@ export type ProbationRunResult = {
   steps: Array<{ read_only?: boolean }>;
 };
 
-function safeFilePart(input: string): string {
-  const s = String(input ?? "");
-  const cleaned = s.replace(/[\\/<>:\"|?*\x00-\x1F]/g, "_");
-  return cleaned.slice(0, 120);
-}
-
 function clampNonNegativeInt(n: unknown, fallback: number): number {
   const v = typeof n === "number" ? n : Number(n);
   if (!Number.isFinite(v)) return fallback;
   return Math.max(0, Math.floor(v));
 }
 
-function parseIntEnv(name: string, fallback: number): number {
-  const raw = process.env[name];
-  if (!raw) return fallback;
-  const n = Number.parseInt(raw, 10);
-  return Number.isFinite(n) ? n : fallback;
+function addMillisIso(nowIso: string, deltaMs: number): string {
+  const t = new Date(nowIso).getTime();
+  if (!Number.isFinite(t)) return nowIso;
+  return new Date(t + deltaMs).toISOString();
 }
 
-function ensureDir(dir: string) {
-  fs.mkdirSync(dir, { recursive: true });
-}
-
-function readJsonSafe(filePath: string): any | null {
-  try {
-    if (!fs.existsSync(filePath)) return null;
-    return JSON.parse(fs.readFileSync(filePath, "utf8"));
-  } catch {
-    return null;
-  }
-}
-
-function writeJsonFile(filePath: string, data: unknown) {
-  ensureDir(path.dirname(filePath));
-  fs.writeFileSync(filePath, JSON.stringify(data, null, 2) + "\n", { encoding: "utf8" });
-}
-
-function probationDir() {
-  return path.join(process.cwd(), "runs", "requalification", "probation");
-}
-
-function probationPath(fingerprint: string) {
-  return path.join(probationDir(), `${safeFilePart(fingerprint)}.json`);
-}
 
 function modeRank(mode: string): number {
   const m = String(mode ?? "OFF");
@@ -87,7 +55,7 @@ function modeRank(mode: string): number {
 }
 
 function qualifiesAsSuccess(runResult: ProbationRunResult): { ok: boolean; notes: string[] } {
-  const notes = ["All runs were read-only", "No policy denials", "No throttles"];
+  const notes = ["No policy denials", "No throttles", "No rollbacks", "Monotonic confidence"];
 
   if (runResult.status !== "success") return { ok: false, notes };
   if (runResult.governor_decision !== "ALLOW") return { ok: false, notes };
@@ -100,10 +68,6 @@ function qualifiesAsSuccess(runResult: ProbationRunResult): { ok: boolean; notes
   const escalated = modeRank(runResult.autonomy_mode_effective) > modeRank(runResult.autonomy_mode);
   if (escalated) return { ok: false, notes };
 
-  const steps = Array.isArray(runResult.steps) ? runResult.steps : [];
-  const allReadOnly = steps.every((s: any) => s?.read_only === true);
-  if (!allReadOnly) return { ok: false, notes };
-
   return { ok: true, notes };
 }
 
@@ -114,35 +78,70 @@ export function updateProbationCounter(input: {
   const rq = readRequalificationState(input.fingerprint);
   if (rq?.state !== "PROBATION") return null;
 
-  const required_successes = Math.max(1, parseIntEnv("PROBATION_SUCCESS_REQUIRED", 5));
-  const file = probationPath(input.fingerprint);
+  // Tier-22.1 defaults: hard-coded for now.
+  const required_successes = 3;
 
-  const existing = readJsonSafe(file);
-  const current: ProbationCounterArtifact = {
-    fingerprint: input.fingerprint,
-    state: "PROBATION",
-    success_count: clampNonNegativeInt(existing?.success_count, 0),
-    required_successes: clampNonNegativeInt(existing?.required_successes, required_successes),
-    last_success_at:
-      typeof existing?.last_success_at === "string" && existing.last_success_at.trim()
-        ? String(existing.last_success_at)
-        : "1970-01-01T00:00:00Z",
-    notes: Array.isArray(existing?.notes) ? existing.notes.map((n: any) => String(n)) : [],
-  };
+  const lastConfidence = Number.isFinite(Number(rq.last_confidence)) ? Number(rq.last_confidence) : null;
+  const prev = lastConfidence === null ? Number.NEGATIVE_INFINITY : lastConfidence;
 
+  const confidence = Number(input.runResult.confidence);
+  const confidenceOk = Number.isFinite(confidence) && confidence >= prev;
   const q = qualifiesAsSuccess(input.runResult);
-  const next: ProbationCounterArtifact = {
-    ...current,
-    required_successes,
-    notes: q.notes,
-  };
+  const ok = q.ok && confidenceOk;
 
-  if (q.ok) {
-    next.success_count = current.success_count + 1;
-    next.last_success_at = input.runResult.now_iso;
+  const currentCount = clampNonNegativeInt(rq.success_count, 0);
+  const nextCount = ok ? currentCount + 1 : 0;
+
+  // Persist counters in the Tier-22 state file.
+  writeRequalificationState({
+    ...rq,
+    state: "PROBATION",
+    // Keep rq.since unchanged while in probation.
+    success_count: nextCount,
+    last_confidence: Number.isFinite(confidence) ? confidence : rq.last_confidence,
+    required: required_successes,
+  } as any);
+
+  // Append-only probation event.
+  writeRequalificationEvent({
+    fingerprint: input.fingerprint,
+    at_iso: input.runResult.now_iso,
+    event: "ProbationSuccess",
+    details: {
+      confidence: Number.isFinite(confidence) ? confidence : null,
+      success_count: nextCount,
+      required: required_successes,
+      eligible: nextCount >= required_successes,
+      ok,
+      notes: q.notes,
+    },
+  });
+
+  if (nextCount >= required_successes) {
+    // Promote to ELIGIBLE and emit recommendation (never auto-ACTIVE).
+    writeRequalificationState({
+      fingerprint: input.fingerprint,
+      state: "ELIGIBLE",
+      cause: "PROBATION_SUCCESS_THRESHOLD",
+      since: input.runResult.now_iso,
+      cooldown_until: null,
+      success_count: nextCount,
+      last_confidence: Number.isFinite(confidence) ? confidence : rq.last_confidence,
+      required: required_successes,
+    } as any);
+
+    writeRequalificationEvent({
+      fingerprint: input.fingerprint,
+      at_iso: addMillisIso(input.runResult.now_iso, 1),
+      event: "RequalificationRecommended",
+      details: {
+        recommendation: "ELIGIBLE",
+        confidence: Number.isFinite(confidence) ? confidence : null,
+        success_count: nextCount,
+        required: required_successes,
+      },
+    });
   }
 
-  writeJsonFile(file, next);
-
-  return { success_count: next.success_count, required_successes: next.required_successes };
+  return { success_count: nextCount, required_successes };
 }

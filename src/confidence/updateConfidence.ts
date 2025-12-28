@@ -126,3 +126,28 @@ export function updateConfidence(input: { fingerprint: string; signal: Confidenc
 
   return next;
 }
+
+export function touchConfidence(input: { fingerprint: string }) {
+  const now = fixedNowIso();
+  const file = confidencePath(input.fingerprint);
+  const raw = readJsonSafe(file);
+
+  const next = raw && typeof raw === "object"
+    ? {
+        ...(raw as any),
+        fingerprint: input.fingerprint,
+        updated_at: now,
+      }
+    : {
+        kind: "ConfidenceArtifact" as const,
+        fingerprint: input.fingerprint,
+        confidence: 1,
+        updated_at: now,
+        signals: [],
+      };
+
+  const dir = confidenceDir();
+  ensureDir(dir);
+  fs.writeFileSync(confidencePath(input.fingerprint), JSON.stringify(next, null, 2) + "\n", "utf8");
+  return next;
+}

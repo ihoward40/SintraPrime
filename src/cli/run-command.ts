@@ -9,6 +9,7 @@ import {
 } from "../schemas/ExecutionPlan.schema.js";
 import { readApprovalState, writeApprovalState, approvalStatePath } from "../approval/approvalState.js";
 import { computePlanHash } from "../utils/planHash.js";
+import { spawnSync } from "node:child_process";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
@@ -37,10 +38,27 @@ import { getOperatorId, operatorHasRole } from "../domains/domainRoles.js";
 import { runGovernor, isRunGovernorEnabled, deriveFingerprint, checkGovernor } from "../governor/runGovernor.js";
 import { nowIso as fixedNowIso } from "../utils/clock.js";
 import { updateProbationCounter } from "../requalification/updateProbationCounter.js";
-import { shouldDecayConfidence } from "../confidence/evaluateConfidenceDecay.js";
-import { readConfidence, updateConfidence } from "../confidence/updateConfidence.js";
-import { writeConfidenceDecayEvent } from "../artifacts/writeConfidenceDecayEvent.js";
+import { readConfidence, touchConfidence, updateConfidence } from "../confidence/updateConfidence.js";
+import { nowIso as sintraNowIso, nowMs as sintraNowMs } from "../time/now.js";
+import { enforceConfidenceDecay } from "../confidence/decayEnforcer.js";
+import { getEffectiveConfidence } from "../confidence/confidenceStore.js";
 import { computeRankings } from "../operator/computeRankings.js";
+import { freezeGovernanceSpecimen } from "../governance/freezeGovernanceSpecimen.js";
+import { verifyGovernanceSnapshot } from "../governance/verifyGovernanceSnapshot.js";
+import { runGoldenPack } from "../governance/goldenPack.js";
+import { getRepoStatus } from "../operator/repoStatus.js";
+import { findRepoRoot } from "../util/findRepoRoot.js";
+import { recordConfidence, deterministicExecutionId } from "../confidence/confidence.js";
+import { suspendFingerprint } from "../requalification/suspendFingerprint.js";
+
+import { createExplainTrace, type PolicyExplainTrace } from "../policy/policyExplain.js";
+import { isExplainPass } from "../policy/isExplainPass.js";
+import { evaluateProbationStep } from "../requalification/probationEnforcer.js";
+
+import { resetProbationCounters } from "../requalification/probationCounters.js";
+import { writeRequalificationEvent as writeRequalificationActivationEvent } from "../requalification/events.js";
+
+
 import { writeRankingsArtifacts } from "../artifacts/writeRankingsArtifacts.js";
 import { recommendPromotions } from "../autonomy/promotionRecommend.js";
 import { writePromotionCandidatesArtifact } from "../artifacts/writePromotionCandidatesArtifact.js";
@@ -249,6 +267,48 @@ function substituteTemplateVars(value: unknown, vars: Record<string, string>): u
   return value;
 }
 
+function findProjectRoot(startDir: string): string {
+  let dir = path.resolve(startDir);
+  for (let i = 0; i < 50; i += 1) {
+    try {
+      if (fs.existsSync(path.join(dir, "package.json"))) return dir;
+    } catch {
+      // ignore
+    }
+    const parent = path.dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return path.resolve(startDir);
+}
+
+function delegateToCli(entryBaseName: "run-operator" | "run-policy", command: string): number {
+  const root = findProjectRoot(process.cwd());
+  const distEntry = path.join(root, "dist", "cli", `${entryBaseName}.js`);
+  const srcEntry = path.join(root, "src", "cli", `${entryBaseName}.ts`);
+  const tsxEntry = path.join(root, "node_modules", "tsx", "dist", "cli.mjs");
+
+  const useDist = fs.existsSync(distEntry);
+  const args = useDist ? [distEntry, command] : [tsxEntry, srcEntry, command];
+
+  const res = spawnSync(process.execPath, args, {
+    stdio: "inherit",
+    windowsHide: true,
+    env: process.env,
+  });
+
+  if (res.error) {
+    try {
+      process.stderr.write(`${String((res.error as any)?.message ?? res.error)}\n`);
+    } catch {
+      // ignore
+    }
+    return 1;
+  }
+
+  return typeof res.status === "number" ? res.status : 0;
+}
+
 function parseTemplateCommand(command: string):
   | { kind: "TemplateList" }
   | { kind: "TemplateShow"; name: string }
@@ -290,6 +350,8 @@ function safeFileIdPart(part: string) {
 async function maybeRecordProbationSuccessAndRecommend(input: {
   fingerprint: string;
   now_iso: string;
+  confidence: number;
+  explain_pass: boolean;
   threadId: string;
   autonomy_mode: string;
   autonomy_mode_effective: string;
@@ -304,11 +366,27 @@ async function maybeRecordProbationSuccessAndRecommend(input: {
   const rqState = readRequalificationState(input.fingerprint);
   if (rqState?.state !== "PROBATION") return;
 
+  // Tier-22.1 (locked): probation success counters (monotonic confidence + min threshold + explain all-PASS).
+  // These counters are separate from the legacy Tier-22 `success_count` fields stored in the requalification state.
+  let tier22_1Recorded = false;
+  try {
+    const runsDir = process.env.RUNS_DIR || "runs";
+    evaluateProbationStep(runsDir, input.fingerprint, input.confidence, input.explain_pass);
+    tier22_1Recorded = true;
+  } catch {
+    // fail-open; probation counters must never block execution
+  }
+
+  // Tier-22.1 is authoritative when available. Only fall back to legacy Tier-22 counters if
+  // Tier-22.1 bookkeeping failed.
+  if (tier22_1Recorded) return;
+
   const counter = updateProbationCounter({
     fingerprint: input.fingerprint,
     runResult: {
       status: input.run_status,
       now_iso: input.now_iso,
+      confidence: input.confidence,
       governor_decision: "ALLOW",
       policy_denied: input.policy_denied,
       throttled: input.throttled,
@@ -320,76 +398,19 @@ async function maybeRecordProbationSuccessAndRecommend(input: {
     },
   });
 
+  // Recommendation + ELIGIBLE promotion are handled inside updateProbationCounter.
+  // This function remains a single choke point for recording probation outcomes.
   if (!counter) return;
-  if (counter.success_count < counter.required_successes) return;
+}
 
-  // Tier-22.1: recommend ELIGIBLE (never auto-ACTIVE, never auto-activate).
-  writeRequalificationState({
-    fingerprint: input.fingerprint,
-    state: "ELIGIBLE",
-    cause: "PROBATION_SUCCESS_THRESHOLD",
-    since: input.now_iso,
-    cooldown_until: null,
-  });
-
-  // Locked recommendation event artifact shape.
-  {
-    const safeFilePart = (value: string) => {
-      const s = String(value ?? "");
-      const cleaned = s.replace(/[\\/<>:\"|?*\x00-\x1F]/g, "_");
-      return cleaned.slice(0, 120);
-    };
-    const ensureDir = (dir: string) => {
-      fs.mkdirSync(dir, { recursive: true });
-    };
-
-    const ts = new Date(input.now_iso).getTime();
-    const safeTs = Number.isFinite(ts) ? ts : Date.now();
-    const dir = path.join(process.cwd(), "runs", "requalification", "events");
-    ensureDir(dir);
-    const file = path.join(dir, `${safeFilePart(input.fingerprint)}.${safeTs}.json`);
-    const confidence = readConfidence(input.fingerprint).confidence;
-    fs.writeFileSync(
-      file,
-      JSON.stringify(
-        {
-          event: "RequalificationRecommended",
-          fingerprint: input.fingerprint,
-          confidence,
-          success_count: counter.success_count,
-        },
-        null,
-        2
-      ) + "\n",
-      "utf8"
-    );
-  }
-
-  await persistRun({
-    kind: "RequalificationRecommended",
-    execution_id: `requal_recommended_${safeFileIdPart(input.fingerprint)}_${Date.now()}`,
-    threadId: input.threadId,
-    goal: `Requalification recommended: ${input.fingerprint}`,
-    dry_run: true,
-    started_at: input.now_iso,
-    finished_at: input.now_iso,
-    status: "success",
-    fingerprint: input.fingerprint,
-    autonomy_mode: input.autonomy_mode,
-    autonomy_mode_effective: input.autonomy_mode,
-    steps: [],
-    receipt: {
-      kind: "RequalificationRecommended",
-      fingerprint: input.fingerprint,
-      recommendation: "ELIGIBLE",
-      success_count: counter.success_count,
-      required_successes: counter.required_successes,
-    },
-  } as any);
+function mustEnv(name: string) {
+  const v = process.env[name];
+  if (!v || v.trim() === "") throw new Error(`Missing env var: ${name}`);
+  return v;
 }
 
 function deriveTemplateExecutionId(templateName: string, args: Record<string, unknown>) {
-  const pageId = typeof args.page_id === "string" ? args.page_id.trim() : "";
+  const pageId = typeof (args as any).page_id === "string" ? String((args as any).page_id).trim() : "";
   const suffix = pageId ? sanitizeExecutionIdPart(pageId) : "001";
   return `tier10_7-template-run-${sanitizeExecutionIdPart(templateName)}_${suffix}`;
 }
@@ -437,19 +458,13 @@ function readLastReceiptForFingerprint(fingerprint: string): any | null {
 }
 
 function loadPrestateForExecution(execution_id: string) {
-  const dir = "runs/prestate";
+  const dir = path.join(process.cwd(), "runs", "prestate");
   if (!fs.existsSync(dir)) return [];
 
   return fs
     .readdirSync(dir)
     .filter((f) => f.startsWith(execution_id + "."))
     .map((f) => JSON.parse(fs.readFileSync(path.join(dir, f), "utf8")));
-}
-
-function mustEnv(name: string) {
-  const v = process.env[name];
-  if (!v || v.trim() === "") throw new Error(`Missing env var: ${name}`);
-  return v;
 }
 
 function extractJsonFromText(text: string): any {
@@ -567,6 +582,100 @@ async function run() {
   const threadId = process.env.THREAD_ID ?? "exec_live_001";
   const rawCommand = getArgCommand();
   const rawTrimmed = rawCommand.trim();
+
+  if (process.env.WARN_NON_CANONICAL_REPO === "1") {
+    try {
+      const rs = getRepoStatus(process.cwd());
+      if (rs.canonical_repo_root && rs.non_canonical) {
+        // stderr only — never pollute stdout JSON
+        process.stderr.write(
+          JSON.stringify(
+            {
+              kind: "StartupWarning",
+              code: "NON_CANONICAL_REPO",
+              cwd: rs.cwd,
+              repo_root: rs.repo_root,
+              canonical_repo_root: rs.canonical_repo_root,
+            },
+            null,
+            2
+          ) + "\n"
+        );
+      }
+    } catch {
+      // fail-open
+    }
+  }
+
+  // Delegate operator/policy subcommands to their dedicated CLIs.
+  // Prevents unrecognized /operator or /policy commands from falling through to
+  // agent networking (which can surface as "fetch failed" when offline).
+  if (/^\/operator\b/i.test(rawTrimmed)) {
+    const code = delegateToCli("run-operator", rawTrimmed);
+    process.exit(code);
+  }
+  if (/^\/policy\b/i.test(rawTrimmed)) {
+    const code = delegateToCli("run-policy", rawTrimmed);
+    process.exit(code);
+  }
+
+  if (/^\/governance\b/i.test(rawTrimmed)) {
+    const parts = rawTrimmed.split(/\s+/).filter(Boolean);
+    const sub = String(parts[1] ?? "").trim().toLowerCase();
+    const repoRoot = findRepoRoot(process.cwd());
+
+    if (sub === "freeze") {
+      const executionId = parts[2] ? String(parts[2]).trim() : undefined;
+      const out = freezeGovernanceSpecimen({ repoRoot, executionId });
+      process.stdout.write(JSON.stringify(out) + "\n");
+      process.exitCode = 0;
+      return;
+    }
+
+    if (sub === "verify") {
+      const out = verifyGovernanceSnapshot(repoRoot);
+      process.stdout.write(JSON.stringify(out) + "\n");
+      process.exitCode = out.ok ? 0 : 2;
+      return;
+    }
+
+    if (sub === "golden-pack") {
+      try {
+        const out = await runGoldenPack();
+        process.stdout.write(JSON.stringify(out) + "\n");
+        process.exitCode = 0;
+        return;
+      } catch (e: any) {
+        process.stdout.write(
+          JSON.stringify(
+            {
+              kind: "Error",
+              code: "GOVERNANCE_GOLDEN_PACK_FAILED",
+              message: typeof e?.message === "string" ? e.message : "Golden pack failed",
+            },
+            null,
+            2
+          ) + "\n"
+        );
+        process.exitCode = 2;
+        return;
+      }
+    }
+
+    process.stdout.write(
+      JSON.stringify(
+        {
+          kind: "Usage",
+          usage: ["/governance freeze [execution_id]", "/governance verify", "/governance golden-pack"],
+        },
+        null,
+        2
+      ) + "\n"
+    );
+    process.exitCode = 2;
+    return;
+  }
+
   const normalizedCommand = /^\/template\b/i.test(rawTrimmed) ? rawTrimmed : normalizeCommand(rawCommand);
   if (process.env.CLI_DSL_DEBUG === "1" && normalizedCommand !== rawCommand) {
     console.warn(`[CLI-DSL] ${rawCommand} → ${normalizedCommand}`);
@@ -576,6 +685,65 @@ async function run() {
   const domain_id = domainPrefix?.domain_id ?? null;
   const original_command = domainPrefix?.original_command ?? normalizedCommand;
   const command = domainPrefix?.inner_command ?? normalizedCommand;
+
+  // Tier-16 (Confidence Regression): deterministic confidence ledger + regression detector.
+  // Usage: /confidence record <fingerprint> <confidence>
+  if (/^\/confidence\s+record\b/i.test(command.trim())) {
+    const parts = command.trim().split(/\s+/);
+    const fingerprint = String(parts[2] ?? "").trim();
+    const cRaw = parts[3];
+    if (!fingerprint || cRaw == null) {
+      process.stdout.write(
+        JSON.stringify({ kind: "PolicyDenied", code: "MISSING_ARGS", reason: "need <fingerprint> <confidence>" }, null, 2) + "\n"
+      );
+      process.exitCode = 3;
+      return;
+    }
+
+    const confidence = Number(cRaw);
+    if (!Number.isFinite(confidence) || confidence < 0 || confidence > 1) {
+      process.stdout.write(
+        JSON.stringify({ kind: "PolicyDenied", code: "BAD_CONFIDENCE", reason: "confidence must be 0..1" }, null, 2) + "\n"
+      );
+      process.exitCode = 3;
+      return;
+    }
+
+    const runsDir = process.env.RUNS_DIR || "runs";
+    const execution_id = deterministicExecutionId("confidence", fingerprint);
+
+    const { latest, event, latestPath, eventPath } = recordConfidence(runsDir, execution_id, fingerprint, confidence, {
+      epsilon: 0.01,
+    });
+
+    let suspended_state_path: string | null = null;
+    if (event.regression) {
+      await suspendFingerprint(fingerprint, "CONFIDENCE_REGRESSION", {
+        delta: event.delta_from_last,
+        execution_id,
+      });
+      suspended_state_path = `runs/requalification/state/${fingerprint}.json`;
+    }
+
+    process.stdout.write(
+      JSON.stringify(
+        {
+          kind: "ConfidenceRecorded",
+          fingerprint,
+          confidence,
+          regression: event.regression,
+          monotonic_ok: latest.monotonic_ok,
+          latest_path: latestPath.replace(/\\/g, "/"),
+          event_path: eventPath.replace(/\\/g, "/"),
+          suspended_state_path,
+        },
+        null,
+        2
+      ) + "\n"
+    );
+    process.exitCode = 0;
+    return;
+  }
 
   // Tier-S11: deterministic, local test hook for speech confidence gradient.
   // Usage: /speak confidence <0..1|0..100> <message...>
@@ -697,8 +865,9 @@ async function run() {
   const priorReceiptByFingerprint = readLastReceiptForFingerprint(fingerprint);
 
   // Tier-16: confidence-based autonomy downgrade (persistent, never auto-recovers).
-  const confidenceSnap = readConfidence(fingerprint);
-  const autonomy_mode_effective_confidence = applyConfidenceDowngrade(autonomy_mode, confidenceSnap.confidence);
+  const runsDir = process.env.RUNS_DIR || "runs";
+  const effectiveConfidence = getEffectiveConfidence(runsDir, fingerprint);
+  const autonomy_mode_effective_confidence = applyConfidenceDowngrade(autonomy_mode, effectiveConfidence.decayed_confidence);
   if (autonomy_mode_effective_confidence !== autonomy_mode) {
     process.env.AUTONOMY_MODE = autonomy_mode_effective_confidence;
   }
@@ -816,10 +985,13 @@ async function run() {
       const at = fixedNowIso();
       const scan = requalifyScan({ now_iso: at });
 
+      const scanTs = new Date(at).getTime();
+      const scanIdTs = Number.isFinite(scanTs) ? scanTs : Date.now();
+
       // Persist a scan receipt (and a recommendation receipt for each newly eligible fingerprint).
       await persistRun({
         kind: "RequalificationScan",
-        execution_id: `requal_scan_${Date.now()}`,
+        execution_id: `requal_scan_${scanIdTs}`,
         threadId,
         goal: "Requalification scan",
         dry_run: true,
@@ -832,10 +1004,11 @@ async function run() {
         steps: [],
       } as any);
 
-      for (const fp of scan.recommended) {
+      for (const [idx, fp] of scan.recommended.entries()) {
+        const recIdTs = scanIdTs + 1 + idx;
         await persistRun({
           kind: "RequalificationRecommended",
-          execution_id: `requal_recommended_${safeFileIdPart(fp)}_${Date.now()}`,
+          execution_id: `requal_recommended_${safeFileIdPart(fp)}_${recIdTs}`,
           threadId,
           goal: `Requalification recommended: ${fp}`,
           dry_run: true,
@@ -854,6 +1027,7 @@ async function run() {
         kind: scan.kind,
         evaluated: scan.evaluated,
         eligible: scan.eligible,
+        recommended: scan.recommended,
         still_suspended: scan.still_suspended,
       }, null, 2));
       process.exit(0);
@@ -865,7 +1039,34 @@ async function run() {
     const trimmed = command.trim();
     const m = trimmed.match(/^\/autonomy\s+requalify\s+activate\s+(\S+)\s*$/i);
     if (m?.[1]) {
-      // Tier-∞.1.1 — Governor-aware activation pacing
+      const targetFingerprint = String(m[1]).trim();
+      if (!targetFingerprint) {
+        console.log(JSON.stringify({ kind: "PolicyDenied", code: "MISSING_FINGERPRINT", reason: "Missing fingerprint" }, null, 2));
+        process.exit(3);
+      }
+
+      if (!isRequalificationEnabled()) {
+        console.log(JSON.stringify({
+          kind: "PolicyDenied",
+          code: "REQUALIFICATION_DISABLED",
+          reason: "Requalification is disabled",
+          fingerprint: targetFingerprint,
+        }, null, 2));
+        process.exit(3);
+      }
+
+      const current = readRequalificationState(targetFingerprint);
+      if (!current) {
+        console.log(JSON.stringify({
+          kind: "PolicyDenied",
+          code: "UNKNOWN_FINGERPRINT",
+          reason: "Unknown fingerprint",
+          fingerprint: targetFingerprint,
+        }, null, 2));
+        process.exit(3);
+      }
+
+      // Governor gate (Tier-∞ pacing) — activation may be blocked.
       {
         const now_iso = fixedNowIso();
         const g = checkGovernor({
@@ -873,112 +1074,155 @@ async function run() {
           autonomy_mode: "READ_ONLY_AUTONOMY",
           now_iso,
         });
-
         if (g.decision !== "ALLOW") {
           const started_at = now_iso;
           const finished_at = now_iso;
 
-          await persistRun({
-            kind: "Throttled",
-            execution_id: `throttled_${safeFileIdPart(g.fingerprint)}_${Date.now()}`,
-            threadId,
-            goal: `Throttled activation: ${trimmed}`,
-            dry_run: true,
-            started_at,
-            finished_at,
-            status: "throttled",
-            fingerprint: g.fingerprint,
-            autonomy_mode,
-            autonomy_mode_effective: g.autonomy_mode_effective,
-            throttle_reason: g.reason,
-            retry_after: g.retry_after,
-            error: g.reason,
-            scope: "activation",
-            policy_denied: g.reason ? { code: g.reason, reason: g.reason } : null,
-            steps: [],
-          } as any);
+          try {
+            await persistRun({
+              kind: "Throttled",
+              execution_id: `throttled_${safeFileIdPart(g.fingerprint)}_${Date.now()}`,
+              threadId,
+              goal: `Throttled: ${command}`,
+              dry_run: true,
+              started_at,
+              finished_at,
+              status: "throttled",
+              fingerprint: g.fingerprint,
+              autonomy_mode,
+              autonomy_mode_effective: g.autonomy_mode_effective,
+              throttle_reason: g.reason,
+              retry_after: g.retry_after,
+              error: g.reason,
+              policy_denied: g.reason ? { code: g.reason, reason: g.reason } : null,
+              steps: [],
+            } as any);
+          } catch {
+            // ignore; governor throttles must not be blocked by receipt persistence
+          }
 
-          console.log(
-            JSON.stringify(
-              {
-                kind: "Throttled",
-                scope: "activation",
-                reason: g.reason,
-                retry_after: g.retry_after,
-              },
-              null,
-              2
-            )
-          );
+          console.log(JSON.stringify({
+            kind: "Throttled",
+            scope: "activation",
+            reason: g.reason,
+            retry_after: g.retry_after,
+            fingerprint: targetFingerprint,
+          }, null, 2));
           process.exit(3);
         }
       }
 
-      const targetFingerprint = String(m[1]).trim();
-      if (!targetFingerprint) {
-        console.log(JSON.stringify({ kind: "NeedInput", fields: ["fingerprint"] }, null, 2));
-        process.exit(2);
+      // ACTIVE → ACTIVE is a no-op (idempotent) and should not emit a second activation.
+      if (current.state === "ACTIVE") {
+        console.log(JSON.stringify({
+          kind: "RequalificationActivated",
+          fingerprint: targetFingerprint,
+          state: "ACTIVE",
+          already_active: true,
+        }, null, 2));
+        process.exit(0);
       }
 
-      if (!isRequalificationEnabled()) {
-        console.log(
-          JSON.stringify(
-            {
-              kind: "ActivationDenied",
-              fingerprint: targetFingerprint,
-              reason: "REQUALIFICATION_DISABLED",
-            },
-            null,
-            2
-          )
-        );
+      if (current.state !== "ELIGIBLE") {
+        console.log(JSON.stringify({
+          kind: "PolicyDenied",
+          code: "REQUIRES_ELIGIBLE_STATE",
+          reason: "Activation requires ELIGIBLE state",
+          fingerprint: targetFingerprint,
+          current_state: current.state,
+        }, null, 2));
         process.exit(3);
       }
 
-      const current = readRequalificationState(targetFingerprint);
-      if (!current || current.state !== "ELIGIBLE") {
-        console.log(
-          JSON.stringify(
-            {
-              kind: "ActivationDenied",
-              fingerprint: targetFingerprint,
-              reason: "NOT_ELIGIBLE",
-            },
-            null,
-            2
-          )
-        );
-        process.exit(3);
+      // Tier-23 + Tier-22.3: activation requires sufficiently high effective confidence.
+      {
+        const runsDir = process.env.RUNS_DIR || "runs";
+        const eff = getEffectiveConfidence(runsDir, targetFingerprint);
+        const min = Number(process.env.AUTONOMY_ACTIVATE_MIN_CONFIDENCE || "0.80");
+        if (Number.isFinite(min) && eff.decayed_confidence < min) {
+          console.log(JSON.stringify({
+            kind: "PolicyDenied",
+            code: "ACTIVATION_CONFIDENCE_TOO_LOW",
+            reason: "Activation requires sufficient confidence",
+            fingerprint: targetFingerprint,
+            required_min_confidence: min,
+            decayed_confidence: eff.decayed_confidence,
+            raw_confidence: eff.raw_confidence,
+            updated_at: eff.updated_at,
+          }, null, 2));
+          process.exit(3);
+        }
       }
 
+      const runsDir = process.env.RUNS_DIR || "runs";
       const activated_at = fixedNowIso();
+
       writeRequalificationState({
+        ...current,
         fingerprint: targetFingerprint,
         state: "ACTIVE",
-        cause: "OPERATOR_ACTIVATION",
-        since: current.since || activated_at,
+        cause: "OPERATOR_ACTIVATED",
+        since: activated_at,
         cooldown_until: null,
         activated_at,
       });
-      writeRequalificationEvent({
-        fingerprint: targetFingerprint,
-        at_iso: activated_at,
-        event: "OPERATOR_ACTIVATED",
-        details: { from: "ELIGIBLE", to: "ACTIVE" },
-      });
 
-      console.log(
-        JSON.stringify(
-          {
-            kind: "ActivationApproved",
-            fingerprint: targetFingerprint,
-            state: "ACTIVE",
-            activated_at,
-          },
-          null,
-          2
-        )
-      );
+      try {
+        resetProbationCounters(runsDir, targetFingerprint);
+      } catch {
+        // ignore; activation must be best-effort and auditable
+      }
+
+      // Touch confidence on activation to reset the decay clock without losing history.
+      try {
+        touchConfidence({ fingerprint: targetFingerprint });
+      } catch {
+        // ignore
+      }
+
+      let activationEventPath: string | null = null;
+      try {
+        activationEventPath = writeRequalificationActivationEvent(runsDir, {
+          kind: "RequalificationActivated",
+          fingerprint: targetFingerprint,
+          activated_by: "operator",
+          previous_state: "ELIGIBLE",
+          new_state: "ACTIVE",
+          timestamp: activated_at,
+          counters_reset: true,
+        });
+      } catch {
+        activationEventPath = null;
+      }
+
+      // Receipt: always emit a requalification activation run.
+      try {
+        await persistRun({
+          kind: "RequalificationActivated",
+          execution_id: `requal_activate_${safeFileIdPart(targetFingerprint)}_${Date.now()}`,
+          threadId,
+          goal: `Requalification activated: ${targetFingerprint}`,
+          dry_run: true,
+          started_at: activated_at,
+          finished_at: activated_at,
+          status: "success",
+          fingerprint: targetFingerprint,
+          autonomy_mode,
+          autonomy_mode_effective: autonomy_mode,
+          steps: [],
+          activation_event: activationEventPath,
+        } as any);
+      } catch {
+        // ignore; receipts must not block activation
+      }
+
+      console.log(JSON.stringify({
+        kind: "RequalificationActivated",
+        fingerprint: targetFingerprint,
+        state: "ACTIVE",
+        activated_at,
+        activation_event: activationEventPath,
+      }, null, 2));
       process.exit(0);
     }
   }
@@ -1141,52 +1385,46 @@ async function run() {
     if (!bypass && isRequalificationEnabled()) {
       const current = readRequalificationState(fingerprint);
       if (current?.state === "ACTIVE") {
-        const now_iso = fixedNowIso();
-        const check = shouldDecayConfidence({ fingerprint, now_iso });
+        const now_iso = sintraNowIso();
+        const runsDir = process.env.RUNS_DIR || "runs";
+        const enforcement = enforceConfidenceDecay(runsDir, fingerprint);
 
-        if (check.decay) {
-          const next = {
-            ...current,
-            state: "PROBATION" as const,
-            cause: "CONFIDENCE_DECAY",
-            since: now_iso,
-            cooldown_until: null,
-            decayed_at: now_iso,
-          };
-          writeRequalificationState(next);
-          writeRequalificationEvent({
-            fingerprint,
-            at_iso: now_iso,
-            event: "CONFIDENCE_DECAY_ACTIVE_TO_PROBATION",
-            details: {
-              from: "ACTIVE",
-              to: "PROBATION",
-              reason: check.reason,
-              successes_in_window: check.successes_in_window,
-              required_successes: check.required_successes,
-              horizon_hours: check.horizon_hours,
-            },
-          });
-
-          writeConfidenceDecayEvent({
-            fingerprint,
-            from: "ACTIVE",
-            to: "PROBATION",
-            reason: check.reason,
-            timestamp: now_iso,
-          });
+        if (enforcement.changed) {
+          // Record an audit event in the existing requalification stream as well.
+          // (The confidence decay artifact itself is written by enforceConfidenceDecay.)
+          try {
+            writeRequalificationEvent({
+              fingerprint,
+              at_iso: now_iso,
+              event: "CONFIDENCE_DECAY_ACTIVE_TO_PROBATION",
+              details: {
+                from: "ACTIVE",
+                to: "PROBATION",
+                raw_confidence: enforcement.raw_confidence,
+                decayed_confidence: enforcement.decayed_confidence,
+                min_required: Number(process.env.AUTONOMY_MIN_CONFIDENCE || "0.60"),
+                updated_at: enforcement.updated_at,
+                age_ms: enforcement.age_ms,
+              },
+            });
+          } catch {
+            // ignore
+          }
 
           const receipt = {
             kind: "ConfidenceDecayed" as const,
             fingerprint,
             from: "ACTIVE" as const,
             to: "PROBATION" as const,
-            reason: check.reason,
+            raw_confidence: enforcement.raw_confidence,
+            decayed_confidence: enforcement.decayed_confidence,
+            min_required: Number(process.env.AUTONOMY_MIN_CONFIDENCE || "0.60"),
+            updated_at: enforcement.updated_at,
           };
 
           await persistRun({
             kind: "ConfidenceDecayed",
-            execution_id: `confidence_decayed_${safeFileIdPart(fingerprint)}_${Date.now()}`,
+            execution_id: `confidence_decayed_${safeFileIdPart(fingerprint)}_${sintraNowMs()}`,
             threadId,
             goal: `Confidence decayed: ${fingerprint} ACTIVE→PROBATION`,
             dry_run: true,
@@ -1548,12 +1786,13 @@ async function run() {
         plan_hash,
       };
 
+      const policyExplain: PolicyExplainTrace = createExplainTrace();
       const policy = checkPolicyWithMeta(execPlan, process.env, new Date(), {
         execution_id: String(execPlan.execution_id),
         approved_execution_id: String(execPlan.execution_id),
         command: metaCommand,
         domain_id: approvalDomainId ?? undefined,
-      });
+      }, { explain: policyExplain });
       if ((policy as any).requireApproval) {
         throw new Error("Approval unexpectedly still required after /approve");
       }
@@ -1588,14 +1827,16 @@ async function run() {
 
       await persistRun(runLog as any);
 
-      // Tier-22.2: count successful runs while in PROBATION and recommend ELIGIBLE when threshold met.
-      if (runLog.status === "success") {
+      // Tier-22.1: probation success counters update on every evaluation (success or failure).
+      {
         const planSteps = Array.isArray((execPlan as any)?.phases)
           ? (execPlan as any).phases.flatMap((p: any) => (Array.isArray(p?.steps) ? p.steps : []))
           : (Array.isArray((execPlan as any)?.steps) ? (execPlan as any).steps : []);
         await maybeRecordProbationSuccessAndRecommend({
           fingerprint,
           now_iso: fixedNowIso(),
+          confidence: getEffectiveConfidence(process.env.RUNS_DIR || "runs", fingerprint).decayed_confidence,
+          explain_pass: isExplainPass(policyExplain),
           threadId,
           autonomy_mode,
           autonomy_mode_effective: (runLog as any).autonomy_mode_effective ?? autonomy_mode,
@@ -1739,6 +1980,8 @@ async function run() {
     }
 
     if (phases && phasesPlanned.length) {
+      const isAutonomyRunCommand = /^\/autonomy\s+run\b/i.test(command.trim());
+      const policyExplain: PolicyExplainTrace = createExplainTrace();
       const totalStepsPlanned = phases.reduce((acc: number, p: any) => acc + (Array.isArray(p?.steps) ? p.steps.length : 0), 0);
 
       let resumeIndex = 0;
@@ -1772,7 +2015,7 @@ async function run() {
           approved_execution_id: String(plan.execution_id),
           command: metaCommand,
           domain_id: approvalDomainId ?? undefined,
-        });
+        } as any, { explain: policyExplain });
 
         if ((policy as any).requireApproval) {
           throw new Error("Approval unexpectedly still required after /approve");
@@ -1824,6 +2067,7 @@ async function run() {
             phases_executed: phasesExecuted,
             artifacts,
           };
+          if (isAutonomyRunCommand) (failed as any).kind = "AutonomyRun";
           (failed as any).receipt_hash = computeReceiptHashForLog(failed);
           await persistRun(failed as any);
           console.log(JSON.stringify(failed, null, 2));
@@ -1858,6 +2102,7 @@ async function run() {
         phases_executed: phasesExecuted,
         artifacts,
       };
+      if (isAutonomyRunCommand) (overall as any).kind = "AutonomyRun";
       (overall as any).fingerprint = fingerprint;
       (overall as any).autonomy_mode = autonomy_mode;
       (overall as any).autonomy_mode_effective = autonomy_mode;
@@ -1905,6 +2150,27 @@ async function run() {
       }
 
       await persistRun(overall as any);
+
+      // Tier-22.1: probation success counters update on every evaluation (success or failure).
+      {
+        const planSteps = Array.isArray((plan as any)?.phases)
+          ? (plan as any).phases.flatMap((p: any) => (Array.isArray(p?.steps) ? p.steps : []))
+          : (Array.isArray((plan as any)?.steps) ? (plan as any).steps : []);
+        await maybeRecordProbationSuccessAndRecommend({
+          fingerprint,
+          now_iso: fixedNowIso(),
+          confidence: readConfidence(fingerprint).confidence,
+          explain_pass: isExplainPass(policyExplain),
+          threadId,
+          autonomy_mode,
+          autonomy_mode_effective: (overall as any).autonomy_mode_effective ?? autonomy_mode,
+          run_status: String(overall.status),
+          policy_denied: Boolean((overall as any).policy_denied),
+          throttled: String(overall.status) === "throttled",
+          approval_required: Boolean((overall as any).approval_required),
+          steps: planSteps,
+        });
+      }
       console.log(JSON.stringify(overall, null, 2));
       return;
     }
@@ -1917,12 +2183,13 @@ async function run() {
         }
       }
     }
+    const policyExplain: PolicyExplainTrace = createExplainTrace();
     const policy = checkPolicyWithMeta(plan, process.env, new Date(), {
       execution_id: String(plan.execution_id),
       approved_execution_id: String(plan.execution_id),
       command: metaCommand,
       domain_id: approvalDomainId ?? undefined,
-    });
+    }, { explain: policyExplain });
     if ((policy as any).requireApproval) {
       throw new Error("Approval unexpectedly still required after /approve");
     }
@@ -2008,14 +2275,16 @@ async function run() {
 
     await persistRun(runLog as any);
 
-    // Tier-22.2: count successful runs while in PROBATION and recommend ELIGIBLE when threshold met.
-    if (runLog.status === "success") {
+    // Tier-22.1: probation success counters update on every evaluation (success or failure).
+    {
       const planSteps = Array.isArray((plan as any)?.phases)
         ? (plan as any).phases.flatMap((p: any) => (Array.isArray(p?.steps) ? p.steps : []))
         : (Array.isArray((plan as any)?.steps) ? (plan as any).steps : []);
       await maybeRecordProbationSuccessAndRecommend({
         fingerprint,
         now_iso: fixedNowIso(),
+        confidence: readConfidence(fingerprint).confidence,
+        explain_pass: isExplainPass(policyExplain),
         threadId,
         autonomy_mode,
         autonomy_mode_effective: (runLog as any).autonomy_mode_effective ?? autonomy_mode,
@@ -2405,6 +2674,9 @@ async function run() {
 
     const overallStarted = nowIso();
 
+    const isAutonomyRunCommand = /^\/autonomy\s+run\b/i.test(command.trim());
+    const policyExplain: PolicyExplainTrace = createExplainTrace();
+
     for (const phase of phases) {
       const phaseId = String(phase.phase_id);
 
@@ -2487,7 +2759,7 @@ async function run() {
         execution_id: plannerOut.execution_id,
         command,
         domain_id: domain_id ?? undefined,
-      });
+      } as any, { explain: policyExplain });
 
       if ((policy as any).requireApproval) {
         const approval = (policy as any).approval;
@@ -2719,7 +2991,7 @@ async function run() {
         if (!("denied" in policy)) {
           throw new Error("Policy not allowed but no denial details");
         }
-        const denied = policy.denied;
+        const denied = policy.denied as any;
         const now = nowIso();
         await persistRun({
           execution_id: plannerOut.execution_id,
@@ -2766,6 +3038,7 @@ async function run() {
           phases_executed: phasesExecuted,
           artifacts,
         };
+        if (isAutonomyRunCommand) (failed as any).kind = "AutonomyRun";
         (failed as any).receipt_hash = computeReceiptHashForLog(failed);
 
         await persistRun(failed as any);
@@ -2800,6 +3073,7 @@ async function run() {
       phases_executed: phasesExecuted,
       artifacts,
     };
+    if (isAutonomyRunCommand) (overall as any).kind = "AutonomyRun";
     (overall as any).fingerprint = fingerprint;
     (overall as any).autonomy_mode = autonomy_mode;
     (overall as any).autonomy_mode_effective = autonomy_mode;
@@ -2871,14 +3145,16 @@ async function run() {
 
     await persistRun(overall as any);
 
-    // Tier-22.2: count successful runs while in PROBATION and recommend ELIGIBLE when threshold met.
-    if (overall.status === "success") {
+    // Tier-22.1: probation success counters update on every evaluation (success or failure).
+    {
       const planSteps = Array.isArray((plannerOut as any)?.phases)
         ? (plannerOut as any).phases.flatMap((p: any) => (Array.isArray(p?.steps) ? p.steps : []))
         : (Array.isArray((plannerOut as any)?.steps) ? (plannerOut as any).steps : []);
       await maybeRecordProbationSuccessAndRecommend({
         fingerprint,
         now_iso: fixedNowIso(),
+        confidence: readConfidence(fingerprint).confidence,
+        explain_pass: isExplainPass(policyExplain),
         threadId,
         autonomy_mode,
         autonomy_mode_effective: (overall as any).autonomy_mode_effective ?? autonomy_mode,
@@ -3042,11 +3318,12 @@ async function run() {
   // Tier-20: safety backpressure; write suspension artifacts before gating/exec.
   autoSuspendDelegationsForCommand(command);
 
+  const policyExplain: PolicyExplainTrace = createExplainTrace();
   const policy = checkPolicyWithMeta(plannerOut, process.env, new Date(), {
     execution_id: plannerOut.execution_id,
     command,
     domain_id: domain_id ?? undefined,
-  });
+  }, { explain: policyExplain });
 
   if ((policy as any).requireApproval) {
     const delegation = (policy as any).delegation ?? null;
@@ -3263,7 +3540,7 @@ async function run() {
     if (!("denied" in policy)) {
       throw new Error("Policy not allowed but no denial details");
     }
-    const denied = policy.denied;
+    const denied = policy.denied as any;
     const now = new Date().toISOString();
 
     // Tier-16: policy denials decay confidence, with threshold enforcement.
@@ -3400,6 +3677,10 @@ async function run() {
 
   const runLog = await executePlan(plannerOut);
 
+  if (/^\/autonomy\s+run\b/i.test(command.trim())) {
+    (runLog as any).kind = "AutonomyRun";
+  }
+
   (runLog as any).executed = runLog.status === "success";
   (runLog as any).approval_required = false;
   (runLog as any).promotion_fingerprint = (policy as any).promotion_fingerprint ?? null;
@@ -3496,14 +3777,16 @@ async function run() {
 
   await persistRun(runLog);
 
-  // Tier-22.2: count successful runs while in PROBATION and recommend ELIGIBLE when threshold met.
-  if (runLog.status === "success") {
+  // Tier-22.1: probation success counters update on every evaluation (success or failure).
+  {
     const planSteps = Array.isArray((plannerOut as any)?.phases)
       ? (plannerOut as any).phases.flatMap((p: any) => (Array.isArray(p?.steps) ? p.steps : []))
       : (Array.isArray((plannerOut as any)?.steps) ? (plannerOut as any).steps : []);
     await maybeRecordProbationSuccessAndRecommend({
       fingerprint,
       now_iso: fixedNowIso(),
+      confidence: readConfidence(fingerprint).confidence,
+      explain_pass: isExplainPass(policyExplain),
       threadId,
       autonomy_mode,
       autonomy_mode_effective: (runLog as any).autonomy_mode_effective ?? autonomy_mode,

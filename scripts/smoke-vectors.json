@@ -1,39 +1,582 @@
 [
   {
-    "name": "build-validation-dry",
-    "stage": "planner",
-    "command": "/build validation-agent {\"dry_run\":true}",
-    "expect": { "kind": "ExecutionPlan" }
+    "name": "tier24-2-court-export-happy",
+    "stage": "cli",
+    "env": {
+      "SMOKE_FIXED_NOW_ISO": "2025-12-25T00:00:00Z",
+      "NOTION_RUNS_WEBHOOK": null,
+      "PERSIST_LOCAL_RECEIPTS": "1"
+    },
+    "fixture_write": [
+      {
+        "path": "runs/governance/latest.json",
+        "json": {
+          "kind": "GovernanceSnapshot",
+          "registry_version": "fixture",
+          "capability": "fixture",
+          "confidence": 1,
+          "timestamp": "2025-12-25T00:00:00Z",
+          "note": "fixture"
+        }
+      },
+      {
+        "path": "runs/policy-explain/latest.json",
+        "json": {
+          "kind": "PolicyExplainLatest",
+          "generated_at": "2025-12-25T00:00:00Z",
+          "note": "fixture"
+        }
+      },
+      {
+        "path": "runs/policy-sim/latest.json",
+        "json": {
+          "kind": "PolicySimLatest",
+          "generated_at": "2025-12-25T00:00:00Z",
+          "note": "fixture"
+        }
+      },
+      {
+        "path": "runs/confidence/latest.json",
+        "json": {
+          "kind": "ConfidenceLatest",
+          "fingerprint": "fixture",
+          "last_confidence": 1,
+          "last_updated_at": "2025-12-25T00:00:00Z",
+          "monotonic_ok": true,
+          "regressions": 0,
+          "last_regression_at": null,
+          "last_regression_delta": null
+        }
+      }
+    ],
+    "command": "/operator court-export --capability notion.write.page_property --as-of latest --format pdf --seal",
+    "expect_exit_code": 0,
+    "expect": {
+      "kind": "CourtExport",
+      "ok": true,
+      "export_id": "court_export_2025-12-25T00-00-00Z"
+    },
+    "expect_file_exists": "runs/court-export/court_export_2025-12-25T00-00-00Z/MANIFEST.json",
+    "post_assert": {
+      "receipt_subset": {
+        "execution_id": "court_export_2025-12-25T00-00-00Z",
+        "status": "success",
+        "kind": "CourtExportReceipt"
+      }
+    }
+  },
+  {
+    "name": "tier24-2-court-export-deny-missing-latest",
+    "stage": "cli",
+    "env": {
+      "SMOKE_FIXED_NOW_ISO": "2025-12-25T00:10:00Z",
+      "NOTION_RUNS_WEBHOOK": null,
+      "PERSIST_LOCAL_RECEIPTS": "1"
+    },
+    "fixture_write": [
+      {
+        "path": "runs/policy-explain/latest.json",
+        "json": {
+          "kind": "PolicyExplainLatest",
+          "generated_at": "2025-12-25T00:10:00Z",
+          "note": "fixture"
+        }
+      }
+    ],
+    "command": "/operator court-export --capability notion.write.page_property --as-of latest --format pdf --seal",
+    "expect_exit_code": 3,
+    "expect": {
+      "kind": "PolicyDenied",
+      "code": "COURT_EXPORT_MISSING_LATEST",
+      "export_id": "court_export_2025-12-25T00-10-00Z"
+    },
+    "expect_file_exists": "runs/court-export/court_export_2025-12-25T00-10-00Z/DENIAL.json",
+    "post_assert": {
+      "receipt_subset": {
+        "execution_id": "court_export_2025-12-25T00-10-00Z",
+        "status": "denied",
+        "kind": "CourtExportReceipt"
+      }
+    }
+  },
+  {
+    "name": "tier16-confidence-monotonic-ok",
+    "stage": "cli",
+    "env": {
+      "SMOKE_FIXED_NOW_ISO": "2025-12-25T01:00:00Z",
+      "REQUALIFICATION_ENABLED": "1"
+    },
+    "command": "/confidence record notion.write.page_property 0.70",
+    "expect_exit_code": 0,
+    "expect": {
+      "kind": "ConfidenceRecorded",
+      "fingerprint": "notion.write.page_property",
+      "regression": false,
+      "monotonic_ok": true
+    },
+    "post_assert": {
+      "artifact_dir": "runs/confidence",
+      "contains_subset": {
+        "kind": "ConfidenceLatest",
+        "fingerprint": "notion.write.page_property",
+        "monotonic_ok": true
+      }
+    }
+  },
+  {
+    "name": "tier16-confidence-regression-suspends",
+    "stage": "cli",
+    "env": {
+      "SMOKE_FIXED_NOW_ISO": "2025-12-25T01:10:00Z",
+      "REQUALIFICATION_ENABLED": "1"
+    },
+    "fixture_write": [
+      {
+        "path": "runs/confidence/latest.json",
+        "json": {
+          "kind": "ConfidenceLatest",
+          "fingerprint": "notion.write.page_property",
+          "last_confidence": 0.9,
+          "last_updated_at": "2025-12-25T01:09:00Z",
+          "monotonic_ok": true,
+          "regressions": 0,
+          "last_regression_at": null,
+          "last_regression_delta": null
+        }
+      }
+    ],
+    "command": "/confidence record notion.write.page_property 0.75",
+    "expect_exit_code": 0,
+    "expect": {
+      "kind": "ConfidenceRecorded",
+      "fingerprint": "notion.write.page_property",
+      "regression": true,
+      "monotonic_ok": false
+    },
+    "post_assert": {
+      "artifact_dir": "runs/requalification/state",
+      "contains_subset": {
+        "fingerprint": "notion.write.page_property",
+        "state": "SUSPENDED",
+        "cause": "CONFIDENCE_REGRESSION"
+      }
+    }
+  },
+  {
+    "name": "tier22_3-activate-eligible",
+    "stage": "cli",
+    "env": {
+      "REQUALIFICATION_ENABLED": "1",
+      "SMOKE_FIXED_NOW_ISO": "2025-01-01T12:00:00Z"
+    },
+    "fixture_write": [
+      {
+        "path": "runs/requalification/state/notion.write.page.json",
+        "json": {
+          "fingerprint": "notion.write.page",
+          "state": "ELIGIBLE",
+          "cause": "PROBATION_SUCCESS",
+          "since": "2025-12-25T00:00:00Z"
+        }
+      }
+    ],
+    "cmd": "/autonomy requalify activate notion.write.page",
+    "expect_exit_code": 0,
+    "expect_subset_json": {
+      "kind": "RequalificationActivated",
+      "fingerprint": "notion.write.page",
+      "state": "ACTIVE"
+    },
+    "expect_file_exists": "runs/requalification/events/notion.write.page.activate.1735732800000.json",
+    "post_assert": {
+      "artifact_dir": "runs/requalification/state",
+      "contains_keys": ["state"],
+      "contains_subset": { "fingerprint": "notion.write.page", "state": "ACTIVE" }
+    }
+  },
+  {
+    "name": "tier22_3-deny-non-eligible",
+    "stage": "cli",
+    "env": {
+      "REQUALIFICATION_ENABLED": "1",
+      "SMOKE_FIXED_NOW_ISO": "2025-01-01T12:00:00Z"
+    },
+    "fixture_write": [
+      {
+        "path": "runs/requalification/state/notion.write.page.json",
+        "json": {
+          "fingerprint": "notion.write.page",
+          "state": "PROBATION",
+          "cause": "POLICY_DENIAL",
+          "since": "2025-12-25T00:00:00Z"
+        }
+      }
+    ],
+    "cmd": "/autonomy requalify activate notion.write.page",
+    "expect_exit_code": 3,
+    "expect_subset_json": {
+      "kind": "PolicyDenied",
+      "code": "REQUIRES_ELIGIBLE_STATE"
+    }
+  },
+  {
+    "name": "tier23_22_3-activation-deny-low-confidence",
+    "stage": "cli",
+    "env": {
+      "RUNS_DIR": "runs",
+      "REQUALIFICATION_ENABLED": "1",
+      "SMOKE_FIXED_NOW_ISO": "2025-01-01T12:00:00Z",
+      "SINTRA_NOW_ISO": "2025-01-01T12:00:00Z",
+      "AUTONOMY_ACTIVATE_MIN_CONFIDENCE": "0.80",
+      "CONFIDENCE_HALF_LIFE_HOURS": "72",
+      "CONFIDENCE_MIN": "0"
+    },
+    "fixture_write": [
+      {
+        "path": "runs/requalification/state/notion.write.page.json",
+        "json": {
+          "fingerprint": "notion.write.page",
+          "state": "ELIGIBLE",
+          "cause": "PROBATION_SUCCESS",
+          "since": "2025-12-25T00:00:00Z"
+        }
+      },
+      {
+        "path": "runs/confidence/notion.write.page.json",
+        "json": {
+          "fingerprint": "notion.write.page",
+          "raw_confidence": 0.79,
+          "updated_at": "2025-01-01T12:00:00Z"
+        }
+      }
+    ],
+    "cmd": "/autonomy requalify activate notion.write.page",
+    "expect_exit_code": 3,
+    "expect_subset_json": {
+      "kind": "PolicyDenied",
+      "code": "ACTIVATION_CONFIDENCE_TOO_LOW",
+      "fingerprint": "notion.write.page",
+      "required_min_confidence": 0.8
+    }
+  },
+  {
+    "name": "tier23_22_3-activation-touches-confidence",
+    "stage": "cli",
+    "env": {
+      "RUNS_DIR": "runs",
+      "REQUALIFICATION_ENABLED": "1",
+      "SMOKE_FIXED_NOW_ISO": "2025-01-01T12:00:00Z",
+      "SINTRA_NOW_ISO": "2025-01-01T12:00:00Z",
+      "AUTONOMY_ACTIVATE_MIN_CONFIDENCE": "0.80",
+      "CONFIDENCE_HALF_LIFE_HOURS": "72",
+      "CONFIDENCE_MIN": "0"
+    },
+    "fixture_write": [
+      {
+        "path": "runs/requalification/state/notion.write.page.json",
+        "json": {
+          "fingerprint": "notion.write.page",
+          "state": "ELIGIBLE",
+          "cause": "PROBATION_SUCCESS",
+          "since": "2025-12-25T00:00:00Z"
+        }
+      },
+      {
+        "path": "runs/confidence/notion.write.page.json",
+        "json": {
+          "kind": "ConfidenceArtifact",
+          "fingerprint": "notion.write.page",
+          "confidence": 0.9,
+          "updated_at": "2025-01-01T00:00:00Z",
+          "signals": []
+        }
+      }
+    ],
+    "cmd": "/autonomy requalify activate notion.write.page",
+    "expect_exit_code": 0,
+    "expect_subset_json": {
+      "kind": "RequalificationActivated",
+      "fingerprint": "notion.write.page",
+      "state": "ACTIVE"
+    },
+    "post_assert": {
+      "artifact_dir": "runs/confidence",
+      "contains_keys": ["updated_at"],
+      "contains_subset": {
+        "fingerprint": "notion.write.page",
+        "updated_at": "2025-01-01T12:00:00Z"
+      }
+    }
+  },
+  {
+    "name": "tier23-decay-math-deterministic",
+    "stage": "cli",
+    "env": {
+      "RUNS_DIR": "runs",
+      "SINTRA_NOW_ISO": "2025-01-01T12:00:00Z",
+      "CONFIDENCE_HALF_LIFE_HOURS": "1",
+      "CONFIDENCE_MIN": "0"
+    },
+    "fixture_write": [
+      {
+        "path": "runs/confidence/notion.write.page.json",
+        "json": {
+          "fingerprint": "notion.write.page",
+          "raw_confidence": 1,
+          "updated_at": "2025-01-01T11:00:00Z"
+        }
+      }
+    ],
+    "command": "/operator confidence peek notion.write.page",
+    "expect_exit_code": 0,
+    "expect": {
+      "kind": "ConfidencePeek",
+      "fingerprint": "notion.write.page",
+      "raw_confidence": 1,
+      "decayed_confidence": 0.5,
+      "age_ms": 3600000,
+      "updated_at": "2025-01-01T11:00:00Z"
+    }
+  },
+  {
+    "name": "governance-golden-pack",
+    "stage": "cli",
+    "env": {
+      "SMOKE_FIXED_NOW_ISO": "2025-12-25T00:00:00Z"
+    },
+    "fixture_write": [
+      {
+        "path": "runs/governance/latest.json",
+        "json": {
+          "registry_version": "1",
+          "capability": "notion.write.page",
+          "confidence": 0.9,
+          "timestamp": "2025-12-25T00:00:00Z",
+          "note": "fixture"
+        }
+      }
+    ],
+    "cmd": "/governance golden-pack",
+    "expect_subset_json": {
+      "kind": "GovernanceGoldenPack",
+      "verified": true
+    }
+  },
+  {
+    "name": "tier23-low-confidence-triggers-downgrade",
+    "stage": "cli",
+    "env": {
+      "RUNS_DIR": "runs",
+      "REQUALIFICATION_ENABLED": "1",
+      "SINTRA_NOW_ISO": "2025-01-01T12:00:00Z",
+      "AUTONOMY_MIN_CONFIDENCE": "0.60",
+      "CONFIDENCE_HALF_LIFE_HOURS": "72",
+      "CONFIDENCE_MIN": "0"
+    },
+    "fixture_write": [
+      {
+        "path": "runs/requalification/state/916b8ac414809fd92c7b0ed199abf76d064487029c55321c6d3af39fa5b7fe60.json",
+        "json": {
+          "fingerprint": "916b8ac414809fd92c7b0ed199abf76d064487029c55321c6d3af39fa5b7fe60",
+          "state": "ACTIVE",
+          "cause": "OPERATOR_ACTIVATED",
+          "since": "2025-01-01T00:00:00Z"
+        }
+      },
+      {
+        "path": "runs/confidence/916b8ac414809fd92c7b0ed199abf76d064487029c55321c6d3af39fa5b7fe60.json",
+        "json": {
+          "fingerprint": "916b8ac414809fd92c7b0ed199abf76d064487029c55321c6d3af39fa5b7fe60",
+          "raw_confidence": 0.59,
+          "updated_at": "2025-01-01T12:00:00Z"
+        }
+      }
+    ],
+    "command": "/tier23 ping",
+    "expect_exit_code": 4,
+    "expect": {
+      "kind": "ConfidenceDecayed",
+      "fingerprint": "916b8ac414809fd92c7b0ed199abf76d064487029c55321c6d3af39fa5b7fe60",
+      "from": "ACTIVE",
+      "to": "PROBATION"
+    },
+    "expect_file_exists": "runs/confidence/events/916b8ac414809fd92c7b0ed199abf76d064487029c55321c6d3af39fa5b7fe60.decay.1735732800000.json",
+    "post_assert": {
+      "artifact_dir": "runs/requalification/state",
+      "contains_keys": ["state"],
+      "contains_subset": { "fingerprint": "916b8ac414809fd92c7b0ed199abf76d064487029c55321c6d3af39fa5b7fe60", "state": "PROBATION", "cause": "CONFIDENCE_DECAY" }
+    }
+  },
+  {
+    "name": "tier22_1-probation-success-to-eligible",
+    "stage": "cli",
+    "env": {
+      "SINTRA_NOW_ISO": "2025-01-01T00:00:00Z",
+      "REQUALIFICATION_ENABLED": "1",
+      "PROBATION_MIN_SUCCESSES": "2",
+      "PROBATION_MAX_CONFIDENCE_DROP": "0.00",
+      "CONFIDENCE_HALF_LIFE_HOURS": "72",
+      "CONFIDENCE_MIN": "0",
+      "ALLOWED_DOMAINS": null,
+      "ALLOWED_METHODS": null,
+      "ENVIRONMENT": null,
+      "NODE_ENV": null,
+      "CONFIRM_PROD": null,
+      "NOTION_API_BASE": "http://localhost:8787",
+      "NOTION_API_VERSION": "2022-06-28",
+      "NOTION_TOKEN": "local_mock_token",
+      "NOTION_REDACT_KEYS": "title,name"
+    },
+    "fixture_write": [
+      {
+        "path": "runs/requalification/state/notion.write.page.json",
+        "json": {
+          "fingerprint": "notion.write.page",
+          "state": "PROBATION",
+          "cause": "MANUAL_TEST",
+          "since": "2025-01-01T00:00:00Z",
+          "cooldown_until": null
+        }
+      },
+      {
+        "path": "runs/requalification/counters/notion.write.page.json",
+        "json": {
+          "fingerprint": "notion.write.page",
+          "successes": 1,
+          "last_confidence": 0,
+          "last_updated": "2025-01-01T00:00:00Z"
+        }
+      }
+    ],
+    "cmd": "/notion live db db_001",
+    "expect": {
+      "status": "success"
+    },
+    "post_assert": {
+      "artifact_dir": "runs/requalification/state",
+      "contains_subset": { "fingerprint": "notion.write.page", "state": "ELIGIBLE" }
+    }
+  },
+  {
+    "name": "tier22_1-probation-reset-on-drop",
+    "stage": "cli",
+    "fixture_write": [
+      {
+        "path": "runs/requalification/state/notion.write.page.json",
+        "json": {
+          "fingerprint": "notion.write.page",
+          "state": "PROBATION",
+          "cause": "MANUAL_TEST",
+          "since": "2025-01-01T00:00:00Z",
+          "cooldown_until": null
+        }
+      },
+      {
+        "path": "runs/requalification/counters/notion.write.page.json",
+        "json": {
+          "fingerprint": "notion.write.page",
+          "successes": 1,
+          "last_confidence": 2,
+          "last_updated": "2025-01-01T00:00:00Z"
+        }
+      }
+    ],
+    "env": {
+      "SINTRA_NOW_ISO": "2025-01-01T00:00:00Z",
+      "REQUALIFICATION_ENABLED": "1",
+      "PROBATION_MIN_SUCCESSES": "2",
+      "PROBATION_MAX_CONFIDENCE_DROP": "0.00",
+      "CONFIDENCE_HALF_LIFE_HOURS": "72",
+      "CONFIDENCE_MIN": "0",
+      "ALLOWED_DOMAINS": null,
+      "ALLOWED_METHODS": null,
+      "ENVIRONMENT": null,
+      "NODE_ENV": null,
+      "CONFIRM_PROD": null,
+      "NOTION_API_BASE": "http://localhost:8787",
+      "NOTION_API_VERSION": "2022-06-28",
+      "NOTION_TOKEN": "local_mock_token",
+      "NOTION_REDACT_KEYS": "title,name"
+    },
+    "cmd": "/notion live db db_001",
+    "expect": {
+      "status": "success"
+    },
+    "post_assert": {
+      "artifact_dir": "runs/requalification/counters",
+      "contains_subset": { "fingerprint": "notion.write.page", "successes": 0 }
+    }
+  },
+  {
+    "name": "tier15-domain-not-allowlisted",
+    "stage": "cli",
+    "command": "/notion live read db_001",
+    "env": {
+      "ALLOWED_DOMAINS": "example.com",
+      "ALLOWED_METHODS": null,
+      "ENVIRONMENT": null,
+      "NODE_ENV": null,
+      "CONFIRM_PROD": null,
+      "NOTION_API_BASE": "http://localhost:8787",
+      "NOTION_API_VERSION": "2022-06-28",
+      "NOTION_TOKEN": "local_mock_token"
+    },
+    "expect_exit_code": 3,
+    "expect": {
+      "kind": "PolicyDenied",
+      "code": "DOMAIN_NOT_ALLOWED"
+    },
+    "post_assert": {
+      "explain_trace": {
+        "checks": [
+          {
+            "check_id": "DOMAIN_ALLOWLIST",
+            "result": "FAIL"
+          }
+        ]
+      }
+    }
   },
   {
     "name": "build-validation-live",
     "stage": "planner",
     "command": "/build validation-agent {\"dry_run\":false}",
-    "expect": { "kind": "ExecutionPlan" }
+    "expect": {
+      "kind": "ExecutionPlan"
+    }
   },
   {
     "name": "unknown-command",
     "stage": "validation",
     "command": "/build does-not-exist",
-    "expect": { "kind": "ValidatedCommand", "allowed": false }
+    "expect": {
+      "kind": "ValidatedCommand",
+      "allowed": false
+    }
   },
   {
     "name": "document-intake-dsl",
     "stage": "planner",
     "command": "/intake ./docs",
-    "expect": { "kind": "ExecutionPlan" }
+    "expect": {
+      "kind": "ExecutionPlan"
+    }
   },
   {
     "name": "document-intake-canonical",
     "stage": "planner",
     "command": "/build document-intake {\"path\":\"./docs\"}",
-    "expect": { "kind": "ExecutionPlan" }
+    "expect": {
+      "kind": "ExecutionPlan"
+    }
   },
   {
     "name": "document-intake-missing-path",
     "stage": "validation",
     "command": "/build document-intake {}",
-    "expect": { "kind": "NeedInput" }
+    "expect": {
+      "kind": "NeedInput"
+    }
   },
   {
     "name": "document-intake-artifact-written",
@@ -46,10 +589,15 @@
       "NODE_ENV": null,
       "CONFIRM_PROD": null
     },
-    "expect": { "status": "success" },
+    "expect": {
+      "status": "success"
+    },
     "post_assert": {
       "artifact_dir": "runs/intake",
-      "contains_keys": ["files", "path"]
+      "contains_keys": [
+        "files",
+        "path"
+      ]
     }
   },
   {
@@ -63,7 +611,9 @@
       "NODE_ENV": null,
       "CONFIRM_PROD": null
     },
-    "expect": { "status": "success" },
+    "expect": {
+      "status": "success"
+    },
     "post_assert": {
       "receipt_subset": {
         "status": "success",
@@ -83,13 +633,20 @@
       "threadId": "local_test_001",
       "dry_run": false,
       "goal": "Tier-5.2 phased happy path",
-      "agent_versions": { "validator": "1.2.0", "planner": "1.1.3" },
-      "assumptions": ["Generated by test-only planner override"],
+      "agent_versions": {
+        "validator": "1.2.0",
+        "planner": "1.1.3"
+      },
+      "assumptions": [
+        "Generated by test-only planner override"
+      ],
       "required_secrets": [],
       "phases": [
         {
           "phase_id": "intake",
-          "required_capabilities": ["intake.scan"],
+          "required_capabilities": [
+            "intake.scan"
+          ],
           "steps": [
             {
               "step_id": "scan-path",
@@ -97,17 +654,28 @@
               "adapter": "WebhookAdapter",
               "method": "POST",
               "url": "http://localhost:8787/intake/scan",
-              "payload": { "path": "./docs" },
-              "expects": { "http_status": 200 },
+              "payload": {
+                "path": "./docs"
+              },
+              "expects": {
+                "http_status": 200
+              },
               "idempotency_key": null
             }
           ],
-          "outputs": ["files", "path"]
+          "outputs": [
+            "files",
+            "path"
+          ]
         },
         {
           "phase_id": "analysis",
-          "required_capabilities": ["tax.analyze"],
-          "inputs_from": ["intake"],
+          "required_capabilities": [
+            "tax.analyze"
+          ],
+          "inputs_from": [
+            "intake"
+          ],
           "steps": [
             {
               "step_id": "analyze-files",
@@ -115,19 +683,29 @@
               "adapter": "WebhookAdapter",
               "method": "POST",
               "url": "http://localhost:8787/tax/analyze",
-              "expects": { "http_status": 200 },
+              "expects": {
+                "http_status": 200
+              },
               "idempotency_key": null
             }
           ]
         }
       ]
     },
-    "expect": { "status": "success" },
+    "expect": {
+      "status": "success"
+    },
     "post_assert": {
       "receipt_subset": {
         "status": "success",
-        "phases_planned": ["intake", "analysis"],
-        "phases_executed": ["intake", "analysis"],
+        "phases_planned": [
+          "intake",
+          "analysis"
+        ],
+        "phases_executed": [
+          "intake",
+          "analysis"
+        ],
         "resolved_capabilities": {
           "intake.scan": "document-intake-agent@1.0.0",
           "tax.analyze": "tax-agent@1.0.0"
@@ -145,13 +723,20 @@
       "threadId": "local_test_001",
       "dry_run": false,
       "goal": "Tier-5.2 missing capability",
-      "agent_versions": { "validator": "1.2.0", "planner": "1.1.3" },
-      "assumptions": ["Generated by test-only planner override"],
+      "agent_versions": {
+        "validator": "1.2.0",
+        "planner": "1.1.3"
+      },
+      "assumptions": [
+        "Generated by test-only planner override"
+      ],
       "required_secrets": [],
       "phases": [
         {
           "phase_id": "intake",
-          "required_capabilities": ["intake.scan"],
+          "required_capabilities": [
+            "intake.scan"
+          ],
           "steps": [
             {
               "step_id": "scan-path",
@@ -159,17 +744,28 @@
               "adapter": "WebhookAdapter",
               "method": "POST",
               "url": "http://localhost:8787/intake/scan",
-              "payload": { "path": "./docs" },
-              "expects": { "http_status": 200 },
+              "payload": {
+                "path": "./docs"
+              },
+              "expects": {
+                "http_status": 200
+              },
               "idempotency_key": null
             }
           ],
-          "outputs": ["files", "path"]
+          "outputs": [
+            "files",
+            "path"
+          ]
         },
         {
           "phase_id": "analysis",
-          "required_capabilities": ["capability.does.not.exist"],
-          "inputs_from": ["intake"],
+          "required_capabilities": [
+            "capability.does.not.exist"
+          ],
+          "inputs_from": [
+            "intake"
+          ],
           "steps": [
             {
               "step_id": "analyze-files",
@@ -177,7 +773,9 @@
               "adapter": "WebhookAdapter",
               "method": "POST",
               "url": "http://localhost:8787/tax/analyze",
-              "expects": { "http_status": 200 },
+              "expects": {
+                "http_status": 200
+              },
               "idempotency_key": null
             }
           ]
@@ -185,14 +783,23 @@
       ]
     },
     "expect_exit_code": 3,
-    "expect": { "kind": "PolicyDenied" },
+    "expect": {
+      "kind": "PolicyDenied"
+    },
     "post_assert": {
       "receipt_subset": {
         "status": "denied",
         "denied_phase": "analysis",
-        "phases_planned": ["intake", "analysis"],
-        "phases_executed": ["intake"],
-        "policy_denied": { "code": "POLICY_CAPABILITY_UNRESOLVED" }
+        "phases_planned": [
+          "intake",
+          "analysis"
+        ],
+        "phases_executed": [
+          "intake"
+        ],
+        "policy_denied": {
+          "code": "POLICY_CAPABILITY_UNRESOLVED"
+        }
       }
     }
   },
@@ -206,14 +813,23 @@
       "threadId": "local_test_001",
       "dry_run": false,
       "goal": "Tier-5.2 ordering violation",
-      "agent_versions": { "validator": "1.2.0", "planner": "1.1.3" },
-      "assumptions": ["Generated by test-only planner override"],
+      "agent_versions": {
+        "validator": "1.2.0",
+        "planner": "1.1.3"
+      },
+      "assumptions": [
+        "Generated by test-only planner override"
+      ],
       "required_secrets": [],
       "phases": [
         {
           "phase_id": "analysis",
-          "required_capabilities": ["tax.analyze"],
-          "inputs_from": ["intake"],
+          "required_capabilities": [
+            "tax.analyze"
+          ],
+          "inputs_from": [
+            "intake"
+          ],
           "steps": [
             {
               "step_id": "analyze-files",
@@ -221,14 +837,18 @@
               "adapter": "WebhookAdapter",
               "method": "POST",
               "url": "http://localhost:8787/tax/analyze",
-              "expects": { "http_status": 200 },
+              "expects": {
+                "http_status": 200
+              },
               "idempotency_key": null
             }
           ]
         },
         {
           "phase_id": "intake",
-          "required_capabilities": ["intake.scan"],
+          "required_capabilities": [
+            "intake.scan"
+          ],
           "steps": [
             {
               "step_id": "scan-path",
@@ -236,17 +856,27 @@
               "adapter": "WebhookAdapter",
               "method": "POST",
               "url": "http://localhost:8787/intake/scan",
-              "payload": { "path": "./docs" },
-              "expects": { "http_status": 200 },
+              "payload": {
+                "path": "./docs"
+              },
+              "expects": {
+                "http_status": 200
+              },
               "idempotency_key": null
             }
           ],
-          "outputs": ["files", "path"]
+          "outputs": [
+            "files",
+            "path"
+          ]
         }
       ]
     },
     "expect_exit_code": 1,
-    "expect": { "kind": "CliError", "code": "CLI_PHASES_INVALID" }
+    "expect": {
+      "kind": "CliError",
+      "code": "CLI_PHASES_INVALID"
+    }
   },
   {
     "name": "phases-invalid-forward-reference",
@@ -258,14 +888,23 @@
       "threadId": "local_test_001",
       "dry_run": false,
       "goal": "Tier-5.2 invalid forward reference",
-      "agent_versions": { "validator": "1.2.0", "planner": "1.1.3" },
-      "assumptions": ["Generated by test-only planner override"],
+      "agent_versions": {
+        "validator": "1.2.0",
+        "planner": "1.1.3"
+      },
+      "assumptions": [
+        "Generated by test-only planner override"
+      ],
       "required_secrets": [],
       "phases": [
         {
           "phase_id": "analysis",
-          "required_capabilities": ["tax.analyze"],
-          "inputs_from": ["intake"],
+          "required_capabilities": [
+            "tax.analyze"
+          ],
+          "inputs_from": [
+            "intake"
+          ],
           "steps": [
             {
               "step_id": "noop-analysis",
@@ -273,14 +912,18 @@
               "adapter": "WebhookAdapter",
               "method": "GET",
               "url": "http://localhost:8787/status/200",
-              "expects": { "http_status": 200 },
+              "expects": {
+                "http_status": 200
+              },
               "idempotency_key": null
             }
           ]
         },
         {
           "phase_id": "intake",
-          "required_capabilities": ["intake.scan"],
+          "required_capabilities": [
+            "intake.scan"
+          ],
           "steps": [
             {
               "step_id": "noop-intake",
@@ -288,7 +931,9 @@
               "adapter": "WebhookAdapter",
               "method": "GET",
               "url": "http://localhost:8787/status/200",
-              "expects": { "http_status": 200 },
+              "expects": {
+                "http_status": 200
+              },
               "idempotency_key": null
             }
           ]
@@ -296,7 +941,10 @@
       ]
     },
     "expect_exit_code": 1,
-    "expect": { "kind": "CliError", "code": "CLI_PHASES_INVALID" }
+    "expect": {
+      "kind": "CliError",
+      "code": "CLI_PHASES_INVALID"
+    }
   },
   {
     "name": "policy-deny-domain",
@@ -312,7 +960,10 @@
       "threadId": "local_test_001",
       "dry_run": true,
       "goal": "Trigger domain allowlist policy denial",
-      "agent_versions": { "validator": "1.2.0", "planner": "1.1.3" },
+      "agent_versions": {
+        "validator": "1.2.0",
+        "planner": "1.1.3"
+      },
       "required_secrets": [],
       "steps": [
         {
@@ -321,15 +972,27 @@
           "adapter": "WebhookAdapter",
           "method": "GET",
           "url": "https://evil.example.com/ping",
-          "expects": { "http_status": [200] },
+          "expects": {
+            "http_status": [
+              200
+            ]
+          },
           "idempotency_key": null
         }
       ]
     },
     "expect_exit_code": 3,
-    "expect": { "kind": "PolicyDenied", "code": "DOMAIN_NOT_ALLOWED" },
+    "expect": {
+      "kind": "PolicyDenied",
+      "code": "DOMAIN_NOT_ALLOWED"
+    },
     "post_assert": {
-      "receipt_subset": { "status": "denied", "policy_denied": { "code": "DOMAIN_NOT_ALLOWED" } }
+      "receipt_subset": {
+        "status": "denied",
+        "policy_denied": {
+          "code": "DOMAIN_NOT_ALLOWED"
+        }
+      }
     }
   },
   {
@@ -349,7 +1012,10 @@
       "threadId": "local_test_001",
       "dry_run": false,
       "goal": "Trigger production write approval requirement",
-      "agent_versions": { "validator": "1.2.0", "planner": "1.1.3" },
+      "agent_versions": {
+        "validator": "1.2.0",
+        "planner": "1.1.3"
+      },
       "required_secrets": [],
       "steps": [
         {
@@ -358,18 +1024,30 @@
           "adapter": "WebhookAdapter",
           "method": "POST",
           "url": "http://localhost:8787/intake/scan",
-          "payload": { "path": "./docs" },
-          "expects": { "http_status": [200] },
+          "payload": {
+            "path": "./docs"
+          },
+          "expects": {
+            "http_status": [
+              200
+            ]
+          },
           "idempotency_key": null
         }
       ]
     },
     "expect_exit_code": 4,
-    "expect": { "kind": "ApprovalRequired", "code": "WRITE_OPERATION" },
+    "expect": {
+      "kind": "ApprovalRequired",
+      "code": "WRITE_OPERATION"
+    },
     "post_assert": {
       "receipt_subset": {
         "status": "awaiting_approval",
-        "approval_required": { "kind": "ApprovalRequired", "code": "WRITE_OPERATION" }
+        "approval_required": {
+          "kind": "ApprovalRequired",
+          "code": "WRITE_OPERATION"
+        }
       },
       "approval_state": true
     }
@@ -378,11 +1056,18 @@
     "name": "approval-resume-prod-write",
     "stage": "cli",
     "command": "/approve policy_deny_prod_write_001",
-    "env": { "ENVIRONMENT": "production" },
+    "env": {
+      "ENVIRONMENT": "production"
+    },
     "expect_exit_code": 0,
-    "expect": { "status": "success" },
+    "expect": {
+      "status": "success"
+    },
     "post_assert": {
-      "receipt_subset": { "status": "success", "execution_id": "policy_deny_prod_write_001" },
+      "receipt_subset": {
+        "status": "success",
+        "execution_id": "policy_deny_prod_write_001"
+      },
       "resume_reused_plan_hash": true
     }
   },
@@ -398,10 +1083,87 @@
       "CONFIRM_PROD": null
     },
     "expect_file_exists": "runs/notion/exec_mock_notion_db_001.read-database.json",
-    "expect": { "status": "success" },
+    "expect": {
+      "status": "success"
+    },
     "post_assert": {
       "artifact_dir": "runs/notion",
-      "contains_keys": ["properties", "id"]
+      "contains_keys": [
+        "properties",
+        "id"
+      ]
+    }
+  },
+  {
+    "name": "notion-read-page-mock",
+    "stage": "cli",
+    "command": "/notion page pg_mock_001",
+    "env": {
+      "ALLOWED_DOMAINS": null,
+      "ALLOWED_METHODS": null,
+      "ENVIRONMENT": null,
+      "NODE_ENV": null,
+      "CONFIRM_PROD": null
+    },
+    "expect_file_exists": "runs/notion/exec_mock_notion_page_001.read-page.json",
+    "expect": {
+      "status": "success"
+    },
+    "post_assert": {
+      "artifact_dir": "runs/notion",
+      "contains_keys": [
+        "properties",
+        "id"
+      ]
+    }
+  },
+  {
+    "name": "notion-read-deny-non-get",
+    "stage": "cli",
+    "command": "/notion db db_mock_001",
+    "env": {
+      "THREAD_ID": "local_test_001",
+      "ALLOWED_DOMAINS": null,
+      "ALLOWED_METHODS": null,
+      "ENVIRONMENT": null,
+      "NODE_ENV": null,
+      "CONFIRM_PROD": null
+    },
+    "planner_override": {
+      "kind": "ExecutionPlan",
+      "execution_id": "exec_mock_notion_read_deny_001",
+      "threadId": "local_test_001",
+      "dry_run": false,
+      "goal": "Policy test: Notion read steps must be GET/HEAD",
+      "agent_versions": {
+        "validator": "1.2.0",
+        "planner": "1.1.3"
+      },
+      "required_secrets": [],
+      "steps": [
+        {
+          "step_id": "read-database-illegal-method",
+          "action": "notion.read.database",
+          "adapter": "NotionAdapter",
+          "method": "PATCH",
+          "read_only": true,
+          "url": "http://localhost:8787/notion/database/db_mock_001",
+          "headers": {
+            "Cache-Control": "no-store"
+          },
+          "expects": {
+            "http_status": [
+              200
+            ]
+          },
+          "idempotency_key": null
+        }
+      ]
+    },
+    "expect_exit_code": 3,
+    "expect": {
+      "kind": "PolicyDenied",
+      "code": "METHOD_NOT_ALLOWED"
     }
   },
   {
@@ -416,7 +1178,10 @@
       "CONFIRM_PROD": null
     },
     "expect_exit_code": 4,
-    "expect": { "kind": "ApprovalRequired", "code": "NOTION_WRITE_APPROVAL_REQUIRED" },
+    "expect": {
+      "kind": "ApprovalRequired",
+      "code": "NOTION_WRITE_APPROVAL_REQUIRED"
+    },
     "post_assert": {
       "approval_state": true
     }
@@ -433,22 +1198,38 @@
       "CONFIRM_PROD": null
     },
     "expect_exit_code": 0,
-    "expect": { "status": "success", "execution_id": "exec_mock_notion_write_001" },
+    "expect": {
+      "status": "success",
+      "execution_id": "exec_mock_notion_write_001"
+    },
     "expect_file_exists": "runs/notion-write/exec_mock_notion_write_001.write-page-property.json",
     "post_assert": {
       "artifact_dir": "runs/notion-write",
-      "contains_keys": ["request_payload", "response", "action", "execution_id", "approved_at"],
-      "contains_subset": { "response": { "updated": true } }
+      "contains_keys": [
+        "request_payload",
+        "response",
+        "action",
+        "execution_id",
+        "approved_at"
+      ],
+      "contains_subset": {
+        "response": {
+          "updated": true
+        }
+      }
     }
-  }
-  ,
+  },
   {
     "name": "notion-title-write-pauses",
     "stage": "cli",
     "command": "/notion title pg_001 \"New Title\"",
-    "expect": { "kind": "ApprovalRequired" },
+    "expect": {
+      "kind": "ApprovalRequired"
+    },
     "expect_exit_code": 4,
-    "post_assert": { "approval_state": true }
+    "post_assert": {
+      "approval_state": true
+    }
   },
   {
     "name": "notion-title-write-approve-resumes",
@@ -456,17 +1237,23 @@
     "command": "/approve exec_mock_notion_title_001",
     "post_assert": {
       "artifact_dir": "runs/notion-write",
-      "contains_keys": ["updated", "title"]
+      "contains_keys": [
+        "updated",
+        "title"
+      ]
     }
-  }
-  ,
+  },
   {
     "name": "tier7-orchestration-pauses-at-write",
     "stage": "cli",
     "command": "/orchestrate notion-status db_001 pg_001",
-    "expect": { "kind": "ApprovalRequired" },
+    "expect": {
+      "kind": "ApprovalRequired"
+    },
     "expect_exit_code": 4,
-    "post_assert": { "approval_state": true }
+    "post_assert": {
+      "approval_state": true
+    }
   },
   {
     "name": "tier7-orchestration-approve-completes",
@@ -474,10 +1261,11 @@
     "command": "/approve exec_mock_orchestration_001",
     "post_assert": {
       "artifact_dir": "runs/notion",
-      "contains_keys": ["properties"]
+      "contains_keys": [
+        "properties"
+      ]
     }
-  }
-  ,
+  },
   {
     "name": "tier8-read-only-autonomy-happy",
     "stage": "cli",
@@ -485,10 +1273,15 @@
       "AUTONOMY_MODE": "READ_ONLY_AUTONOMY"
     },
     "command": "/notion db db_001",
-    "expect": { "status": "success" },
+    "expect": {
+      "status": "success"
+    },
     "post_assert": {
       "artifact_dir": "runs/autonomy",
-      "contains_keys": ["execution_id", "mode"]
+      "contains_keys": [
+        "execution_id",
+        "mode"
+      ]
     }
   },
   {
@@ -497,7 +1290,7 @@
     "env": {
       "AUTONOMY_MODE": "READ_ONLY_AUTONOMY"
     },
-    "command": "/notion set pg_001 Status=Done",       
+    "command": "/notion set pg_001 Status=Done",
     "expect": {
       "kind": "PolicyDenied",
       "code": "AUTONOMY_READ_ONLY_VIOLATION"
@@ -508,24 +1301,34 @@
     "name": "tier9-prestate-written-on-approval",
     "stage": "cli",
     "command": "/notion set pg_001 Status=Done",
-    "expect": { "kind": "ApprovalRequired" },
+    "expect": {
+      "kind": "ApprovalRequired"
+    },
     "expect_exit_code": 4,
     "post_assert": {
       "artifact_dir": "runs/prestate",
-      "contains_keys": ["execution_id", "plan_hash", "snapshot"]
+      "contains_keys": [
+        "execution_id",
+        "plan_hash",
+        "snapshot"
+      ]
     }
   },
   {
     "name": "tier9-rollback-recorded",
     "stage": "cli",
     "command": "/rollback policy_deny_prod_write_001",
-    "expect": { "kind": "RollbackRecorded" },
+    "expect": {
+      "kind": "RollbackRecorded"
+    },
     "post_assert": {
       "artifact_dir": "runs/rollback",
-      "contains_keys": ["compensation_plan", "rolled_back_execution_id"]
+      "contains_keys": [
+        "compensation_plan",
+        "rolled_back_execution_id"
+      ]
     }
-  }
-  ,
+  },
   {
     "name": "tier10-notion-live-read-redacted",
     "stage": "cli",
@@ -541,11 +1344,24 @@
       "NOTION_TOKEN": "local_mock_token",
       "NOTION_REDACT_KEYS": "title,name"
     },
-    "expect": { "status": "success" },
+    "expect": {
+      "status": "success"
+    },
     "post_assert": {
       "artifact_dir": "runs/notion-live-read",
-      "contains_keys": ["execution_id", "step_id", "notion_path", "http_status", "response"],
-      "contains_subset": { "response": { "title": "[REDACTED]", "name": "[REDACTED]" } }
+      "contains_keys": [
+        "execution_id",
+        "step_id",
+        "notion_path",
+        "http_status",
+        "response"
+      ],
+      "contains_subset": {
+        "response": {
+          "title": "[REDACTED]",
+          "name": "[REDACTED]"
+        }
+      }
     }
   },
   {
@@ -564,7 +1380,10 @@
       "NOTION_REDACT_KEYS": "title,name"
     },
     "expect_exit_code": 3,
-    "expect": { "kind": "PolicyDenied", "code": "NOTION_LIVE_REQUIRES_READ_ONLY" }
+    "expect": {
+      "kind": "PolicyDenied",
+      "code": "NOTION_LIVE_REQUIRES_READ_ONLY"
+    }
   },
   {
     "name": "tier10_2-live-write-pauses",
@@ -582,11 +1401,16 @@
       "NOTION_REDACT_KEYS": "title,name",
       "NOTION_LIVE_APPROVE_RECHECK": "1"
     },
-    "expect": { "kind": "ApprovalRequired" },
+    "expect": {
+      "kind": "ApprovalRequired"
+    },
     "expect_exit_code": 4,
     "post_assert": {
       "artifact_dir": "runs/prestate",
-      "contains_keys": ["execution_id", "snapshot"]
+      "contains_keys": [
+        "execution_id",
+        "snapshot"
+      ]
     }
   },
   {
@@ -605,10 +1429,16 @@
       "NOTION_REDACT_KEYS": "title,name",
       "NOTION_LIVE_APPROVE_RECHECK": "1"
     },
-    "expect": { "status": "success" },
+    "expect": {
+      "status": "success"
+    },
     "post_assert": {
       "artifact_dir": "runs/notion-live-write",
-      "contains_keys": ["request_properties", "approved_at", "response"]
+      "contains_keys": [
+        "request_properties",
+        "approved_at",
+        "response"
+      ]
     }
   },
   {
@@ -627,11 +1457,16 @@
       "NOTION_REDACT_KEYS": "title,name",
       "NOTION_LIVE_APPROVE_RECHECK": "1"
     },
-    "expect": { "kind": "ApprovalRequired" },
+    "expect": {
+      "kind": "ApprovalRequired"
+    },
     "expect_exit_code": 4,
     "post_assert": {
       "artifact_dir": "runs/prestate",
-      "contains_keys": ["execution_id", "snapshot"]
+      "contains_keys": [
+        "execution_id",
+        "snapshot"
+      ]
     }
   },
   {
@@ -650,10 +1485,17 @@
       "NOTION_REDACT_KEYS": "title,name",
       "NOTION_LIVE_APPROVE_RECHECK": "1"
     },
-    "expect": { "status": "success" },
+    "expect": {
+      "status": "success"
+    },
     "post_assert": {
       "artifact_dir": "runs/notion-live-write",
-      "contains_keys": ["request_properties", "bundle_keys", "approved_at", "response"]
+      "contains_keys": [
+        "request_properties",
+        "bundle_keys",
+        "approved_at",
+        "response"
+      ]
     }
   },
   {
@@ -672,7 +1514,9 @@
       "NOTION_REDACT_KEYS": "title,name",
       "NOTION_LIVE_APPROVE_RECHECK": "1"
     },
-    "expect": { "kind": "ApprovalRequired" },
+    "expect": {
+      "kind": "ApprovalRequired"
+    },
     "expect_exit_code": 4
   },
   {
@@ -691,7 +1535,10 @@
       "NOTION_REDACT_KEYS": "title,name",
       "NOTION_LIVE_APPROVE_RECHECK": "1"
     },
-    "expect": { "kind": "NeedApprovalAgain", "code": "GUARD_FAILED_PRE_EXEC" },
+    "expect": {
+      "kind": "NeedApprovalAgain",
+      "code": "GUARD_FAILED_PRE_EXEC"
+    },
     "expect_exit_code": 4
   },
   {
@@ -710,7 +1557,10 @@
       "NOTION_REDACT_KEYS": "title,name",
       "NOTION_LIVE_APPROVE_RECHECK": "1"
     },
-    "expect": { "kind": "AlreadyExecuted", "code": "IDEMPOTENCY_HIT" }
+    "expect": {
+      "kind": "AlreadyExecuted",
+      "code": "IDEMPOTENCY_HIT"
+    }
   },
   {
     "name": "tier10_5-idempotency-hit-bundle",
@@ -728,7 +1578,10 @@
       "NOTION_REDACT_KEYS": "title,name",
       "NOTION_LIVE_APPROVE_RECHECK": "1"
     },
-    "expect": { "kind": "AlreadyExecuted", "code": "IDEMPOTENCY_HIT" }
+    "expect": {
+      "kind": "AlreadyExecuted",
+      "code": "IDEMPOTENCY_HIT"
+    }
   },
   {
     "name": "tier10_6-batch-pauses-once",
@@ -746,11 +1599,17 @@
       "NOTION_REDACT_KEYS": "title,name",
       "NOTION_LIVE_APPROVE_RECHECK": "1"
     },
-    "expect": { "kind": "ApprovalRequiredBatch" },
+    "expect": {
+      "kind": "ApprovalRequiredBatch"
+    },
     "expect_exit_code": 4,
     "post_assert": {
       "artifact_dir": "runs/approvals",
-      "contains_keys": ["pending_step_ids", "plan_hash", "status"]
+      "contains_keys": [
+        "pending_step_ids",
+        "plan_hash",
+        "status"
+      ]
     }
   },
   {
@@ -769,10 +1628,15 @@
       "NOTION_REDACT_KEYS": "title,name",
       "NOTION_LIVE_APPROVE_RECHECK": "1"
     },
-    "expect": { "kind": "BatchApprovedExecuted" },
+    "expect": {
+      "kind": "BatchApprovedExecuted"
+    },
     "post_assert": {
       "artifact_dir": "runs/notion-live-write",
-      "contains_keys": ["approved_at", "request_properties"]
+      "contains_keys": [
+        "approved_at",
+        "request_properties"
+      ]
     }
   },
   {
@@ -791,11 +1655,17 @@
       "NOTION_REDACT_KEYS": "title,name",
       "NOTION_LIVE_APPROVE_RECHECK": "1"
     },
-    "expect": { "kind": "ApprovalRequiredBatch" },
+    "expect": {
+      "kind": "ApprovalRequiredBatch"
+    },
     "expect_exit_code": 4,
     "post_assert": {
       "artifact_dir": "runs/approvals",
-      "contains_keys": ["pending_step_ids", "plan_hash", "status"]
+      "contains_keys": [
+        "pending_step_ids",
+        "plan_hash",
+        "status"
+      ]
     }
   },
   {
@@ -814,35 +1684,49 @@
       "NOTION_REDACT_KEYS": "title,name",
       "NOTION_LIVE_APPROVE_RECHECK": "1"
     },
-    "expect": { "kind": "BatchApprovedExecuted" },
+    "expect": {
+      "kind": "BatchApprovedExecuted"
+    },
     "post_assert": {
       "artifact_dir": "runs/notion-live-write",
-      "contains_keys": ["approved_at", "request_properties"]
+      "contains_keys": [
+        "approved_at",
+        "request_properties"
+      ]
     }
   },
   {
     "name": "tier11-queue-list",
     "stage": "cli",
     "command": "/queue list",
-    "expect": { "kind": "QueueList" }
+    "expect": {
+      "kind": "QueueList"
+    }
   },
   {
     "name": "tier11-reject-run",
     "stage": "cli",
     "command": "/queue reject exec_123 \"Docs incomplete\"",
-    "expect": { "kind": "RunRejected", "execution_id": "exec_123" }
+    "expect": {
+      "kind": "RunRejected",
+      "execution_id": "exec_123"
+    }
   },
   {
     "name": "tier12-run-show",
     "stage": "cli",
     "command": "/run show exec_123",
-    "expect": { "kind": "RunDetails" }
+    "expect": {
+      "kind": "RunDetails"
+    }
   },
   {
     "name": "tier12-run-artifacts",
     "stage": "cli",
     "command": "/run artifacts exec_123",
-    "expect": { "kind": "ArtifactIndex" }
+    "expect": {
+      "kind": "ArtifactIndex"
+    }
   },
   {
     "name": "tier13-explain-blocked-by-dedup",
@@ -861,7 +1745,12 @@
         "at": "2024-01-08T09:15:30Z",
         "reset_history": true,
         "seed_dedup": true,
-        "seed_budget_days": [{ "day": "2024-01-08", "count": 0 }],
+        "seed_budget_days": [
+          {
+            "day": "2024-01-08",
+            "count": 0
+          }
+        ],
         "primary_reason": "DEDUP_ACTIVE",
         "would_run": false
       }
@@ -883,16 +1772,63 @@
         "job_id": "notion_tax_cases_daily_scan",
         "at": "2024-01-10T09:15:30Z",
         "reset_history": true,
-        "seed_budget_days": [{ "day": "2024-01-09", "count": 3 }],
+        "seed_budget_days": [
+          {
+            "day": "2024-01-09",
+            "count": 3
+          }
+        ],
         "primary_reason": "ELIGIBLE",
         "would_run": true
       }
     }
   },
   {
+    "name": "tier13_5-scheduler-explain-not-found",
+    "stage": "cli",
+    "command": "/scheduler explain job_missing_001",
+    "expect_exit_code": 2,
+    "expect": {
+      "kind": "SchedulerExplain",
+      "query": "job_missing_001",
+      "found": false
+    }
+  },
+  {
+    "name": "tier13_5-scheduler-explain-found-latest",
+    "stage": "cli",
+    "fixture_write": [
+      {
+        "path": "runs/scheduler/latest/job_001.json",
+        "json": {
+          "kind": "SchedulerDecision",
+          "decision": "SKIPPED_DEDUP",
+          "job_id": "job_001",
+          "execution_id": "exec_seed_001",
+          "dedup_hit": true,
+          "dedup_key": "seeded",
+          "decided_at": "2025-12-26T00:00:00Z"
+        }
+      }
+    ],
+    "command": "/scheduler explain job_001",
+    "expect": {
+      "kind": "SchedulerExplain",
+      "query": "job_001",
+      "found": true,
+      "decision_record": {
+        "kind": "SchedulerDecision",
+        "decision": "SKIPPED_DEDUP",
+        "job_id": "job_001",
+        "execution_id": "exec_seed_001",
+        "dedup_hit": true
+      }
+    }
+  },
+  {
     "name": "tier14-policy-simulate-require-approval",
     "stage": "cli",
-    "command": "/policy simulate /notion set pg_001 Status=Done",
+    "command": "/policy sim /notion set pg_001 Status=Done",
     "expect_exit_code": 0,
     "expect": {
       "kind": "PolicySimulation",
@@ -915,7 +1851,7 @@
   {
     "name": "tier14-policy-simulate-throttle",
     "stage": "cli",
-    "command": "/policy simulate /notion db db_001",
+    "command": "/policy sim /notion db db_001",
     "env": {
       "RUN_GOVERNOR_ENABLED": "1",
       "SMOKE_FIXED_NOW_ISO": "2024-01-10T09:15:30Z",
@@ -934,7 +1870,9 @@
     "expect": {
       "kind": "PolicySimulation",
       "decision": "THROTTLE",
-      "governor": { "decision": "DELAY" }
+      "governor": {
+        "decision": "DELAY"
+      }
     },
     "post_assert": {
       "no_writes": {
@@ -995,7 +1933,171 @@
     }
   },
   {
-    "name": "tier17-ranking-order",
+    "name": "tier15-policy-variant-flip-spoken",
+    "stage": "cli",
+    "command": "/policy simulate-variants notion.write.page --confidence 0.3,0.95",
+    "env": {
+      "SPEECH_ENABLED": "1",
+      "SPEECH_SINKS": "console",
+      "SPEECH_CATEGORIES": "policy"
+    },
+    "expect": {
+      "kind": "PolicySimulationVariants",
+      "fingerprint": "notion.write.page"
+    },
+    "post_assert": {
+      "stderr_contains": [
+        "Policy regression detected at confidence 0.95"
+      ]
+    }
+  },
+  {
+    "name": "tier15-policy-variant-no-change",
+    "stage": "cli",
+    "command": "/policy simulate-variants notion.write.page --confidence 0.2,0.3",
+    "expect": {
+      "kind": "PolicySimulationVariants",
+      "fingerprint": "notion.write.page"
+    }
+  },
+  {
+    "name": "tier15-speech-delta-first",
+    "stage": "cli",
+    "command": "/speak confidence 0.95 Tier15 delta test",
+    "env": {
+      "SMOKE_FIXED_NOW_ISO": "2025-12-22T00:00:00.000Z",
+      "THREAD_ID": "tier15_delta_001",
+      "SPEECH_ENABLED": "1",
+      "SPEECH_SINKS": "console",
+      "SPEECH_DEBUG": "1",
+      "SPEECH_DELTA_ONLY": "1",
+      "SPEECH_DELTA_PERSIST": "1",
+      "SPEECH_DELTA_TTL_MS": "86400000"
+    },
+    "expect": {
+      "kind": "Spoke",
+      "category": "confidence",
+      "threadId": "tier15_delta_001"
+    }
+  },
+  {
+    "name": "tier15-speech-delta-repeat-suppressed",
+    "stage": "cli",
+    "command": "/speak confidence 0.95 Tier15 delta test",
+    "env": {
+      "SMOKE_FIXED_NOW_ISO": "2025-12-22T00:00:00.000Z",
+      "THREAD_ID": "tier15_delta_001",
+      "SPEECH_ENABLED": "1",
+      "SPEECH_SINKS": "console",
+      "SPEECH_DEBUG": "1",
+      "SPEECH_DELTA_ONLY": "1",
+      "SPEECH_DELTA_PERSIST": "1",
+      "SPEECH_DELTA_TTL_MS": "86400000"
+    },
+    "expect": {
+      "kind": "Spoke",
+      "category": "confidence",
+      "threadId": "tier15_delta_001"
+    },
+    "post_assert": {
+      "stderr_contains": [
+        "\"reason\":\"DELTA_NO_CHANGE\""
+      ]
+    }
+  },
+  {
+    "name": "tier15-operator-policy-simulate-happy",
+    "stage": "cli",
+    "command": "/operator policy-simulate --policy speech_gate --confidence 0.2,0.9",
+    "expect": {
+      "kind": "PolicySimulation",
+      "policy": "speech_gate",
+      "results": [
+        {
+          "decision": "DENY",
+          "reason": "LOW_CONFIDENCE",
+          "confidence": 0.2,
+          "spoken_explain": {
+            "text": "Simulation: Denied (LOW_CONFIDENCE) at confidence 0.20",
+            "category": "confidence",
+            "confidence": 0.2
+          }
+        },
+        {
+          "decision": "ALLOW",
+          "reason": null,
+          "confidence": 0.9,
+          "spoken_explain": {
+            "text": "Simulation: Allowed at confidence 0.90",
+            "category": "confidence",
+            "confidence": 0.9
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "tier15-operator-policy-simulate-deny",
+    "stage": "cli",
+    "command": "/operator policy-simulate --policy speech_gate --confidence 0.1",
+    "expect": {
+      "kind": "PolicySimulation",
+      "policy": "speech_gate",
+      "results": [
+        {
+          "decision": "DENY",
+          "reason": "LOW_CONFIDENCE",
+          "confidence": 0.1,
+          "spoken_explain": {
+            "text": "Simulation: Denied (LOW_CONFIDENCE) at confidence 0.10",
+            "category": "confidence",
+            "confidence": 0.1
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "tier16-regression-suspends-fingerprint",
+    "stage": "cli",
+    "command": "/policy simulate-variants notion.write.page --confidence 0.2,0.9",
+    "env": {
+      "REQUALIFICATION_ENABLED": "1"
+    },
+    "expect_file_exists": "runs/requalification/state/notion.write.page.json",
+    "expect": {
+      "kind": "PolicySimulationVariants",
+      "fingerprint": "notion.write.page",
+      "regression": {
+        "kind": "ConfidenceRegression",
+        "at_confidence": 0.9
+      }
+    },
+    "post_assert": {
+      "artifact_dir": "runs/requalification/state",
+      "contains_subset": {
+        "fingerprint": "notion.write.page",
+        "state": "SUSPENDED",
+        "cause": "CONFIDENCE_REGRESSION"
+      }
+    }
+  },
+  {
+    "name": "tier16-regression-visible-to-requalifier",
+    "stage": "cli",
+    "command": "/autonomy requalify scan",
+    "env": {
+      "REQUALIFICATION_ENABLED": "1"
+    },
+    "expect": {
+      "kind": "RequalificationScan"
+    },
+    "post_assert": {
+      "still_suspended[*]": "notion.write.page"
+    }
+  },
+  {
+    "name": "tier18-ranking-order",
     "stage": "cli",
     "command": "/operator queue",
     "expect": {
@@ -1069,7 +2171,39 @@
     }
   },
   {
-    "name": "tier17-auto-runnable-visible",
+    "name": "speech-rate-cap-denies-second",
+    "stage": "cli",
+    "env": {
+      "SPEECH_ENABLED": "1",
+      "SPEECH_SINKS": "console",
+      "SPEECH_CATEGORIES": "confidence",
+      "SPEECH_CONFIDENCE_GRADIENT": "1",
+      "SPEECH_GRADIENT_PREFIX": "1",
+      "SPEECH_VOICE_BUDGET": "10",
+      "SPEECH_MAX_PER_MINUTE": "1",
+      "SPEECH_ARTIFACTS": "1",
+      "THREAD_ID": "speech_rate_001",
+      "ALLOWED_DOMAINS": null,
+      "ALLOWED_METHODS": null,
+      "ENVIRONMENT": null,
+      "NODE_ENV": null,
+      "CONFIRM_PROD": null
+    },
+    "command": "/speak confidence 0.85 one\n/speak confidence 0.85 two",
+    "post_assert": {
+      "artifact_dir": "runs/speech-decisions",
+      "contains_subset": {
+        "kind": "SpeechDecision",
+        "category": "confidence",
+        "decision": {
+          "allow": false,
+          "reason": "RATE_LIMIT"
+        }
+      }
+    }
+  },
+  {
+    "name": "tier18-auto-runnable-visible",
     "stage": "cli",
     "command": "/operator queue",
     "expect": {
@@ -1080,29 +2214,71 @@
     }
   },
   {
+    "name": "operator-speech-status-happy",
+    "stage": "cli",
+    "command": "/operator speech-status",
+    "expect": {
+      "kind": "OperatorSpeechStatus"
+    },
+    "post_assert": {
+      "enabled": true,
+      "sink": "console",
+      "debug_enabled": false
+    }
+  },
+  {
+    "name": "operator-speech-check-json",
+    "stage": "cli",
+    "command": "/operator speech-check",
+    "expect": {
+      "kind": "OperatorSpeechCheck"
+    },
+    "post_assert": {
+      "enabled": true,
+      "sinks.requested_order[0]": "elevenlabs",
+      "sinks.requested_order[1]": "os-tts",
+      "sinks.requested_order[2]": "console",
+      "sinks.configured_order[0]": "os-tts",
+      "sinks.configured_order[1]": "console"
+    }
+  },
+  {
     "name": "tier18-ui-queue-renders-ranked-jobs",
     "stage": "cli",
     "command": "/operator-ui queue",
-    "expect": { "kind": "OperatorUiQueue" },
+    "expect": {
+      "kind": "OperatorUiQueue"
+    },
     "post_assert": {
       "rows[0].status": "REGRESSION",
-      "rows[*].confidence": { "action": "AUTO_RUN" }
+      "rows[*].confidence": {
+        "action": "AUTO_RUN"
+      }
     }
   },
   {
     "name": "tier18-ui-approve-emits-receipt",
     "stage": "cli",
     "command": "/operator-ui approve tier18_ui_approval_001",
-    "expect": { "kind": "OperatorUiActionResult", "action": "APPROVE", "execution_id": "tier18_ui_approval_001" },
+    "expect": {
+      "kind": "OperatorUiActionResult",
+      "action": "APPROVE",
+      "execution_id": "tier18_ui_approval_001"
+    },
     "post_assert": {
-      "receipt_subset": { "status": "success", "execution_id": "tier18_ui_approval_001" }
+      "receipt_subset": {
+        "status": "success",
+        "execution_id": "tier18_ui_approval_001"
+      }
     }
   },
   {
     "name": "tier20-delegated-class-autorun",
     "stage": "cli",
     "command": "/notion set pg_999 Status=Done",
-    "precondition": { "delegated_class": "tier20-notion-status-updates-autorun" },
+    "precondition": {
+      "delegated_class": "tier20-notion-status-updates-autorun"
+    },
     "env": {
       "AUTONOMY_MODE": "APPROVAL_GATED_AUTONOMY",
       "ALLOWED_DOMAINS": null,
@@ -1110,13 +2286,18 @@
       "NODE_ENV": null,
       "CONFIRM_PROD": null
     },
-    "expect": { "executed": true, "approval_required": false }
+    "expect": {
+      "executed": true,
+      "approval_required": false
+    }
   },
   {
     "name": "tier20-delegation-suspended-on-regression",
     "stage": "cli",
     "command": "/notion set pg_999 Status=Done",
-    "precondition": { "delegated_class": "tier20-notion-status-updates-regression" },
+    "precondition": {
+      "delegated_class": "tier20-notion-status-updates-regression"
+    },
     "env": {
       "AUTONOMY_MODE": "APPROVAL_GATED_AUTONOMY",
       "ALLOWED_DOMAINS": null,
@@ -1143,7 +2324,10 @@
       "CONFIRM_PROD": null
     },
     "expect_exit_code": 3,
-    "expect": { "kind": "PolicyDenied", "code": "DOMAIN_OVERLAY_DENY_WRITE" }
+    "expect": {
+      "kind": "PolicyDenied",
+      "code": "DOMAIN_OVERLAY_DENY_WRITE"
+    }
   },
   {
     "name": "tier21-role-blocks-approval",
@@ -1157,7 +2341,10 @@
       "CONFIRM_PROD": null
     },
     "expect_exit_code": 3,
-    "expect": { "kind": "PolicyDenied", "code": "OPERATOR_NOT_AUTHORIZED_FOR_DOMAIN" }
+    "expect": {
+      "kind": "PolicyDenied",
+      "code": "OPERATOR_NOT_AUTHORIZED_FOR_DOMAIN"
+    }
   },
   {
     "name": "tier-infinity-token-exhausted",
@@ -1190,8 +2377,15 @@
       "retry_after": "2025-01-01T01:00:00.000Z"
     },
     "post_assert": {
-      "no_writes": { "paths": ["runs/intake"] },
-      "receipt_subset": { "status": "throttled", "policy_code": "TOKEN_EXHAUSTED" }
+      "no_writes": {
+        "paths": [
+          "runs/intake"
+        ]
+      },
+      "receipt_subset": {
+        "status": "throttled",
+        "policy_code": "TOKEN_EXHAUSTED"
+      }
     }
   },
   {
@@ -1212,7 +2406,11 @@
     },
     "precondition": {
       "rollback_artifacts": [
-        { "kind": "RollbackArtifact", "fingerprint": "intake.scan", "at": "2025-01-01T00:00:00.000Z" }
+        {
+          "kind": "RollbackArtifact",
+          "fingerprint": "intake.scan",
+          "at": "2025-01-01T00:00:00.000Z"
+        }
       ]
     },
     "expect_exit_code": 3,
@@ -1222,10 +2420,22 @@
       "retry_after": "2025-01-01T01:00:00.000Z"
     },
     "post_assert": {
-      "receipt_subset": { "status": "throttled", "policy_code": "CIRCUIT_OPEN" },
+      "receipt_subset": {
+        "status": "throttled",
+        "policy_code": "CIRCUIT_OPEN"
+      },
       "artifact_dir": "runs/governor/circuit-breakers",
-      "contains_keys": ["fingerprint", "opened_at", "open_until", "reason", "counts"],
-      "contains_subset": { "fingerprint": "intake.scan", "reason": "ROLLBACK_THRESHOLD" }
+      "contains_keys": [
+        "fingerprint",
+        "opened_at",
+        "open_until",
+        "reason",
+        "counts"
+      ],
+      "contains_subset": {
+        "fingerprint": "intake.scan",
+        "reason": "ROLLBACK_THRESHOLD"
+      }
     }
   },
   {
@@ -1257,46 +2467,54 @@
     },
     "post_assert": {
       "artifact_dir": "runs/requalification/state",
-      "contains_keys": ["fingerprint", "state", "cause", "since", "cooldown_until"],
-      "contains_subset": { "fingerprint": "notion.write.page", "state": "PROBATION" }
+      "contains_keys": [
+        "fingerprint",
+        "state",
+        "cause",
+        "since",
+        "cooldown_until"
+      ],
+      "contains_subset": {
+        "fingerprint": "notion.write.page",
+        "state": "PROBATION"
+      }
     }
   },
   {
-    "name": "tier22_1-probation-success-increments",
+    "name": "tier22-probation-monotonic-success",
     "stage": "cli",
-    "command": "/notion live db db_001",
+    "command": "/policy simulate-variants notion.write.page --confidence 0.6,0.7,0.8",
     "env": {
       "REQUALIFICATION_ENABLED": "1",
-      "PROBATION_SUCCESS_REQUIRED": "3",
-      "SMOKE_FIXED_NOW_ISO": "2025-01-02T00:00:00.000Z",
+      "SMOKE_FIXED_NOW_ISO": "2025-01-01T00:00:00.000Z",
       "AUTONOMY_MODE": "OFF",
       "ALLOWED_DOMAINS": null,
       "ALLOWED_METHODS": null,
       "NODE_ENV": null,
-      "CONFIRM_PROD": null,
-      "NOTION_API_BASE": "http://localhost:8787",
-      "NOTION_API_VERSION": "2022-06-28",
-      "NOTION_TOKEN": "local_mock_token",
-      "NOTION_REDACT_KEYS": "title,name"
+      "CONFIRM_PROD": null
     },
     "precondition": {
       "requalification_state": {
         "fingerprint": "notion.write.page",
         "state": "PROBATION",
         "cause": "seeded",
-        "since": "2025-01-02T00:00:00.000Z",
+        "since": "2025-01-01T00:00:00.000Z",
         "cooldown_until": null
       }
     },
-    "expect": { "status": "success" },
+    "expect": {
+      "kind": "PolicySimulationVariants",
+      "fingerprint": "notion.write.page"
+    },
+    "expect_file_exists": "runs/requalification/events/notion.write.page.1735689600003.json",
     "post_assert": {
-      "artifact_dir": "runs/requalification/probation",
+      "artifact_dir": "runs/requalification/state",
       "contains_subset": {
         "fingerprint": "notion.write.page",
-        "state": "PROBATION",
-        "success_count": 1,
-        "required_successes": 3,
-        "last_success_at": "2025-01-02T00:00:00.000Z"
+        "state": "ELIGIBLE",
+        "cause": "PROBATION_SUCCESS_THRESHOLD",
+        "success_count": 3,
+        "required": 3
       }
     }
   },
@@ -1322,12 +2540,24 @@
         "cooldown_until": "2025-01-01T00:00:00.000Z"
       }
     },
-    "expect": { "kind": "RequalificationScan" },
+    "expect": {
+      "kind": "RequalificationScan"
+    },
     "expect_file_exists": "runs/requalification/events/notion.write.page.1735776000000.json",
     "post_assert": {
       "artifact_dir": "runs/requalification/state",
-      "contains_keys": ["fingerprint", "state", "cause", "since", "cooldown_until"],
-      "contains_subset": { "fingerprint": "notion.write.page", "state": "PROBATION", "cause": "COOLDOWN_ELAPSED" },
+      "contains_keys": [
+        "fingerprint",
+        "state",
+        "cause",
+        "since",
+        "cooldown_until"
+      ],
+      "contains_subset": {
+        "fingerprint": "notion.write.page",
+        "state": "PROBATION",
+        "cause": "COOLDOWN_ELAPSED"
+      },
       "receipt_subset": {
         "execution_id": "autonomy_transition_notion-write-page_1735776000000",
         "kind": "AutonomyStateTransition",
@@ -1336,48 +2566,274 @@
     }
   },
   {
-    "name": "tier22_1-probation-recommends-eligible",
+    "name": "tier22-probation-regression-resets",
     "stage": "cli",
-    "repeat": 3,
-    "command": "/notion live db db_001",
+    "command": "/policy simulate-variants notion.write.page --confidence 0.7,0.8,0.75",
     "env": {
       "REQUALIFICATION_ENABLED": "1",
-      "PROBATION_SUCCESS_REQUIRED": "3",
-      "SMOKE_FIXED_NOW_ISO": "2025-01-02T00:00:00.000Z",
+      "SMOKE_FIXED_NOW_ISO": "2025-01-01T00:00:00.000Z",
       "AUTONOMY_MODE": "OFF",
       "ALLOWED_DOMAINS": null,
       "ALLOWED_METHODS": null,
       "NODE_ENV": null,
-      "CONFIRM_PROD": null,
-      "NOTION_API_BASE": "http://localhost:8787",
-      "NOTION_API_VERSION": "2022-06-28",
-      "NOTION_TOKEN": "local_mock_token",
-      "NOTION_REDACT_KEYS": "title,name"
+      "CONFIRM_PROD": null
     },
     "precondition": {
       "requalification_state": {
         "fingerprint": "notion.write.page",
         "state": "PROBATION",
         "cause": "seeded",
-        "since": "2025-01-02T00:00:00.000Z",
+        "since": "2025-01-01T00:00:00.000Z",
         "cooldown_until": null
       }
     },
-    "expect": { "status": "success" },
-    "expect_file_exists": "runs/requalification/events/notion.write.page.1735776000000.json",
+    "expect": {
+      "kind": "PolicySimulationVariants",
+      "fingerprint": "notion.write.page"
+    },
+    "expect_file_exists": "runs/requalification/events/notion.write.page.1735689600002.json",
     "post_assert": {
-      "artifact_dir": "runs/requalification/events",
+      "artifact_dir": "runs/requalification/state",
       "contains_subset": {
-        "event": "RequalificationRecommended",
         "fingerprint": "notion.write.page",
-        "confidence": 1,
-        "success_count": 3
+        "state": "PROBATION",
+        "success_count": 0,
+        "required": 3
+      }
+    }
+  },
+  {
+    "name": "tier18-confidence-view-monotonic-success",
+    "stage": "cli",
+    "command": "/operator confidence-view notion.write.page",
+    "env": {
+      "REQUALIFICATION_ENABLED": "1",
+      "SMOKE_FIXED_NOW_ISO": "2025-01-01T00:00:00.000Z",
+      "AUTONOMY_MODE": "OFF",
+      "ALLOWED_DOMAINS": null,
+      "ALLOWED_METHODS": null,
+      "NODE_ENV": null,
+      "CONFIRM_PROD": null
+    },
+    "precondition": {
+      "requalification_state": {
+        "fingerprint": "notion.write.page",
+        "state": "PROBATION",
+        "cause": "seeded",
+        "since": "2025-01-01T00:00:00.000Z",
+        "cooldown_until": null
       },
+      "requalification_events": [
+        {
+          "kind": "ProbationSuccess",
+          "fingerprint": "notion.write.page",
+          "at": "2025-01-01T00:00:00.001Z",
+          "confidence": 0.7,
+          "decision": "ALLOW",
+          "success_count": 1,
+          "required_successes": 3
+        },
+        {
+          "kind": "ProbationSuccess",
+          "fingerprint": "notion.write.page",
+          "at": "2025-01-01T00:00:00.002Z",
+          "confidence": 0.8,
+          "decision": "ALLOW",
+          "success_count": 2,
+          "required_successes": 3
+        },
+        {
+          "kind": "ProbationSuccess",
+          "fingerprint": "notion.write.page",
+          "at": "2025-01-01T00:00:00.003Z",
+          "confidence": 0.85,
+          "decision": "ALLOW",
+          "success_count": 3,
+          "required_successes": 3
+        },
+        {
+          "kind": "RequalificationRecommended",
+          "fingerprint": "notion.write.page",
+          "at": "2025-01-01T00:00:00.004Z",
+          "recommendation": "ELIGIBLE"
+        }
+      ]
+    },
+    "expect": {
+      "kind": "OperatorConfidenceView",
+      "fingerprint": "notion.write.page",
+      "rows": [
+        {
+          "confidence": 0.7,
+          "decision": "ALLOW",
+          "success": "1/3",
+          "monotonic": true
+        },
+        {
+          "confidence": 0.8,
+          "decision": "ALLOW",
+          "success": "2/3",
+          "monotonic": true
+        },
+        {
+          "confidence": 0.85,
+          "decision": "ALLOW",
+          "success": "3/3",
+          "monotonic": true
+        }
+      ]
+    }
+  },
+  {
+    "name": "tier18-confidence-view-regression-resets",
+    "stage": "cli",
+    "command": "/operator confidence-view notion.write.page",
+    "env": {
+      "REQUALIFICATION_ENABLED": "1",
+      "SMOKE_FIXED_NOW_ISO": "2025-01-01T00:00:00.000Z",
+      "AUTONOMY_MODE": "OFF",
+      "ALLOWED_DOMAINS": null,
+      "ALLOWED_METHODS": null,
+      "NODE_ENV": null,
+      "CONFIRM_PROD": null
+    },
+    "precondition": {
+      "requalification_state": {
+        "fingerprint": "notion.write.page",
+        "state": "PROBATION",
+        "cause": "seeded",
+        "since": "2025-01-01T00:00:00.000Z",
+        "cooldown_until": null
+      },
+      "requalification_events": [
+        {
+          "kind": "ProbationSuccess",
+          "fingerprint": "notion.write.page",
+          "at": "2025-01-01T00:00:00.001Z",
+          "confidence": 0.8,
+          "decision": "ALLOW",
+          "success_count": 1,
+          "required_successes": 3
+        },
+        {
+          "kind": "ProbationSuccess",
+          "fingerprint": "notion.write.page",
+          "at": "2025-01-01T00:00:00.002Z",
+          "confidence": 0.75,
+          "last_confidence": 0.8,
+          "decision": "ALLOW",
+          "success_count": 0,
+          "required_successes": 3
+        }
+      ]
+    },
+    "expect": {
+      "kind": "OperatorConfidenceView",
+      "fingerprint": "notion.write.page",
+      "rows": [
+        {
+          "confidence": 0.8,
+          "decision": "ALLOW",
+          "success": "1/3",
+          "monotonic": true
+        },
+        {
+          "confidence": 0.75,
+          "decision": "ALLOW",
+          "success": "0/3",
+          "monotonic": false
+        }
+      ]
+    }
+  },
+  {
+    "name": "operator-confidence-curve-happy",
+    "stage": "cli",
+    "command": "/operator confidence-curve test_fingerprint",
+    "env": {
+      "REQUALIFICATION_ENABLED": "1",
+      "SMOKE_FIXED_NOW_ISO": "2025-01-01T00:00:00.000Z",
+      "AUTONOMY_MODE": "OFF",
+      "ALLOWED_DOMAINS": null,
+      "ALLOWED_METHODS": null,
+      "NODE_ENV": null,
+      "CONFIRM_PROD": null
+    },
+    "expect": {
+      "kind": "OperatorView"
+    }
+  },
+  {
+    "name": "tier16-autonomy-requalify-recommends-eligible",
+    "stage": "cli",
+    "command": "/autonomy requalify scan",
+    "env": {
+      "REQUALIFICATION_ENABLED": "1",
+      "SMOKE_FIXED_NOW_ISO": "2025-01-01T00:00:00.000Z",
+      "AUTONOMY_MODE": "OFF",
+      "ALLOWED_DOMAINS": null,
+      "ALLOWED_METHODS": null,
+      "NODE_ENV": null,
+      "CONFIRM_PROD": null
+    },
+    "precondition": {
+      "requalification_state": {
+        "fingerprint": "notion.write.page",
+        "state": "ELIGIBLE",
+        "cause": "PROBATION_SUCCESS_THRESHOLD",
+        "since": "2025-01-01T00:00:00.000Z",
+        "cooldown_until": null,
+        "success_count": 3,
+        "required_successes": 3
+      }
+    },
+    "expect": {
+      "kind": "RequalificationScan",
+      "eligible": [
+        "notion.write.page"
+      ],
+      "recommended": [
+        "notion.write.page"
+      ]
+    },
+    "post_assert": {
       "receipt_subset": {
         "kind": "RequalificationRecommended",
+        "execution_id": "requal_recommended_notion-write-page_1735689600001",
         "fingerprint": "notion.write.page",
-        "recommendation": "ELIGIBLE"
+        "status": "success"
       }
+    }
+  },
+  {
+    "name": "tier16-autonomy-requalify-does-not-recommend-probation",
+    "stage": "cli",
+    "command": "/autonomy requalify scan",
+    "env": {
+      "REQUALIFICATION_ENABLED": "1",
+      "SMOKE_FIXED_NOW_ISO": "2025-01-01T00:00:00.000Z",
+      "AUTONOMY_MODE": "OFF",
+      "ALLOWED_DOMAINS": null,
+      "ALLOWED_METHODS": null,
+      "NODE_ENV": null,
+      "CONFIRM_PROD": null
+    },
+    "precondition": {
+      "requalification_state": {
+        "fingerprint": "notion.write.page",
+        "state": "PROBATION",
+        "cause": "seeded",
+        "since": "2025-01-01T00:00:00.000Z",
+        "cooldown_until": null,
+        "success_count": 2,
+        "required_successes": 3,
+        "last_confidence": 0.8
+      }
+    },
+    "expect": {
+      "kind": "RequalificationScan",
+      "eligible": [],
+      "recommended": []
     }
   },
   {
@@ -1407,10 +2863,15 @@
         "cooldown_until": null
       }
     },
-    "expect": { "status": "success" },
+    "expect": {
+      "status": "success"
+    },
     "post_assert": {
       "artifact_dir": "runs/requalification/state",
-      "contains_subset": { "fingerprint": "notion.write.page", "state": "ELIGIBLE" }
+      "contains_subset": {
+        "fingerprint": "notion.write.page",
+        "state": "ELIGIBLE"
+      }
     }
   },
   {
@@ -1572,111 +3033,170 @@
     "expect_exit_code": 3
   },
   {
-    "name": "tier23-confidence-decays-to-probation",
+    "name": "tier29-approval-required-notify",
     "stage": "cli",
-    "command": "/tier23 ping",
+    "fixture_write": [
+      {
+        "path": "playbooks/registry.json",
+        "json": [
+          {
+            "id": "approval_required_notify",
+            "enabled": true,
+            "when": { "kind": "ApprovalRequired" },
+            "conditions": {
+              "domain": ["notion"]
+            },
+            "actions": [
+              { "type": "notify", "channel": "operator", "template": "approval_needed" }
+            ]
+          }
+        ]
+      }
+    ],
     "env": {
-      "SMOKE_FIXED_NOW_ISO": "2025-01-01T00:00:00.000Z",
-      "REQUALIFICATION_ENABLED": "1",
-      "CONFIDENCE_DECAY_HOURS": "72",
-      "CONFIDENCE_MIN_SUCCESS": "1",
-      "AUTONOMY_MODE": "OFF",
+      "PLAYBOOKS_ENABLED": "1",
       "ALLOWED_DOMAINS": null,
       "ALLOWED_METHODS": null,
+      "ENVIRONMENT": null,
       "NODE_ENV": null,
       "CONFIRM_PROD": null
     },
-    "precondition": {
-      "requalification_state": {
-        "command": "/tier23 ping",
-        "fingerprint": "916b8ac414809fd92c7b0ed199abf76d064487029c55321c6d3af39fa5b7fe60",
-        "state": "ACTIVE",
-        "cause": "seeded",
-        "since": "2024-12-01T00:00:00.000Z",
-        "cooldown_until": null
-      }
-    },
-    "expect": {
-      "kind": "ConfidenceDecayed",
-      "to": "PROBATION",
-      "reason": "STALE_CONFIDENCE"
-    },
+    "command": "/notion set pg_001 Status=Done",
     "expect_exit_code": 4,
+    "expect": {
+      "kind": "ApprovalRequired",
+      "code": "NOTION_WRITE_APPROVAL_REQUIRED"
+    },
     "post_assert": {
-      "artifact_dir": "runs/confidence/events",
-      "contains_subset": {
-        "from": "ACTIVE",
-        "to": "PROBATION",
-        "reason": "STALE_CONFIDENCE"
+      "approval_state": true,
+      "files_exist": [
+        "runs/playbooks/exec_mock_notion_write_001.approval_required_notify.json"
+      ],
+      "receipt_subset": {
+        "kind": "PlaybookExecuted",
+        "playbook_id": "approval_required_notify",
+        "parent_execution_id": "exec_mock_notion_write_001"
       }
     }
   },
   {
-    "name": "tier23-no-decay-with-recent-success",
+    "name": "tier29-playbook-budget-exhausted",
     "stage": "cli",
-    "command": "/intake ./docs",
+    "repeat": 2,
+    "fixture_write": [
+      {
+        "path": "playbooks/registry.json",
+        "json": [
+          {
+            "id": "approval_required_notify",
+            "enabled": true,
+            "when": { "kind": "ApprovalRequired" },
+            "conditions": {
+              "domain": ["notion"]
+            },
+            "actions": [
+              { "type": "notify", "channel": "operator", "template": "approval_needed" }
+            ]
+          }
+        ]
+      }
+    ],
     "env": {
-      "SMOKE_FIXED_NOW_ISO": "2025-01-01T00:00:00.000Z",
-      "REQUALIFICATION_ENABLED": "1",
-      "CONFIDENCE_DECAY_HOURS": "72",
-      "CONFIDENCE_MIN_SUCCESS": "1",
-      "AUTONOMY_MODE": "OFF",
+      "PLAYBOOKS_ENABLED": "1",
+      "AUTONOMY_TOKENS_PER_HOUR": "1",
+      "AUTONOMY_MAX_CONCURRENT": "1",
       "ALLOWED_DOMAINS": null,
       "ALLOWED_METHODS": null,
+      "ENVIRONMENT": null,
       "NODE_ENV": null,
       "CONFIRM_PROD": null
     },
-    "precondition": {
-      "requalification_state": {
-        "fingerprint": "intake.scan",
-        "state": "ACTIVE",
-        "cause": "seeded",
-        "since": "2024-12-01T00:00:00.000Z",
-        "cooldown_until": null
-      }
-    },
+    "command": "/notion set pg_001 Status=Done",
+    "expect_exit_code": 4,
     "expect": {
-      "status": "success"
+      "kind": "ApprovalRequired",
+      "code": "NOTION_WRITE_APPROVAL_REQUIRED"
+    },
+    "post_assert": {
+      "approval_state": true,
+      "artifact_dir": "runs/playbooks",
+      "contains_subset": {
+        "playbook_id": "approval_required_notify",
+        "throttled": true
+      },
+      "receipt_subset": {
+        "kind": "Throttled",
+        "throttle_reason": "PLAYBOOK_BUDGET_EXHAUSTED",
+        "playbook_id": "approval_required_notify",
+        "parent_execution_id": "exec_mock_notion_write_001"
+      }
     }
   },
   {
-    "name": "tier17-rankings-compute-writes-artifacts",
+    "name": "tier17-operator-rank-writes-artifact",
     "stage": "cli",
-    "command": "/rankings compute 7",
-    "expect_subset": { "kind": "RankingsComputed", "window_days": 7 },
+    "env": {
+      "SMOKE_FIXED_NOW_ISO": "2025-12-26T00:00:00Z"
+    },
+    "command": "/operator rank 7",
+    "expect_subset": {
+      "kind": "OperatorRanking",
+      "window_days": 7
+    },
     "post_assert": {
-      "artifact_dir": "runs/rankings/operators",
-      "contains_keys": ["score", "signals"]
+      "artifact_dir": "runs/operator/rankings",
+      "contains_keys": [
+        "score",
+        "totals"
+      ]
     }
   },
   {
-    "name": "tier17-rankings-penalize-on-rollback-signal",
+    "name": "tier17-operator-rank-deterministic-shape",
     "stage": "cli",
-    "command": "/rankings compute 1",
-    "expect_subset": { "kind": "RankingsComputed", "window_days": 1 },
-    "post_assert": {
-      "artifact_dir": "runs/rankings/bundles",
-      "contains_keys": ["operators", "fingerprints", "domains"]
+    "env": {
+      "SMOKE_FIXED_NOW_ISO": "2025-12-26T00:00:00Z"
+    },
+    "command": "/operator rank 1",
+    "expect_subset": {
+      "kind": "OperatorRanking",
+      "window_days": 1,
+      "score": null,
+      "breakdown": null,
+      "totals": null
     }
   },
   {
     "name": "tier19-promotion-recommend-outputs-json",
     "stage": "cli",
     "command": "/autonomy promote recommend {\"windowRuns\":1,\"minAvgScore\":85,\"minAgeDays\":0}",
-    "expect_subset": { "kind": "PromotionCandidatesRecommended" },
+    "expect_subset": {
+      "kind": "PromotionCandidatesRecommended"
+    },
     "post_assert": {
       "artifact_dir": "runs/autonomy-promotion-candidates",
-      "contains_keys": ["kind", "candidates"]
+      "contains_keys": [
+        "kind",
+        "candidates"
+      ]
     }
   },
   {
     "name": "tier19-promotion-recommend-writes-artifact",
     "stage": "cli",
     "command": "/autonomy promote recommend",
-    "expect_subset": { "kind": "PromotionCandidatesRecommended" },
+    "expect_subset": {
+      "kind": "PromotionCandidatesRecommended"
+    },
     "post_assert": {
       "artifact_dir": "runs/autonomy-promotion-candidates",
-      "contains_keys": ["kind", "window_runs", "min_avg_score", "min_age_days", "candidates"]
+      "contains_keys": [
+        "kind",
+        "window_runs",
+        "min_avg_score",
+        "min_age_days",
+        "candidates"
+      ]
     }
   },
   {
@@ -1695,11 +3215,17 @@
       "NOTION_REDACT_KEYS": "title,name"
     },
     "expect_exit_code": 3,
-    "expect": { "kind": "PolicyDenied", "code": "NOTION_LIVE_REQUIRES_READ_ONLY" },
+    "expect": {
+      "kind": "PolicyDenied",
+      "code": "NOTION_LIVE_REQUIRES_READ_ONLY"
+    },
     "expect_file_exists": "runs/confidence/notion.write.page.json",
     "post_assert": {
       "artifact_dir": "runs/confidence",
-      "contains_subset": { "fingerprint": "notion.write.page", "confidence": 0.8 }
+      "contains_subset": {
+        "fingerprint": "notion.write.page",
+        "confidence": 0.8
+      }
     }
   },
   {
@@ -1720,11 +3246,139 @@
       "NOTION_REDACT_KEYS": "title,name"
     },
     "expect_exit_code": 3,
-    "expect": { "kind": "PolicyDenied", "code": "REQUALIFICATION_BLOCKED" },
+    "expect": {
+      "kind": "PolicyDenied",
+      "code": "REQUALIFICATION_BLOCKED"
+    },
     "expect_file_exists": "runs/requalification/state/notion.write.page.json",
     "post_assert": {
       "artifact_dir": "runs/requalification/state",
-      "contains_subset": { "fingerprint": "notion.write.page", "state": "SUSPENDED", "cause": "CONFIDENCE_TOO_LOW" }
+      "contains_subset": {
+        "fingerprint": "notion.write.page",
+        "state": "SUSPENDED",
+        "cause": "CONFIDENCE_TOO_LOW"
+      }
+    }
+  },
+  {
+    "name": "operator-repo-status-happy",
+    "stage": "cli",
+    "command": "/operator repo-status",
+    "expect": {
+      "kind": "RepoStatus"
+    }
+  },
+  {
+    "name": "operator-repo-status-non-canonical",
+    "stage": "cli",
+    "env": {
+      "CANONICAL_REPO_ROOT": "C:\\this\\path\\does\\not\\match"
+    },
+    "command": "/operator repo-status",
+    "expect": {
+      "kind": "RepoStatus",
+      "non_canonical": true
+    }
+  },
+  {
+    "name": "Tier-S3: delta speaks + writes artifact",
+    "command": "/status",
+    "env": {
+      "SMOKE_FIXED_NOW_ISO": "2030-01-01T00:00:00.000Z",
+      "SPEECH_TIER": "S3"
+    },
+    "fixture_write": [
+      {
+        "path": "runs/receipts.jsonl",
+        "content": "{\"ts\":\"2029-12-31T00:00:00.000Z\",\"fingerprint\":\"smoke-speech\",\"command\":\"/status\",\"ok\":true,\"autonomy_mode\":\"ON\",\"autonomy_mode_effective\":\"ON\",\"confidence\":{\"raw\":0.11,\"effective\":0.11},\"governor\":{\"throttle\":false},\"requalification\":{\"state\":\"CLEAR\"}}\n"
+      }
+    ],
+    "post_assert": {
+      "stderr_contains": ["[S3]"],
+      "file_exists": ["runs/speech-deltas"]
+    }
+  },
+  {
+    "name": "Tier-S3: no prior -> no delta speech",
+    "command": "/status",
+    "env": {
+      "SMOKE_FIXED_NOW_ISO": "2030-01-01T00:00:00.000Z",
+      "SPEECH_TIER": "S3"
+    },
+    "fixture_write": [
+      {
+        "path": "runs/receipts.jsonl",
+        "content": ""
+      }
+    ],
+    "post_assert": {
+      "stderr_not_contains": ["[S3]"],
+      "file_not_exists": ["runs/speech-deltas"]
+    }
+  },
+  {
+    "name": "Tier-S5: autonomy on -> status speaks + writes artifact",
+    "command": "/status",
+    "env": {
+      "SMOKE_FIXED_NOW_ISO": "2030-01-01T00:00:00.000Z",
+      "SPEECH_TIER": "S5"
+    },
+    "fixture_write": [
+      {
+        "path": "runs/receipts.jsonl",
+        "content": ""
+      }
+    ],
+    "post_assert": {
+      "stderr_contains": ["[S5]"],
+      "file_exists": ["runs/speech-status"]
+    }
+  },
+  {
+    "name": "Tier-S5: autonomy off -> silent",
+    "command": "/status",
+    "env": {
+      "SMOKE_FIXED_NOW_ISO": "2030-01-01T00:00:00.000Z",
+      "SPEECH_TIER": "S5",
+      "AUTONOMY_MODE_EFFECTIVE": "OFF"
+    },
+    "fixture_write": [
+      {
+        "path": "runs/receipts.jsonl",
+        "content": ""
+      }
+    ],
+    "post_assert": {
+      "stderr_not_contains": ["[S5]"],
+      "file_not_exists": ["runs/speech-status"]
+    }
+  },
+  {
+    "name": "tier22-probation-counter-increments",
+    "stage": "cli",
+    "cmd": "/autonomy requalify scan",
+    "env": {
+      "PROBATION_SUCCESS_WINDOW": "3"
+    },
+    "post_assert": {
+      "requalification_counter": {
+        "fingerprint": "notion.write.page",
+        "min_successes": 1
+      }
+    }
+  },
+  {
+    "name": "tier22-probation-recommends-eligible-after-window",
+    "stage": "cli",
+    "cmd": "/autonomy requalify scan",
+    "env": {
+      "PROBATION_SUCCESS_WINDOW": "2"
+    },
+    "post_assert": {
+      "requalification_state": {
+        "fingerprint": "notion.write.page",
+        "state": "ELIGIBLE"
+      }
     }
   }
 ]

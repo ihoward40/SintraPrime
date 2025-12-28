@@ -14,7 +14,8 @@ export function writeConfidenceDecayEvent(input: {
   reason: string;
   timestamp: string;
 }) {
-  const dir = path.join(process.cwd(), "runs", "confidence", "events");
+  const runsDir = process.env.RUNS_DIR || "runs";
+  const dir = path.join(runsDir, "confidence", "events");
   fs.mkdirSync(dir, { recursive: true });
 
   const ts = new Date(input.timestamp).getTime();

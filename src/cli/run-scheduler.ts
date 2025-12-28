@@ -7,6 +7,9 @@ import { readSchedulerHistory } from "../scheduler/readHistory.js";
 import { writeSchedulerReceipt } from "../artifacts/writeSchedulerReceipt.js";
 import { decisionTrace } from "../scheduler/decisionTrace.js";
 import { runSchedulerExplain } from "./run-scheduler-explain.js";
+import { schedulerExplain } from "./scheduler-explain.js";
+import { writeSchedulerDecision } from "../scheduler/writeSchedulerDecision.js";
+import { deriveFingerprint } from "../governor/runGovernor.js";
 
 type SchedulerMode = "OFF" | "READ_ONLY_AUTONOMY" | "PROPOSE_ONLY_AUTONOMY" | "APPROVAL_GATED_AUTONOMY";
 
@@ -163,21 +166,21 @@ function parseSchedulerHistoryCommand(command: string):
 }
 
 function parseSchedulerExplainCommand(command: string):
-  | { kind: "SchedulerExplain"; job_id: string; at?: Date }
+  | { kind: "SchedulerExplain"; query: string; at?: Date }
   | null {
   const trimmed = String(command ?? "").trim();
   if (!/^\/scheduler\s+explain\b/i.test(trimmed)) return null;
 
   const tokens = trimmed.split(/\s+/).slice(2);
-  const job_id = tokens[0];
-  if (!job_id) throw new Error("Usage: /scheduler explain <job_id> [--at <timestamp>]");
+  const query = tokens[0];
+  if (!query) throw new Error("Usage: /scheduler explain <job_id|execution_id> [--at <timestamp>]");
 
   let at: Date | undefined;
   for (let i = 1; i < tokens.length; i += 1) {
     const t = tokens[i]!;
     if (t === "--at") {
       const v = tokens[i + 1];
-      if (!v) throw new Error("Usage: /scheduler explain <job_id> [--at <timestamp>]");
+      if (!v) throw new Error("Usage: /scheduler explain <job_id|execution_id> [--at <timestamp>]");
       const d = new Date(v);
       if (!Number.isFinite(d.getTime())) throw new Error("--at must be a valid ISO timestamp");
       at = d;
@@ -185,10 +188,10 @@ function parseSchedulerExplainCommand(command: string):
       continue;
     }
     if (t.startsWith("--")) throw new Error(`Unknown flag: ${t}`);
-    throw new Error("Usage: /scheduler explain <job_id> [--at <timestamp>]");
+    throw new Error("Usage: /scheduler explain <job_id|execution_id> [--at <timestamp>]");
   }
 
-  return { kind: "SchedulerExplain", job_id, at };
+  return { kind: "SchedulerExplain", query, at };
 }
 
 export async function runScheduler(jobId?: string) {
@@ -211,7 +214,29 @@ export async function runScheduler(jobId?: string) {
       manual_trigger: Boolean(jobId),
     });
 
+    // Tier-13.5: write deterministic scheduler decision breadcrumbs.
+    const fingerprint = deriveFingerprint({ command: job.command, domain_id: null });
+
     if (trace.scheduler_action === "SKIP") {
+      const skipDecision =
+        trace.primary_reason === "OUTSIDE_SCHEDULE"
+          ? "SKIPPED_NOT_DUE"
+          : trace.primary_reason === "DEDUP_ACTIVE"
+            ? "SKIPPED_DEDUP"
+            : "ERROR";
+
+      writeSchedulerDecision({
+        kind: "SchedulerDecision",
+        decision: skipDecision,
+        job_id: job.job_id,
+        fingerprint,
+        now: started_at,
+        next_run_at: trace.next_eligible_at ?? undefined,
+        dedup_hit: trace.primary_reason === "DEDUP_ACTIVE",
+        message: `Scheduler skipped: ${trace.primary_reason}`,
+        decided_at: started_at,
+      });
+
       const skipped = {
         job_id: job.job_id,
         window_id: trace.window_id,
@@ -241,6 +266,18 @@ export async function runScheduler(jobId?: string) {
 
     let outcome: any;
     try {
+      // Record that the scheduler attempted to run this job.
+      writeSchedulerDecision({
+        kind: "SchedulerDecision",
+        decision: "SCHEDULED",
+        job_id: job.job_id,
+        fingerprint,
+        now: started_at,
+        scheduled_for: started_at,
+        next_run_at: trace.next_eligible_at ?? undefined,
+        decided_at: started_at,
+      });
+
       const engineOut = runEngineCommand(job.command, env, job.budgets.max_runtime_ms);
       outcome = engineOut.json;
     } catch (err: any) {
@@ -253,6 +290,55 @@ export async function runScheduler(jobId?: string) {
       started_at,
       outcome,
     });
+
+    // Record post-outcome decision classification (receipts-only).
+    try {
+      const k = typeof outcome?.kind === "string" ? outcome.kind : "";
+      const execution_id = typeof outcome?.execution_id === "string" ? outcome.execution_id : undefined;
+
+      if (k === "PolicyDenied") {
+        const code = typeof outcome?.code === "string" ? outcome.code : "UNKNOWN";
+        const reason = typeof outcome?.reason === "string" ? outcome.reason : "";
+        writeSchedulerDecision({
+          kind: "SchedulerDecision",
+          decision: "DENIED_POLICY",
+          job_id: job.job_id,
+          execution_id,
+          fingerprint,
+          now: started_at,
+          policy: { code, reason },
+          decided_at: started_at,
+        });
+      } else if (k === "Throttled") {
+        const reason = typeof outcome?.reason === "string" ? outcome.reason : undefined;
+        const retry_after = typeof outcome?.retry_after === "string" ? outcome.retry_after : undefined;
+        writeSchedulerDecision({
+          kind: "SchedulerDecision",
+          decision: "THROTTLED_GOVERNOR",
+          job_id: job.job_id,
+          execution_id,
+          fingerprint,
+          now: started_at,
+          governor: { decision: "DELAY", reason, retry_after },
+          decided_at: started_at,
+        });
+      } else if (k === "ApprovalRequired" || k === "ApprovalRequiredBatch" || k === "NeedApprovalAgain") {
+        const state_file = typeof outcome?.state_file === "string" ? outcome.state_file : "runs/approvals";
+        const plan_hash = typeof outcome?.plan_hash === "string" ? outcome.plan_hash : undefined;
+        writeSchedulerDecision({
+          kind: "SchedulerDecision",
+          decision: "PAUSED_APPROVAL",
+          job_id: job.job_id,
+          execution_id,
+          fingerprint,
+          now: started_at,
+          approval: { status: "awaiting_approval", state_file, plan_hash },
+          decided_at: started_at,
+        });
+      }
+    } catch {
+      // Never block scheduler runs on breadcrumb writes.
+    }
 
     const receipt = writeSchedulerReceipt({
       job_id: job.job_id,
@@ -289,10 +375,32 @@ async function main() {
 
   const parsedExplain = parseSchedulerExplainCommand(cmd);
   if (parsedExplain) {
-    const job = findJob(parsedExplain.job_id);
+    const query = parsedExplain.query;
     const at = parsedExplain.at ?? new Date(nowIso());
-    const out = runSchedulerExplain({ job, at });
-    console.log(JSON.stringify({ kind: "SchedulerExplain", ...out }, null, 2));
+
+    let job: JobDefinition | null = null;
+    try {
+      job = findJob(query);
+    } catch {
+      job = null;
+    }
+
+    const decisionLookup = schedulerExplain(query);
+    const traceOut = job ? runSchedulerExplain({ job, at }) : null;
+
+    const found = Boolean(job) || decisionLookup.found;
+    const out: any = {
+      kind: "SchedulerExplain",
+      query,
+      found,
+      ...(traceOut ?? {}),
+    };
+
+    if (decisionLookup.found) out.decision_record = decisionLookup.decision;
+    if (!found && decisionLookup.hint) out.hint = decisionLookup.hint;
+
+    console.log(JSON.stringify(out, null, 2));
+    if (!found) process.exitCode = 2;
     return;
   }
 

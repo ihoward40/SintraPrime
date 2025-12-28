@@ -19,15 +19,17 @@ export function materializePhaseSteps(params: {
   }
 
   return phase.steps.map((step) => {
+    if ((step as any)?.adapter === "ShellAdapter") return step;
+
     // Inject phase-scoped execution context into request bodies deterministically.
     const injection = { artifacts: injectedArtifacts };
 
-    if (!isPlainObject(step.payload)) {
-      return { ...step, payload: injection };
+    if (!isPlainObject((step as any).payload)) {
+      return { ...(step as any), payload: injection };
     }
 
     // If the step already has a payload object, merge in the injected artifacts without
     // mutating the original payload object.
-    return { ...step, payload: { ...step.payload, ...injection } };
+    return { ...(step as any), payload: { ...((step as any).payload as any), ...injection } };
   });
 }

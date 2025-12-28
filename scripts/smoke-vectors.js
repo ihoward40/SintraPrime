@@ -632,6 +632,97 @@ function seedTierInfinityFixturesIfNeeded(vector, command) {
 }
 
 function seedTier22FixturesIfNeeded(vector, command) {
+  // Tier-22.1 (probation scan counters): these vectors intentionally rely on scan-time
+  // bookkeeping and therefore need a deterministic PROBATION seed + a last-known
+  // probation signal under the per-vector runs/ isolation.
+  // This is test-only fixture behavior.
+  if (vector && typeof vector === "object") {
+    const name = typeof vector.name === "string" ? vector.name : "";
+    if (name === "tier22-probation-counter-increments" || name === "tier22-probation-recommends-eligible-after-window") {
+      const fp = "notion.write.page";
+      const baseNow = new Date(0).toISOString();
+
+      // Seed PROBATION state.
+      {
+        const outPath = path.join(process.cwd(), "runs", "requalification", "state", `${fp}.json`);
+        fs.mkdirSync(path.dirname(outPath), { recursive: true });
+        if (!fs.existsSync(outPath)) {
+          fs.writeFileSync(
+            outPath,
+            JSON.stringify(
+              {
+                fingerprint: fp,
+                state: "PROBATION",
+                cause: "seeded",
+                since: baseNow,
+                cooldown_until: null,
+              },
+              null,
+              2
+            ) + "\n",
+            { encoding: "utf8" }
+          );
+        }
+      }
+
+      // Seed a last-known probation evaluation signal (used by scan).
+      {
+        const eventsDir = path.join(process.cwd(), "runs", "requalification", "events");
+        fs.mkdirSync(eventsDir, { recursive: true });
+        const ts = 1; // deterministic
+        const evPath = path.join(eventsDir, `${fp}.${ts}.json`);
+        if (!fs.existsSync(evPath)) {
+          fs.writeFileSync(
+            evPath,
+            JSON.stringify(
+              {
+                kind: "ProbationSuccess",
+                fingerprint: fp,
+                at: baseNow,
+                ok: true,
+                confidence: 0.9,
+                success_count: 1,
+                required: 3,
+              },
+              null,
+              2
+            ) + "\n",
+            { encoding: "utf8" }
+          );
+        }
+      }
+
+      // For the window=2 vector, seed counters at successes=1 so a single scan promotes.
+      if (name === "tier22-probation-recommends-eligible-after-window") {
+        const countersDir = path.join(process.cwd(), "runs", "requalification", "counters");
+        fs.mkdirSync(countersDir, { recursive: true });
+        const p = path.join(countersDir, `${fp}.json`);
+        if (!fs.existsSync(p)) {
+          fs.writeFileSync(
+            p,
+            JSON.stringify(
+              {
+                fingerprint: fp,
+                window: 2,
+                successes: 1,
+                failures: 0,
+                last_curve_hash: null,
+                last_seen_at: baseNow,
+                updated_at: baseNow,
+                // legacy compat
+                last_confidence: 0,
+                last_updated: baseNow,
+              },
+              null,
+              2
+            ) + "\n",
+            { encoding: "utf8" }
+          );
+        }
+      }
+    }
+  }
+
   const pre = vector?.precondition;
   if (!pre || typeof pre !== "object") return;
 
@@ -668,6 +759,42 @@ function seedTier22FixturesIfNeeded(vector, command) {
     ) + "\n",
     { encoding: "utf8" }
   );
+
+  const events = pre.requalification_events;
+  if (Array.isArray(events) && events.length) {
+    const eventsDir = path.join(process.cwd(), "runs", "requalification", "events");
+    fs.mkdirSync(eventsDir, { recursive: true });
+    for (const e of events) {
+      if (!e || typeof e !== "object") continue;
+      const evFp = typeof e.fingerprint === "string" && e.fingerprint.trim() ? e.fingerprint.trim() : fingerprint;
+      const atIso =
+        (typeof e.at_iso === "string" && e.at_iso.trim())
+          ? e.at_iso.trim()
+          : ((typeof e.at === "string" && e.at.trim()) ? e.at.trim() : new Date(0).toISOString());
+      const ts = new Date(atIso).getTime();
+      const safeTs = Number.isFinite(ts) ? ts : 0;
+      const file = path.join(eventsDir, `${evFp}.${safeTs}.json`);
+      fs.writeFileSync(file, JSON.stringify({ ...e, fingerprint: evFp, at: atIso }, null, 2) + "\n", { encoding: "utf8" });
+    }
+  }
+}
+
+function assertRequalificationCounter({ fingerprint, min_successes }) {
+  const runsDir = String(process.env.RUNS_DIR || "runs");
+  const p = path.join(process.cwd(), runsDir, "requalification", "counters", `${fingerprint}.json`);
+  if (!fs.existsSync(p)) throw new Error(`missing counter file: ${p}`);
+  const c = JSON.parse(fs.readFileSync(p, "utf8"));
+  if ((c.successes ?? 0) < min_successes) {
+    throw new Error(`counter successes too low: got=${c.successes} want>=${min_successes}`);
+  }
+}
+
+function assertRequalificationState({ fingerprint, state }) {
+  const runsDir = String(process.env.RUNS_DIR || "runs");
+  const p = path.join(process.cwd(), runsDir, "requalification", "state", `${fingerprint}.json`);
+  if (!fs.existsSync(p)) throw new Error(`missing state file: ${p}`);
+  const s = JSON.parse(fs.readFileSync(p, "utf8"));
+  if (s.state !== state) throw new Error(`state mismatch: got=${s.state} want=${state}`);
 }
 
 function seedConfidenceFixturesIfNeeded(vector, command) {
@@ -1079,6 +1206,41 @@ function seedOperatorUiApproveFixtureIfNeeded(command) {
   }
 }
 
+function normalizeVector(v) {
+  if (!v || typeof v !== "object") return v;
+  const out = { ...v };
+
+  // Back-compat: older vectors use cmd/expect_subset_json.
+  if (typeof out.command !== "string" && typeof out.cmd === "string") {
+    out.command = out.cmd;
+  }
+  if (out.expect == null && out.expect_subset_json != null) {
+    out.expect = out.expect_subset_json;
+  }
+  if (out.expect == null && out.expect_subset != null) {
+    out.expect = out.expect_subset;
+  }
+  if (typeof out.expect_exit_code !== "number" && typeof out.expectExitCode === "number") {
+    out.expect_exit_code = out.expectExitCode;
+  }
+
+  return out;
+}
+
+function applyFixtureWritesIfNeeded(vector) {
+  // Local-only fixture writer (deterministic preconditions)
+  if (!vector || typeof vector !== "object") return;
+  if (!vector.fixture_write || process.env.SMOKE_VECTORS_USE_REMOTE === "1") return;
+  if (!Array.isArray(vector.fixture_write)) return;
+
+  for (const fx of vector.fixture_write) {
+    if (!fx || typeof fx !== "object") continue;
+    const p = path.resolve(process.cwd(), fx.path);
+    fs.mkdirSync(path.dirname(p), { recursive: true });
+    fs.writeFileSync(p, JSON.stringify(fx.json, null, 2));
+  }
+}
+
 function seedDelegatedSupervisionFixtureIfNeeded(vector) {
   const name = String(vector?.name ?? "");
   const pre = vector?.precondition;
@@ -1260,19 +1422,31 @@ function getByPath(root, pathExpr) {
 
 function assertOperatorPostAssert(gotJson, postAssert) {
   if (!postAssert || typeof postAssert !== "object") return;
+
+  const reserved = new Set([
+    "stderr_contains",
+    "no_writes",
+    "artifact_dir",
+    "contains_subset",
+    "contains_keys",
+    "receipt_subset",
+    "confidence",
+    "scheduler_explain",
+    "scheduler_history",
+  ]);
+
   const keys = Object.keys(postAssert);
-  const pathKeys = keys.filter((k) => k.startsWith("jobs[") || k.startsWith("rows["));
+  const pathKeys = keys.filter((k) => !reserved.has(k) && (k.includes(".") || k.includes("[") || k.includes("*")));
   if (!pathKeys.length) return;
 
   for (const k of pathKeys) {
     const expected = postAssert[k];
     const res = getByPath(gotJson, k);
     if (res.kind === "wildcard") {
-      // Any-match semantics for jobs[*].foo
       const values = Array.isArray(res.values) ? res.values : [];
       const ok = values.some((v) => deepSubsetMatch(v, expected));
       if (!ok) {
-        throw new Error(`[POST_ASSERT] ${k}: no jobs matched expected value`);
+        throw new Error(`[POST_ASSERT] ${k}: no values matched expected value`);
       }
       continue;
     }
@@ -1437,7 +1611,8 @@ try {
   // ignore
 }
 
-for (const v of vectors) {
+for (const rawVector of vectors) {
+  const v = normalizeVector(rawVector);
   const name = v?.name;
   const command = v?.command;
   const expect = v?.expect;
@@ -1465,38 +1640,38 @@ for (const v of vectors) {
       }
     }
 
-      // Ensure per-vector env isolation for test-only planner override injection.
-      // Without this, ambient env vars can cause the CLI to attempt planner override
-      // when the vector did not request it.
-      const baseEnv = vectorEnv && typeof vectorEnv === "object" ? { ...vectorEnv } : {};
-      let effectiveVectorEnv = baseEnv;
+    // Ensure per-vector env isolation for test-only planner override injection.
+    // Without this, ambient env vars can cause the CLI to attempt planner override
+    // when the vector did not request it.
+    const baseEnv = vectorEnv && typeof vectorEnv === "object" ? { ...vectorEnv } : {};
+    const effectiveVectorEnv = baseEnv;
 
-      // Ensure ambient shell env doesn't change smoke expectations.
-      // STRICT_AGENT_OUTPUT causes the CLI to throw on observation warnings, which
-      // can prevent JSON output and make vectors nondeterministic.
-      if (!("STRICT_AGENT_OUTPUT" in baseEnv)) {
-        baseEnv.STRICT_AGENT_OUTPUT = null;
-      }
+    // Ensure ambient shell env doesn't change smoke expectations.
+    // STRICT_AGENT_OUTPUT causes the CLI to throw on observation warnings, which
+    // can prevent JSON output and make vectors nondeterministic.
+    if (!("STRICT_AGENT_OUTPUT" in baseEnv)) {
+      baseEnv.STRICT_AGENT_OUTPUT = null;
+    }
 
-      // Ensure ambient AUTONOMY_MODE doesn't change smoke expectations.
-      if (!("AUTONOMY_MODE" in baseEnv)) {
-        baseEnv.AUTONOMY_MODE = null;
-      }
+    // Ensure ambient AUTONOMY_MODE doesn't change smoke expectations.
+    if (!("AUTONOMY_MODE" in baseEnv)) {
+      baseEnv.AUTONOMY_MODE = null;
+    }
 
-      if (plannerOverride !== undefined) {
-        baseEnv.ALLOW_PLANNER_OVERRIDE = "1";
-        const baseUrl = getLocalMockBaseUrl();
-        const rewritten = rewriteLocalhost8787Urls(
-          // clone to avoid mutating the vector object
-          JSON.parse(JSON.stringify(plannerOverride)),
-          baseUrl
-        );
-        baseEnv.PLANNER_OVERRIDE_JSON = JSON.stringify(rewritten);
-      } else {
-        // Explicitly unset in this vector.
-        baseEnv.ALLOW_PLANNER_OVERRIDE = null;
-        baseEnv.PLANNER_OVERRIDE_JSON = null;
-      }
+    if (plannerOverride !== undefined) {
+      baseEnv.ALLOW_PLANNER_OVERRIDE = "1";
+      const baseUrl = getLocalMockBaseUrl();
+      const rewritten = rewriteLocalhost8787Urls(
+        // clone to avoid mutating the vector object
+        JSON.parse(JSON.stringify(plannerOverride)),
+        baseUrl
+      );
+      baseEnv.PLANNER_OVERRIDE_JSON = JSON.stringify(rewritten);
+    } else {
+      // Explicitly unset in this vector.
+      baseEnv.ALLOW_PLANNER_OVERRIDE = null;
+      baseEnv.PLANNER_OVERRIDE_JSON = null;
+    }
 
     const result = await withVectorEnv(effectiveVectorEnv, async () => {
       if (stage === "cli") {
@@ -1522,10 +1697,14 @@ for (const v of vectors) {
         } catch {
           // ignore
         }
-        try {
-          fs.rmSync(path.join(process.cwd(), "runs", "requalification"), { recursive: true, force: true });
-        } catch {
-          // ignore
+        // NOTE: Tier-16 wiring expects the scan vector to observe suspension state
+        // emitted by the immediately preceding vector.
+        if (name !== "tier16-regression-visible-to-requalifier") {
+          try {
+            fs.rmSync(path.join(process.cwd(), "runs", "requalification"), { recursive: true, force: true });
+          } catch {
+            // ignore
+          }
         }
         try {
           fs.rmSync(path.join(process.cwd(), "runs", "rollback"), { recursive: true, force: true });
@@ -1539,6 +1718,27 @@ for (const v of vectors) {
         } catch {
           // ignore
         }
+
+        // Tier-29: playbook artifacts are stateful; isolate per vector.
+        try {
+          fs.rmSync(path.join(process.cwd(), "runs", "playbooks"), { recursive: true, force: true });
+        } catch {
+          // ignore
+        }
+
+        // Speech tiers: isolate per vector.
+        try {
+          fs.rmSync(path.join(process.cwd(), "runs", "speech-deltas"), { recursive: true, force: true });
+        } catch {
+          // ignore
+        }
+        try {
+          fs.rmSync(path.join(process.cwd(), "runs", "speech-status"), { recursive: true, force: true });
+        } catch {
+          // ignore
+        }
+
+        applyFixtureWritesIfNeeded(v);
 
         seedConfidenceFixturesIfNeeded(v, command);
 
@@ -1575,6 +1775,15 @@ for (const v of vectors) {
             const s = String(needle ?? "");
             if (s && !String(out.stderr ?? "").includes(s)) {
               throw new Error(`[POST_ASSERT] stderr missing substring: ${s}`);
+            }
+          }
+        }
+
+        if (Array.isArray(postAssert?.stderr_not_contains)) {
+          for (const needle of postAssert.stderr_not_contains) {
+            const s = String(needle ?? "");
+            if (s && String(out.stderr ?? "").includes(s)) {
+              throw new Error(`[POST_ASSERT] stderr contained forbidden substring: ${s}`);
             }
           }
         }
@@ -1648,6 +1857,13 @@ for (const v of vectors) {
         }
 
         assertOperatorPostAssert(gotJson, postAssert);
+
+        if (postAssert?.requalification_counter) {
+          assertRequalificationCounter(postAssert.requalification_counter);
+        }
+        if (postAssert?.requalification_state) {
+          assertRequalificationState(postAssert.requalification_state);
+        }
 
         if (postAssert?.confidence && typeof postAssert.confidence === "object") {
           const cfg = postAssert.confidence;

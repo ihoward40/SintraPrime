@@ -1,4 +1,6 @@
 import type { ExecutionPlan, ExecutionStep } from "../schemas/ExecutionPlan.schema.js";
+import type { PolicyExplainTrace } from "./policyExplain.js";
+import { recordCheck } from "./policyExplain.js";
 import { computePromotionFingerprint } from "../autonomy/promotionFingerprint.js";
 import { isDemoted, readPromotion } from "../autonomy/promotionStore.js";
 import { evaluateDelegationForPlan } from "../delegated/delegationEngine.js";
@@ -6,7 +8,10 @@ import type { DelegationDecision } from "../delegated/delegatedTypes.js";
 import { readDomainOverlay } from "../domains/domainRegistry.js";
 import { deriveFingerprint } from "../governor/runGovernor.js";
 import { readRequalificationState } from "../requalification/requalification.js";
-import { readConfidence } from "../confidence/updateConfidence.js";
+import { getEffectiveConfidence } from "../confidence/confidenceStore.js";
+import { getBrowserAllowOverrides, loadPolicyOverridesSync } from "./policyOverrides.js";
+import fs from "node:fs";
+import path from "node:path";
 
 export type PolicyDenied = {
   kind: "PolicyDenied";
@@ -19,10 +24,20 @@ export type ApprovalRequired = {
   code: string;
   reason: string;
   action: string;
-  preview: {
-    destination: string;
-    summary: string;
-  };
+  preview: { destination: string; summary: string };
+};
+
+export type PolicyMeta = {
+  phase_id?: string;
+  execution_id?: string;
+  approved_execution_id?: string;
+  simulation?: boolean;
+  command?: string;
+  original_command?: string;
+  domain_id?: string | null;
+  confidence_override?: number;
+  phases_count?: number;
+  total_steps_planned?: number;
 };
 
 export type PolicyResult =
@@ -30,29 +45,16 @@ export type PolicyResult =
   | { allowed: false; denied: PolicyDenied }
   | { allowed: false; requireApproval: true; approval: ApprovalRequired };
 
-export type PolicyResultMeta = {
-  // Tier-19
-  promotion_fingerprint?: string | null;
-  // Tier-20
-  delegation?: DelegationDecision | null;
+type PolicyResultMeta = {
+  promotion_fingerprint: string | null;
+  delegation: DelegationDecision | null;
 };
+
+function isShellExecutionStep(step: unknown): step is { adapter: "ShellAdapter" } {
+  return !!step && typeof step === "object" && (step as any).adapter === "ShellAdapter";
+}
 
 export type PolicyResultWithMeta = PolicyResult & PolicyResultMeta;
-
-export type PolicyMeta = {
-  phase_id?: string;
-  phases_count?: number;
-  total_steps_planned?: number;
-  // Tier 5.3: write-time approval gate.
-  approved_execution_id?: string;
-  execution_id?: string;
-  // Tier-19: promotion fingerprint uses the originating command string.
-  command?: string;
-  // Tier-21: trust domain context.
-  domain_id?: string;
-  // Tier-21: audit-friendly original command string when wrapped.
-  original_command?: string;
-};
 
 function getAutonomyMode(env: NodeJS.ProcessEnv): string {
   return env.AUTONOMY_MODE || "OFF";
@@ -107,19 +109,22 @@ function isProd(env: NodeJS.ProcessEnv) {
   return e === "production" || n === "production";
 }
 
-function methodIsWrite(method: ExecutionStep["method"]) {
-  return method === "POST" || method === "PUT" || method === "PATCH" || method === "DELETE";
+function methodIsWrite(method: unknown) {
+  const m = String(method ?? "").toUpperCase();
+  return m === "POST" || m === "PUT" || m === "PATCH" || m === "DELETE";
 }
 
-function methodIsReadOnly(method: ExecutionStep["method"]) {
-  return method === "GET" || method === "HEAD";
+function methodIsReadOnly(method: unknown) {
+  const m = String(method ?? "").toUpperCase();
+  return m === "GET" || m === "HEAD";
 }
 
 function uniqueHostsFromSteps(steps: ExecutionStep[]): string[] {
   const hosts = new Set<string>();
   for (const step of steps) {
+    if (isShellExecutionStep(step)) continue;
     try {
-      hosts.add(new URL(step.url).hostname);
+      hosts.add(new URL(String((step as any).url)).hostname);
     } catch {
       // ignore here; URL validity is handled elsewhere
     }
@@ -141,6 +146,25 @@ function parseUtcHm(envValue: string | undefined): { hour: number; minute: numbe
   const minute = Number(m[2]);
   if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
   return { hour, minute };
+}
+
+let cachedBrowserAllow: Set<string> | null = null;
+
+function getBrowserAllowlistHosts(clock: Date): Set<string> {
+  if (cachedBrowserAllow) return cachedBrowserAllow;
+  try {
+    const p = path.join(process.cwd(), "browser.allowlist.json");
+    const raw = fs.readFileSync(p, "utf8");
+    const obj = JSON.parse(raw) as any;
+    const allow = Array.isArray(obj?.allow) ? obj.allow.map((s: any) => String(s).trim().toLowerCase()).filter(Boolean) : [];
+    const overrides = loadPolicyOverridesSync({ cwd: process.cwd(), now: clock });
+    const extra = getBrowserAllowOverrides(overrides).map((s) => String(s).trim().toLowerCase()).filter(Boolean);
+    cachedBrowserAllow = new Set([...allow, ...extra]);
+    return cachedBrowserAllow;
+  } catch {
+    cachedBrowserAllow = new Set();
+    return cachedBrowserAllow;
+  }
 }
 
 export function checkPlanPolicy(plan: any, env: NodeJS.ProcessEnv = process.env) {
@@ -193,9 +217,11 @@ export function checkPolicyWithMeta(
   plan: ExecutionPlan,
   env: NodeJS.ProcessEnv,
   clock: Date,
-  meta: PolicyMeta | undefined
+  meta: PolicyMeta | undefined,
+  opts?: { explain?: PolicyExplainTrace }
 ): PolicyResultWithMeta {
   const autonomyMode = getAutonomyMode(env);
+  const isSimulation = meta?.simulation === true;
 
   // Tier-16: confidence regression enforcement (pre-execution).
   // If confidence is too low, only allow fully read-only plans.
@@ -203,7 +229,9 @@ export function checkPolicyWithMeta(
     const command = typeof meta?.command === "string" ? meta.command : "";
     if (command) {
       const fp = deriveFingerprint({ command, domain_id: meta?.domain_id ?? null });
-      const confidence = readConfidence(fp).confidence;
+      const override = typeof meta?.confidence_override === "number" ? meta.confidence_override : null;
+      const runsDir = typeof env.RUNS_DIR === "string" && env.RUNS_DIR.trim() ? env.RUNS_DIR.trim() : "runs";
+      const confidence = override !== null ? override : getEffectiveConfidence(runsDir, fp).decayed_confidence;
       if (confidence <= 0.4) {
         const hasWrite = plan.steps.some((s: any) => s?.read_only === false || methodIsWrite(s?.method));
         if (hasWrite) {
@@ -225,6 +253,9 @@ export function checkPolicyWithMeta(
   // Tier-22.1: probation enforcement (policy-level; no writes / approvals).
   // This runs before approval gating so probation cannot silently restore write power.
   {
+    if (isSimulation) {
+      // Tier-14 simulation: do not enforce requalification state.
+    } else {
     const enabled = env.REQUALIFICATION_ENABLED === "1";
     const command = typeof meta?.command === "string" ? meta.command : "";
     if (enabled && command) {
@@ -257,6 +288,7 @@ export function checkPolicyWithMeta(
             };
           }
         }
+      }
       }
     }
   }
@@ -359,13 +391,16 @@ export function checkPolicyWithMeta(
           action: typeof (step as any).action === "string" ? String((step as any).action) : "unknown",
           destination: (() => {
             try {
-              const u = new URL(step.url);
+              if (isShellExecutionStep(step)) return "local-shell";
+              const u = new URL(String((step as any).url));
               return `${u.hostname}${u.pathname}`;
             } catch {
-              return String(step.url || "unknown");
+              return isShellExecutionStep(step) ? "local-shell" : String((step as any).url || "unknown");
             }
           })(),
-          summary: `${String(step.method || "GET").toUpperCase()} ${String(step.url || "")}`,
+          summary: isShellExecutionStep(step)
+            ? "ShellAdapter command execution"
+            : `${String((step as any).method || "GET").toUpperCase()} ${String((step as any).url || "")}`,
           })
         );
       }
@@ -426,12 +461,49 @@ export function checkPolicyWithMeta(
   }
 
   // 1) Protocol guard (basic safety)
+
   for (const step of plan.steps) {
+    // Local shell execution steps do not have URLs and must be explicitly approved.
+    if (isShellExecutionStep(step)) {
+      const cmd = typeof (step as any)?.command === "string" ? String((step as any).command) : "";
+      if (!cmd.trim()) {
+        return withMeta(deny("SHELL_COMMAND_MISSING", "ShellAdapter steps require a non-empty command"));
+      }
+
+      if (!approved) {
+        return withMeta(
+          requireApproval({
+            code: "SHELL_EXEC_APPROVAL_REQUIRED",
+            reason: "Shell execution requires explicit approval",
+            action: typeof (step as any)?.action === "string" ? String((step as any).action) : "shell.run",
+            destination: "local-shell",
+            summary: "ShellAdapter command execution",
+          })
+        );
+      }
+
+      continue;
+    }
+
     let url: URL;
     try {
-      url = new URL(step.url);
+      url = new URL(String((step as any).url));
     } catch {
-      return withMeta(deny("POLICY_URL_INVALID", `invalid url: ${step.url}`));
+      return withMeta(deny("POLICY_URL_INVALID", `invalid url: ${String((step as any).url)}`));
+    }
+
+    // BrowserAgent must be host-allowlisted (secure default).
+    if (String((step as any).adapter) === "BrowserAgent") {
+      const allow = getBrowserAllowlistHosts(clock);
+      const host = String(url.hostname ?? "").toLowerCase();
+      if (!allow.has(host)) {
+        return withMeta(
+          deny(
+            "BROWSER_DOMAIN_NOT_ALLOWLISTED",
+            `BrowserAgent blocked: ${host} not in browser.allowlist.json`
+          )
+        );
+      }
     }
 
     // Tier-10.x: Live Notion safety rails (read-only by default; writes approval-scoped)
@@ -439,13 +511,14 @@ export function checkPolicyWithMeta(
     const isNotionLiveEndpoint = url.hostname === "api.notion.com" && url.pathname.startsWith("/v1/");
     const isNotionLiveAction = action.startsWith("notion.live.");
     if (isNotionLiveEndpoint || isNotionLiveAction) {
-      const method = String(step.method || "GET").toUpperCase();
+      const method = String((step as any).method || "GET").toUpperCase();
       const readOnlyFlag = (step as any).read_only;
 
       // 1) If it's not explicitly read_only, it MUST be approval_scoped and have prestate.
       if (readOnlyFlag !== true) {
         const approvalScoped = (step as any).approval_scoped;
         if (approvalScoped !== true) {
+          if (opts?.explain) recordCheck(opts.explain, { check_id: "NOTION_LIVE_READ_ONLY", input: { action }, result: "FAIL", reason: "Live Notion requires read_only=true unless approval_scoped=true" });
           return withMeta(
             deny(
             "NOTION_LIVE_REQUIRES_READ_ONLY",
@@ -457,6 +530,7 @@ export function checkPolicyWithMeta(
         const hasPrestate = !!(step as any).prestate;
         const hasFingerprint = typeof (step as any).prestate_fingerprint === "string" && String((step as any).prestate_fingerprint).trim();
         if (!hasPrestate || !hasFingerprint) {
+          if (opts?.explain) recordCheck(opts.explain, { check_id: "NOTION_LIVE_WRITE_PRESTATE", input: { action }, result: "FAIL", reason: "Approval-scoped live writes require prestate + prestate_fingerprint" });
           return withMeta(
             deny(
             "NOTION_LIVE_WRITE_REQUIRES_PRESTATE",
@@ -465,11 +539,16 @@ export function checkPolicyWithMeta(
           );
         }
 
-        if (method !== "PATCH") {
+        // Live Notion writes are PATCH-only, except for the governed insert lane (POST /v1/pages).
+        const isInsert = action === "notion.live.insert";
+        const insertOk = isInsert && method === "POST" && url.hostname === "api.notion.com" && url.pathname === "/v1/pages";
+        const patchOk = method === "PATCH";
+        if (!patchOk && !insertOk) {
+          if (opts?.explain) recordCheck(opts.explain, { check_id: "NOTION_LIVE_WRITE_METHOD", input: { action, method }, result: "FAIL", reason: "Only PATCH allowed for approval-scoped live notion writes (or POST /v1/pages for notion.live.insert)" });
           return withMeta(
             deny(
             "NOTION_LIVE_WRITE_METHOD_NOT_ALLOWED",
-            "Only PATCH allowed for approval-scoped live notion writes"
+            "Only PATCH allowed for approval-scoped live notion writes (or POST /v1/pages for notion.live.insert)"
             )
           );
         }
@@ -477,13 +556,14 @@ export function checkPolicyWithMeta(
         // Live writes must be explicitly approved (Tier 10.2) using the same approval token mechanism.
         if (!approved) {
           const destination = `${url.hostname}${url.pathname}`;
+          if (opts?.explain) recordCheck(opts.explain, { check_id: "NOTION_LIVE_WRITE_APPROVAL", input: { action }, result: "FAIL", reason: "Live Notion writes require explicit approval (Tier 10.2)" });
           return withMeta(
             requireApproval({
             code: "NOTION_LIVE_WRITE_APPROVAL_REQUIRED",
             reason: "Live Notion writes require explicit approval (Tier 10.2)",
             action,
             destination,
-            summary: `PATCH ${url.pathname}`,
+            summary: `${method} ${url.pathname}`,
             })
           );
         }
@@ -492,6 +572,7 @@ export function checkPolicyWithMeta(
       // 2) Read-only method constraints
       if (readOnlyFlag === true) {
         if (method !== "GET" && method !== "HEAD") {
+          if (opts?.explain) recordCheck(opts.explain, { check_id: "NOTION_LIVE_METHOD", input: { action, method }, result: "FAIL", reason: "Only GET/HEAD allowed for notion.live.read" });
           return withMeta(
             deny(
             "NOTION_LIVE_METHOD_NOT_ALLOWED",
@@ -499,17 +580,18 @@ export function checkPolicyWithMeta(
             )
           );
         }
+        if (opts?.explain) recordCheck(opts.explain, { check_id: "NOTION_LIVE_METHOD", input: { action, method }, result: "PASS" });
       }
+      if (opts?.explain && readOnlyFlag === true) recordCheck(opts.explain, { check_id: "NOTION_LIVE_READ_ONLY", input: { action }, result: "PASS" });
     }
-
     // Tier 6.x: Notion has explicit read vs write lanes.
     // - Read is deny-only (Tier 6.0 contract)
     // - Write is approval-scoped (Tier 6.1), never auto-exec
     const isNotionPath = url.pathname.includes("/notion/");
     if (isNotionPath) {
       if (action.startsWith("notion.read.")) {
-        if (!methodIsReadOnly(step.method)) {
-          return withMeta(deny("METHOD_NOT_ALLOWED", `Notion read method ${step.method} is not allowed (GET/HEAD only)`));
+        if (!methodIsReadOnly((step as any).method)) {
+          return withMeta(deny("METHOD_NOT_ALLOWED", `Notion read method ${String((step as any).method)} is not allowed (GET/HEAD only)`));
         }
         const readOnlyFlag = (step as any).read_only;
         if (readOnlyFlag !== true) {
@@ -517,8 +599,8 @@ export function checkPolicyWithMeta(
         }
       } else if (action === "notion.write.page_property" || action === "notion.write.page_title") {
         // Validate the write shape first (deny, no approval loophole).
-        if (step.method !== "PATCH") {
-          return withMeta(deny("METHOD_NOT_ALLOWED", `Notion write method ${step.method} is not allowed (PATCH only)`));
+        if (String((step as any).method) !== "PATCH") {
+          return withMeta(deny("METHOD_NOT_ALLOWED", `Notion write method ${String((step as any).method)} is not allowed (PATCH only)`));
         }
 
         // Tier 6.1/6.2: tight endpoint allowlist (no silent drift).
@@ -609,10 +691,13 @@ export function checkPolicyWithMeta(
   const allowedDomains = parseCsv(env.ALLOWED_DOMAINS);
   if (allowedDomains.length) {
     for (const step of plan.steps) {
-      const host = new URL(step.url).hostname;
+      if (isShellExecutionStep(step)) continue;
+      const host = new URL(String((step as any).url)).hostname;
       if (!allowedDomains.includes(host)) {
+        if (opts?.explain) recordCheck(opts.explain, { check_id: "DOMAIN_ALLOWLIST", input: { host }, result: "FAIL", reason: "host not allowlisted" });
         return withMeta(deny("DOMAIN_NOT_ALLOWED", `host ${host} not allowlisted`));
       }
+      if (opts?.explain) recordCheck(opts.explain, { check_id: "DOMAIN_ALLOWLIST", input: { host }, result: "PASS" });
     }
   }
 
@@ -620,8 +705,10 @@ export function checkPolicyWithMeta(
   const allowedMethods = parseCsv(env.ALLOWED_METHODS).map((m) => m.toUpperCase());
   if (allowedMethods.length) {
     for (const step of plan.steps) {
-      if (!allowedMethods.includes(step.method)) {
-        return withMeta(deny("POLICY_METHOD_BLOCK", `method ${step.method} not allowlisted`));
+      if (isShellExecutionStep(step)) continue;
+      const m = String((step as any).method).toUpperCase();
+      if (!allowedMethods.includes(m)) {
+        return withMeta(deny("POLICY_METHOD_BLOCK", `method ${m} not allowlisted`));
       }
     }
   }
@@ -656,7 +743,7 @@ export function checkPolicyWithMeta(
 
   // 4) Tier 5.3 approval gate: writes in production require explicit human approval.
   if (isProd(env)) {
-    const hasWrites = plan.steps.some((s) => methodIsWrite(s.method));
+    const hasWrites = plan.steps.some((s) => isShellExecutionStep(s) || methodIsWrite((s as any).method));
     if (hasWrites) {
       // If we're resuming via /approve, allow the write to proceed.
       const approved =
@@ -664,7 +751,7 @@ export function checkPolicyWithMeta(
       if (!approved) {
         const hosts = uniqueHostsFromSteps(plan.steps);
         const destination = hosts.length ? `Hosts:${hosts.join(",")}` : "External";
-        const writeCount = plan.steps.filter((s) => methodIsWrite(s.method)).length;
+        const writeCount = plan.steps.filter((s) => !isShellExecutionStep(s) && methodIsWrite((s as any).method)).length;
         return withMeta(
           requireApproval({
           code: "WRITE_OPERATION",
@@ -679,4 +766,6 @@ export function checkPolicyWithMeta(
   }
 
   return withMeta({ allowed: true });
+
 }
+

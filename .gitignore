@@ -4,3 +4,17 @@ dist/
 .DS_Store
 runs/
 tmp/
+
+# Local audit logs (policy-defined)
+logs/
+
+# Local OAuth secrets (operator-runbook location)
+sintraprime/config/oauth/
+
+# Local evidence + outputs (operator-runbook location)
+sintraprime/logs/
+sintraprime/vault/
+sintraprime/packets/
+
+# Local strategy memory
+sintraprime/state/
