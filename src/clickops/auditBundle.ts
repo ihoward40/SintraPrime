@@ -5,6 +5,8 @@ import archiver from "archiver";
 import os from "node:os";
 import { spawnSync } from "node:child_process";
 
+import { publishManifestToS3, resolvePublishManifestS3Target } from "./publishManifestS3.js";
+
 function listFilesRecursive(rootDir: string): string[] {
   const out: string[] = [];
   const stack: string[] = [rootDir];
@@ -363,6 +365,12 @@ export type RunMetadata = {
   receipt: unknown;
   error: string | null;
   publish_manifest_url?: string | null;
+  publish_manifest_s3_uri?: string | null;
+  publish_manifest_error?: {
+    at: string;
+    name?: string;
+    message: string;
+  } | null;
   rfc3161?: {
     tsa_used: string | null;
     attempted: string[];
@@ -404,6 +412,7 @@ export async function createClickOpsAuditBundle(params: {
   error: string | null;
   lock_state: LockState;
   publish_manifest_url?: string | null;
+  publish_manifest_s3?: string | null;
 }): Promise<{ outZipAbs: string; manifest: AuditManifest; manifest_sha256: string; run_metadata: RunMetadata }>
 {
   const runDirAbs = path.resolve(params.runDirAbs);
@@ -456,7 +465,7 @@ export async function createClickOpsAuditBundle(params: {
   // we select a TSA first, then timestamp the final sha256.txt after updating RUN_METADATA.json.
   const tsaList = parseTsaList();
   const includeTsq = String(process.env.CLICKOPS_TSA_INCLUDE_TSQ ?? "") === "1";
-  const publishUrl = resolvePublishManifestUrl(
+  const publishUrlFromFlagOrEnv = resolvePublishManifestUrl(
     String(params.publish_manifest_url ?? process.env.CLICKOPS_PUBLISH_MANIFEST_URL ?? ""),
     params.run_id
   );
@@ -465,7 +474,7 @@ export async function createClickOpsAuditBundle(params: {
     attempted: [],
     status: "unavailable",
   };
-  if (publishUrl) runMetadata.publish_manifest_url = publishUrl;
+  // publish_manifest_url may be set below either from explicit URL or S3 publishing.
   runMetadata.rfc3161 = rfc3161Meta;
 
   const initialRunMetadataJson = JSON.stringify(runMetadata, null, 2) + "\n";
@@ -486,6 +495,50 @@ export async function createClickOpsAuditBundle(params: {
   const manifestBuf = Buffer.from(manifestJson, "utf8");
   const manifestSha = sha256Buffer(manifestBuf);
   fileEntries.push({ zipPath: "MANIFEST.json", bytes: manifestBuf.byteLength, sha256: sha256Buffer(manifestBuf), content: manifestBuf });
+
+  // Optional: publish MANIFEST.json to S3 (best-effort, single attempt).
+  // Does not fail the run; records URL/URI/error in RUN_METADATA.json.
+  let publishUrl: string | null = null;
+  const publishTarget = resolvePublishManifestS3Target({
+    publish_manifest_s3: params.publish_manifest_s3 ?? null,
+    env_bucket: process.env.CLICKOPS_S3_BUCKET ?? null,
+    env_prefix: process.env.CLICKOPS_S3_PREFIX ?? null,
+    run_id: params.run_id,
+  });
+
+  if (publishTarget) {
+    const res = await publishManifestToS3({ target: publishTarget, manifest_json: manifestBuf });
+    if (res.ok) {
+      publishUrl = res.https_url;
+      runMetadata.publish_manifest_url = res.https_url;
+      runMetadata.publish_manifest_s3_uri = res.s3_uri;
+      runMetadata.publish_manifest_error = null;
+    } else {
+      publishUrl = null;
+      runMetadata.publish_manifest_url = null;
+      runMetadata.publish_manifest_s3_uri = publishTarget.s3_uri;
+      runMetadata.publish_manifest_error = { at: new Date().toISOString(), name: res.error.name, message: res.error.message };
+    }
+  } else if (publishUrlFromFlagOrEnv) {
+    publishUrl = publishUrlFromFlagOrEnv;
+    runMetadata.publish_manifest_url = publishUrlFromFlagOrEnv;
+    runMetadata.publish_manifest_error = null;
+  }
+
+  // Update RUN_METADATA.json with publish fields (and keep hashes consistent where possible).
+  {
+    const updatedRunMetadataJson = JSON.stringify(runMetadata, null, 2) + "\n";
+    const updatedMetaBuf = Buffer.from(updatedRunMetadataJson, "utf8");
+    const idx = fileEntries.findIndex((f) => f.zipPath === "RUN_METADATA.json");
+    if (idx >= 0) {
+      fileEntries[idx] = {
+        zipPath: "RUN_METADATA.json",
+        bytes: updatedMetaBuf.byteLength,
+        sha256: sha256Buffer(updatedMetaBuf),
+        content: updatedMetaBuf,
+      };
+    }
+  }
 
   const manifestHashRef = `sha256:${manifestSha}`;
   const manifestRef = publishUrl ? publishUrl : manifestHashRef;

@@ -48,9 +48,10 @@
     "smoke:trim": "node ./scripts/smoke.js | node ./scripts/trim-output.js",
     "smoke:vectors": "node ./scripts/smoke-vectors.js",
     "smoke:vectors:trim": "node ./scripts/smoke-vectors.js | node ./scripts/trim-output.js",
-    "test": "npm run build && npm run test:workflow-diff && npm run test:capability-receipt && npm run test:runs-explain-summary-snapshot && npm run test:ui-diff-banner-snapshot && npm run test:ui-runs-row-badges-snapshot && npm run validate:unicode && npm run validate:emoji",
+    "test": "npm run build && npm run test:workflow-diff && npm run test:capability-receipt && npm run test:clickops-s3-manifest && npm run test:runs-explain-summary-snapshot && npm run test:ui-diff-banner-snapshot && npm run test:ui-runs-row-badges-snapshot && npm run validate:unicode && npm run validate:emoji",
     "test:workflow-diff": "node --test tests/workflow-diff.test.js",
     "test:capability-receipt": "node --test tests/capability-receipt.test.js",
+    "test:clickops-s3-manifest": "node --test tests/clickops-s3-manifest.test.js",
     "fixtures:diff": "npm run build && node scripts/generate-diff-fixtures.mjs",
     "fixtures:diff-output": "node ./scripts/generate-diff-output-fixtures.mjs",
     "fixtures:diff-output:update": "node ./scripts/generate-diff-output-fixtures.mjs --update-fixtures",
@@ -83,6 +84,7 @@
     "sintraprime-verify": "dist/cli/verifyBundle.js"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.888.0",
     "@elevenlabs/elevenlabs-js": "^2.28.0",
     "@google-cloud/local-auth": "^3.0.1",
     "@notionhq/client": "^5.6.0",

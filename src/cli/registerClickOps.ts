@@ -396,6 +396,10 @@ export function registerClickOps(program: Command) {
       "--publish-manifest-url <url>",
       "If provided, QR/banner uses this hosted manifest URL (supports {{ RUN_ID }} template)"
     )
+    .option(
+      "--publish-manifest <s3Uri>",
+      "Publish MANIFEST.json to S3 (s3://bucket/prefix). Writes URL + errors into RUN_METADATA.json; does not fail the run."
+    )
     .option("--confirm", "Required to execute when not --dry-run", false)
     .option("--lock-ttl <minutes>", "Override ClickOps lock TTL in minutes (min 5, max 360)")
     .option("--execution-id <id>", "Override execution id")
@@ -409,6 +413,11 @@ export function registerClickOps(program: Command) {
       const publishManifestUrlOpt =
         typeof (opts as any).publishManifestUrl === "string" && String((opts as any).publishManifestUrl).trim()
           ? String((opts as any).publishManifestUrl).trim()
+          : null;
+
+      const publishManifestS3Opt =
+        typeof (opts as any).publishManifest === "string" && String((opts as any).publishManifest).trim()
+          ? String((opts as any).publishManifest).trim()
           : null;
 
       let runStatus: "success" | "failed" | "aborted" = "failed";
@@ -635,6 +644,7 @@ export function registerClickOps(program: Command) {
                 error: caughtError ? String(caughtError?.message ?? caughtError) : null,
                 lock_state: lockState,
                 publish_manifest_url: publishManifestUrlOpt,
+                publish_manifest_s3: publishManifestS3Opt,
               });
 
               // Filing-friendly PDF wrapper (references ZIP by hash; no embedded screenshots).
