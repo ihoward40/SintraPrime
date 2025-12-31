@@ -1,0 +1,33 @@
+# Minimal ClickOps visualize-only CI spec
+# - Exercises parsing, allowlist/policy, locking, and visualize path
+# - Must not send inputs in visualize mode
+
+kind: WorkflowDefinition
+workflow_id: ci.visualize
+threadId: clickops
+
+dry_run: false
+
+goal: "CI smoke: clickops.run --visualize (no inputs)"
+
+vars:
+  TARGET_URL: "https://example.com"
+
+nodes:
+  - id: open_target
+    description: "Navigate to example.com (allowlisted)"
+    step:
+      adapter: BrowserAgent
+      method: goto
+      url: "{{TARGET_URL}}"
+
+  - id: would_type_in_live_run
+    description: "This would normally be an input step; visualize must skip it"
+    step:
+      adapter: BrowserAgent
+      method: run_script
+      url: "{{TARGET_URL}}"
+      headed: false
+      script: |
+        # This script should never execute in visualize mode.
+        type("CI_SHOULD_NOT_TYPE")

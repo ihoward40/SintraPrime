@@ -40,3 +40,34 @@ jobs:
           PLANNER_WEBHOOK_URL: http://localhost:8787/planner
           THREAD_ID: local_test_001
         run: npm run smoke:vectors:trim
+
+  clickops_visualize_smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Install Playwright (Chromium)
+        run: npx playwright install --with-deps chromium
+
+      - name: Build
+        run: npm run build
+
+      - name: ClickOps Visualize (no inputs)
+        env:
+          CI: "1"
+        run: node dist/cli/main.js clickops.run --spec templates/workflows/ci.visualize.yaml --visualize
+
+      - name: Assert visualize artifacts
+        run: node scripts/ci/clickops-visualize-assert.mjs
