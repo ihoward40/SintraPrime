@@ -118,6 +118,8 @@ function renderIndexHtml(latest: any): string {
     rows || "<tr><td colspan=\"4\"><i>No objects published.</i></td></tr>",
     "</tbody>",
     "</table>",
+    "<hr>",
+    `<p><small>Generated at: ${escapeHtml(created)} (UTC)</small></p>`,
     "</body>",
     "</html>",
     "",

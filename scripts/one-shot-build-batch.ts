@@ -38,9 +38,7 @@ function parseCasesList(s: string): string[] {
     .split(",")
     .map((p) => p.trim())
     .filter(Boolean);
-  const uniq = Array.from(new Set(parts));
-  uniq.sort((a, b) => a.localeCompare(b));
-  return uniq;
+  return parts;
 }
 
 function readCasesFile(absPath: string): string[] {
@@ -49,9 +47,27 @@ function readCasesFile(absPath: string): string[] {
     .split(/\r?\n/)
     .map((l) => l.trim())
     .filter((l) => l && !l.startsWith("#"));
-  const uniq = Array.from(new Set(lines));
-  uniq.sort((a, b) => a.localeCompare(b));
-  return uniq;
+  return lines;
+}
+
+function assertNoDuplicates(cases: string[]) {
+  const seen = new Set<string>();
+  const dups = new Set<string>();
+  for (const c of cases) {
+    if (seen.has(c)) dups.add(c);
+    seen.add(c);
+  }
+  if (dups.size) {
+    const list = Array.from(dups).sort((a, b) => a.localeCompare(b));
+    throw new Error(`Duplicate case IDs detected in batch input: ${list.join(", ")}`);
+  }
+}
+
+function normalizeCases(cases: string[]): string[] {
+  const cleaned = cases.map((c) => String(c ?? "").trim()).filter(Boolean);
+  assertNoDuplicates(cleaned);
+  const sorted = cleaned.slice().sort((a, b) => a.localeCompare(b));
+  return sorted;
 }
 
 function runOneShot(caseId: string, nowIso: string, outAbs: string, passthrough: string[]) {
@@ -96,6 +112,8 @@ function main() {
     const abs = path.resolve(process.cwd(), casesFileArg);
     cases = readCasesFile(abs);
   }
+
+  cases = normalizeCases(cases);
 
   if (!cases.length) {
     console.error("No cases provided.");
