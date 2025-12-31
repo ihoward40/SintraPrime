@@ -1197,15 +1197,19 @@ export async function executePlan(rawPlan: unknown): Promise<ExecutionRunLog> {
                       else throw new Error("addProperty:cannot_open_type_picker");
                     }
 
-                    // Prefer exact match; fallback to menuitem.
-                    const typeItem = page.getByText(new RegExp(`^${typeLabel}$`, "i")).first();
-                    if (await typeItem.count()) {
-                      await typeItem.click({ timeout: 10_000 });
-                    } else {
-                      const mi = page.getByRole("menuitem", { name: new RegExp(typeLabel, "i") }).first();
-                      if (await mi.count()) await mi.click({ timeout: 10_000 });
-                      else throw new Error(`addProperty:type_not_found:${typeLabel}`);
-                    }
+                      if (isNotionHost) {
+                        await clickByTextResilient(typeLabel, 10_000);
+                      } else {
+                        // Prefer exact match; fallback to menuitem.
+                        const typeItem = page.getByText(new RegExp(`^${typeLabel}$`, "i")).first();
+                        if (await typeItem.count()) {
+                          await typeItem.click({ timeout: 10_000 });
+                        } else {
+                          const mi = page.getByRole("menuitem", { name: new RegExp(typeLabel, "i") }).first();
+                          if (await mi.count()) await mi.click({ timeout: 10_000 });
+                          else throw new Error(`addProperty:type_not_found:${typeLabel}`);
+                        }
+                      }
 
                     if (optionValues.length) {
                       for (const ov of optionValues) {
@@ -1223,12 +1227,16 @@ export async function executePlan(rawPlan: unknown): Promise<ExecutionRunLog> {
 
                   const openSortM = line.match(/^openSortMenu\(\)\s*;?$/);
                   if (openSortM) {
-                    const sortBtn = page.getByRole("button", { name: /^sort$/i }).first();
-                    if (await sortBtn.count()) await sortBtn.click({ timeout: 10_000 });
-                    else {
-                      const sortText = page.getByText(/^Sort$/i).first();
-                      if (await sortText.count()) await sortText.click({ timeout: 10_000 });
-                      else throw new Error("openSortMenu:cannot_find_sort_button");
+                    if (isNotionHost) {
+                      await clickByTextResilient("Sort", 10_000);
+                    } else {
+                      const sortBtn = page.getByRole("button", { name: /^sort$/i }).first();
+                      if (await sortBtn.count()) await sortBtn.click({ timeout: 10_000 });
+                      else {
+                        const sortText = page.getByText(/^Sort$/i).first();
+                        if (await sortText.count()) await sortText.click({ timeout: 10_000 });
+                        else throw new Error("openSortMenu:cannot_find_sort_button");
+                      }
                     }
                     continue;
                   }
@@ -1243,10 +1251,14 @@ export async function executePlan(rawPlan: unknown): Promise<ExecutionRunLog> {
                     const addSort = dialog.getByRole("button", { name: /add a sort|add sort/i }).first();
                     if (await addSort.count()) await addSort.click({ timeout: 10_000 });
 
-                    const escaped = prop.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-                    const propPick = dialog.getByText(new RegExp(escaped, "i")).first();
-                    if (await propPick.count()) await propPick.click({ timeout: 10_000 });
-                    else throw new Error(`sortBy:property_not_found:${prop}`);
+                    if (isNotionHost) {
+                      await clickByTextResilient(prop, 10_000);
+                    } else {
+                      const escaped = prop.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+                      const propPick = dialog.getByText(new RegExp(escaped, "i")).first();
+                      if (await propPick.count()) await propPick.click({ timeout: 10_000 });
+                      else throw new Error(`sortBy:property_not_found:${prop}`);
+                    }
                     continue;
                   }
 
