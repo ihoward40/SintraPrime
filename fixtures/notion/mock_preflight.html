@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mock Notion Preflight Fixture</title>
+  </head>
+  <body>
+    <main aria-label="Mock Notion">
+      <h1>Mock Notion Preflight Fixture</h1>
+
+      <!-- Sort control container (role-first + menu scoping) -->
+      <div role="menu" aria-label="View controls">
+        <div role="menuitem" tabindex="0">Sort</div>
+      </div>
+
+      <!-- Property picker container (column header for sortBy("...") intent) -->
+      <section aria-label="Database">
+        <div role="columnheader">Status</div>
+      </section>
+
+      <!-- Add property trigger container (text fallback path) -->
+      <div>+ Add a property</div>
+
+      <!-- Property type menu container (stable role/option targets) -->
+      <div role="listbox" aria-label="Property type">
+        <div role="option">Select</div>
+        <div role="option">Multi-select</div>
+        <div role="option">Text</div>
+      </div>
+    </main>
+  </body>
+</html>

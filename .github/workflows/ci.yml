@@ -71,3 +71,46 @@ jobs:
 
       - name: Assert visualize artifacts
         run: node scripts/ci/clickops-visualize-assert.mjs
+
+  clickops_notion_preflight_mock:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Install Playwright (Chromium)
+        run: npx playwright install --with-deps chromium
+
+      - name: Build
+        run: npm run build
+
+      - name: Map notion.so to localhost
+        run: |
+          echo "127.0.0.1 notion.so" | sudo tee -a /etc/hosts
+
+      - name: Start mocked Notion fixture server
+        env:
+          MOCK_NOTION_PORT: "8791"
+        run: |
+          node ./scripts/ci/notion-fixture-server.mjs &
+          sleep 1
+          curl -sSf http://notion.so:8791/status/200 >/dev/null
+
+      - name: ClickOps Visualize (mocked Notion preflight)
+        env:
+          CI: "1"
+        run: node dist/cli/main.js clickops.run --spec templates/workflows/ci.notion_preflight.visualize.yaml --visualize
+
+      - name: Assert Notion preflight artifacts
+        run: node scripts/ci/clickops-notion-preflight-assert.mjs

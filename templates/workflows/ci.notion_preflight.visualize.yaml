@@ -1,0 +1,35 @@
+# Mocked Notion preflight (visualize-only)
+# - Uses a local fixture server with notion.so mapped to 127.0.0.1 in CI
+# - Must not send inputs in visualize mode
+
+kind: WorkflowDefinition
+workflow_id: ci.notion_preflight.visualize
+threadId: clickops
+
+dry_run: false
+
+goal: "CI: mocked Notion preflight in clickops.run --visualize (no inputs)"
+
+vars:
+  TARGET_URL: "http://notion.so:8791/"
+
+nodes:
+  - id: open_target
+    description: "Navigate to mocked Notion fixture (notion.so -> localhost)"
+    step:
+      adapter: BrowserAgent
+      method: goto
+      url: "{{TARGET_URL}}"
+
+  - id: notion_preflight
+    description: "Visualize-only selector preflight against mocked Notion DOM"
+    step:
+      adapter: BrowserAgent
+      method: run_script
+      url: "{{TARGET_URL}}"
+      headed: false
+      script: |
+        # Selector-intents only; visualize mode must not click/type.
+        openSortMenu();
+        sortBy("Status");
+        addProperty("Priority", "Select", ["High", "Low"]);
