@@ -526,11 +526,52 @@ export async function executePlan(rawPlan: unknown): Promise<ExecutionRunLog> {
   const isVisualize = String(process.env.SINTRAPRIME_CLICKOPS_VISUALIZE ?? "") === "1";
   const visualizePlanLines: string[] = [];
   const visualizeDslLines: string[] = [];
+  const visualizeNotionPreflightLines: string[] = [];
   let visualizeDidGoto = false;
   const visualizeBaseDir = path.join(process.cwd(), "runs", safeRunDirPart(plan.execution_id));
   const visualizePlanPath = path.join(visualizeBaseDir, "visualize.plan.txt");
   const visualizeDslPath = path.join(visualizeBaseDir, "visualize.dsl.txt");
   const visualizeScreenshotPath = path.join(visualizeBaseDir, "visualize.initial.png");
+  const visualizeNotionPreflightPath = path.join(visualizeBaseDir, "visualize.notion-preflight.txt");
+
+  const escapeRegExp = (s: string) => String(s ?? "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+  async function writeVisualizeArtifactsIfEnabled() {
+    if (!isVisualize) return;
+    try {
+      await fs.mkdir(visualizeBaseDir, { recursive: true });
+
+      if (visualizeNotionPreflightLines.length) {
+        visualizePlanLines.push("");
+        visualizePlanLines.push("# Notion Preflight");
+        visualizePlanLines.push(`preflight_path: ${visualizeNotionPreflightPath}`);
+      }
+
+      await fs.writeFile(visualizePlanPath, visualizePlanLines.join("\n") + "\n", "utf8");
+      await fs.writeFile(visualizeDslPath, visualizeDslLines.join("\n") + "\n", "utf8");
+      if (visualizeNotionPreflightLines.length) {
+        await fs.writeFile(visualizeNotionPreflightPath, visualizeNotionPreflightLines.join("\n") + "\n", "utf8");
+      }
+
+      if (!runLog.artifacts) runLog.artifacts = {};
+      runLog.artifacts.clickops_visualize = {
+        outputs: {
+          plan_path: visualizePlanPath,
+          dsl_path: visualizeDslPath,
+          initial_screenshot: visualizeDidGoto ? visualizeScreenshotPath : null,
+          notion_preflight_path: visualizeNotionPreflightLines.length ? visualizeNotionPreflightPath : null,
+        },
+        files: [visualizePlanPath, visualizeDslPath]
+          .concat(visualizeDidGoto ? [visualizeScreenshotPath] : [])
+          .concat(visualizeNotionPreflightLines.length ? [visualizeNotionPreflightPath] : []),
+        metadata: { started_at: runLog.started_at, finished_at: runLog.finished_at ?? nowIso() },
+      };
+
+      process.stderr.write(`[clickops.visualize] wrote ${visualizePlanPath}\n`);
+    } catch {
+      // Best-effort; visualize artifacts must not change execution semantics.
+    }
+  }
 
   const maybePrintWorkflowFetchHint = (step: ExecutionStep, e: any) => {
     if (!isWorkflowRun) return;
@@ -939,8 +980,204 @@ export async function executePlan(rawPlan: unknown): Promise<ExecutionRunLog> {
             const headed = typeof (step as any).headed === "boolean" ? Boolean((step as any).headed) : true;
 
             if (isVisualize) {
+              const isNotionHost = host === "notion.so" || host === "www.notion.so" || host.endsWith(".notion.so");
+
+              if (isNotionHost) {
+                const { chromium } = await import("playwright");
+                const browser = await chromium.launch({ headless: true });
+                try {
+                  const context = await browser.newContext();
+                  const page = await context.newPage();
+
+                  // Block all non-allowlisted HTTP(S) requests (secure default).
+                  await page.route("**/*", async (route) => {
+                    const reqUrl = route.request().url();
+                    try {
+                      const ru = new URL(reqUrl);
+                      if (ru.protocol === "http:" || ru.protocol === "https:") {
+                        const rh = String(ru.hostname ?? "").toLowerCase();
+                        if (!allow.has(rh)) {
+                          await route.abort();
+                          return;
+                        }
+                      }
+                    } catch {
+                      await route.abort();
+                      return;
+                    }
+                    await route.continue();
+                  });
+
+                  await page.goto(urlText, { waitUntil: "load", timeout });
+
+                  const preflightStartedAt = nowIso();
+                  visualizeNotionPreflightLines.push(
+                    `# step_${String(stepIndex).padStart(2, "0")}: ${String(step.step_id)}  started_at=${preflightStartedAt}`
+                  );
+
+                  const lines = scriptRaw
+                    .split(/\r?\n/)
+                    .map((l) => l.trim())
+                    .filter((l) => Boolean(l) && !l.startsWith("#") && !l.startsWith("//"));
+
+                  async function resolveByTextResilient(textRaw: string, timeoutMsLocal = 4_000) {
+                    const text = String(textRaw ?? "").trim();
+                    if (!text) return { ok: false, via: "missing" };
+
+                    const escaped = escapeRegExp(text);
+                    const exactCi = new RegExp(`^\\s*${escaped}\\s*$`, "i");
+                    const containsCi = new RegExp(escaped, "i");
+                    const roles = ["menuitem", "option", "button", "link", "tab", "treeitem", "checkbox", "radio"] as const;
+
+                    const scopes: any[] = [page];
+                    const dialog = page.getByRole("dialog").last();
+                    if (await dialog.count()) scopes.unshift(dialog);
+                    const menu = page.getByRole("menu").last();
+                    if (await menu.count()) scopes.unshift(menu);
+                    const listbox = page.getByRole("listbox").last();
+                    if (await listbox.count()) scopes.unshift(listbox);
+
+                    for (const scope of scopes) {
+                      for (const role of roles) {
+                        const locExact = scope.getByRole(role, { name: exactCi }).first();
+                        try {
+                          await locExact.waitFor({ state: "visible", timeout: timeoutMsLocal });
+                          return { ok: true, via: `${String(role)}:exact` };
+                        } catch {}
+
+                        const locContains = scope.getByRole(role, { name: containsCi }).first();
+                        try {
+                          await locContains.waitFor({ state: "visible", timeout: timeoutMsLocal });
+                          return { ok: true, via: `${String(role)}:contains` };
+                        } catch {}
+                      }
+
+                      const tExact = scope.getByText(exactCi).first();
+                      try {
+                        await tExact.waitFor({ state: "visible", timeout: timeoutMsLocal });
+                        return { ok: true, via: `text:exact` };
+                      } catch {}
+
+                      const tContains = scope.getByText(containsCi).first();
+                      try {
+                        await tContains.waitFor({ state: "visible", timeout: timeoutMsLocal });
+                        return { ok: true, via: `text:contains` };
+                      } catch {}
+                    }
+
+                    return { ok: false, via: "not_found" };
+                  }
+
+                  async function resolveColumnHeader(propRaw: string, timeoutMsLocal = 4_000) {
+                    const prop = String(propRaw ?? "").trim();
+                    if (!prop) return { ok: false, via: "missing" };
+                    const escaped = escapeRegExp(prop);
+                    const exactCi = new RegExp(`^\\s*${escaped}\\s*$`, "i");
+                    const h = page.getByRole("columnheader", { name: exactCi }).first();
+                    try {
+                      await h.waitFor({ state: "visible", timeout: timeoutMsLocal });
+                      return { ok: true, via: "columnheader:exact" };
+                    } catch {
+                      return { ok: false, via: "columnheader:not_found" };
+                    }
+                  }
+
+                  async function resolveAddPropertyTrigger(timeoutMsLocal = 4_000) {
+                    const btn = page.getByRole("button", { name: /add a property|new property|add property/i }).first();
+                    try {
+                      await btn.waitFor({ state: "visible", timeout: timeoutMsLocal });
+                      return { ok: true, via: "button:add_property" };
+                    } catch {
+                      const txt = page.getByText(/\+\s*Add a property/i).first();
+                      try {
+                        await txt.waitFor({ state: "visible", timeout: timeoutMsLocal });
+                        return { ok: true, via: "text:+add_property" };
+                      } catch {
+                        return { ok: false, via: "not_found" };
+                      }
+                    }
+                  }
+
+                  const requiredFailures: string[] = [];
+
+                  for (const line of lines) {
+                    const openSortM = line.match(/^openSortMenu\(\)\s*;?$/);
+                    if (openSortM) {
+                      const r = await resolveByTextResilient("Sort", 4_000);
+                      visualizeNotionPreflightLines.push(
+                        `- intent: openSortMenu  target="Sort"  result=${r.ok ? "resolved" : "not_found"}  via=${r.via}`
+                      );
+                      if (!r.ok) requiredFailures.push("Sort");
+                      continue;
+                    }
+
+                    const sortByM = line.match(/^sortBy\((?:"([^"]+)"|'([^']+)')\)\s*;?$/);
+                    if (sortByM) {
+                      const prop = String(sortByM[1] ?? sortByM[2] ?? "").trim();
+                      const r = await resolveColumnHeader(prop, 4_000);
+                      visualizeNotionPreflightLines.push(
+                        `- intent: sortBy  target="${prop}"  result=${r.ok ? "resolved" : "not_found"}  via=${r.via}`
+                      );
+                      if (!r.ok) requiredFailures.push(`columnheader:${prop}`);
+                      continue;
+                    }
+
+                    const addPropM = line.match(
+                      /^addProperty\(\s*(?:"([^"]+)"|'([^']+)')\s*,\s*(?:"([^"]+)"|'([^']+)')\s*(?:,\s*(\[[\s\S]*\]))?\s*\)\s*;?$/
+                    );
+                    if (addPropM) {
+                      const propName = String(addPropM[1] ?? addPropM[2] ?? "").trim();
+                      const propTypeRaw = String(addPropM[3] ?? addPropM[4] ?? "").trim();
+
+                      const trigger = await resolveAddPropertyTrigger(4_000);
+                      visualizeNotionPreflightLines.push(
+                        `- intent: addProperty.trigger  target="Add a property"  result=${trigger.ok ? "resolved" : "not_found"}  via=${trigger.via}`
+                      );
+                      if (!trigger.ok) requiredFailures.push("add_property_trigger");
+
+                      const propType = propTypeRaw.toLowerCase().replace(/\s+/g, " ");
+                      const typeLabel = (() => {
+                        if (propType === "text") return "Text";
+                        if (propType === "number") return "Number";
+                        if (propType === "date") return "Date";
+                        if (propType === "select") return "Select";
+                        if (propType === "multi-select" || propType === "multi_select" || propType === "multi select") return "Multi-select";
+                        if (propType === "status") return "Status";
+                        return null;
+                      })();
+                      const typeOk = Boolean(typeLabel);
+                      visualizeNotionPreflightLines.push(
+                        `- intent: addProperty.type  target="${propTypeRaw}"  result=${typeOk ? "resolved" : "not_found"}  via=type_mapping${typeLabel ? `:${typeLabel}` : ""}`
+                      );
+                      if (!typeOk) requiredFailures.push(`type:${propTypeRaw}`);
+
+                      if (propName) {
+                        visualizeNotionPreflightLines.push(`- note: addProperty.name  value="${propName}"`);
+                      }
+                      continue;
+                    }
+                  }
+
+                  const finishedAt = nowIso();
+                  visualizeNotionPreflightLines.push(`# finished_at=${finishedAt}`);
+                  visualizeNotionPreflightLines.push("");
+
+                  if (requiredFailures.length) {
+                    throw new Error(`visualize_notion_preflight:unresolvable:${requiredFailures.join(",")}`);
+                  }
+                } finally {
+                  await browser.close();
+                }
+              }
+
               stepLog.status = "skipped";
-              stepLog.response = { visualize: true, url: urlText, script_path: scriptPath };
+              stepLog.http_status = 200;
+              stepLog.response = {
+                visualize: true,
+                url: urlText,
+                script_path: scriptPath,
+                notion_preflight_path: visualizeNotionPreflightLines.length ? visualizeNotionPreflightPath : null,
+              };
             } else if (plan.dry_run) {
               stepLog.status = "skipped";
               stepLog.response = { dry_run: true, url: urlText, script_path: scriptPath };
@@ -1672,6 +1909,7 @@ export async function executePlan(rawPlan: unknown): Promise<ExecutionRunLog> {
         runLog.status = "failed";
         runLog.failed_step = step.step_id;
         runLog.finished_at = nowIso();
+        await writeVisualizeArtifactsIfEnabled();
         runLog.receipt_hash = computeReceiptHash(runLog);
         return runLog;
       }
@@ -1680,25 +1918,7 @@ export async function executePlan(rawPlan: unknown): Promise<ExecutionRunLog> {
     runLog.status = "success";
     runLog.finished_at = nowIso();
 
-    if (isVisualize) {
-      try {
-        await fs.writeFile(visualizePlanPath, visualizePlanLines.join("\n") + "\n", "utf8");
-        await fs.writeFile(visualizeDslPath, visualizeDslLines.join("\n") + "\n", "utf8");
-        if (!runLog.artifacts) runLog.artifacts = {};
-        runLog.artifacts.clickops_visualize = {
-          outputs: {
-            plan_path: visualizePlanPath,
-            dsl_path: visualizeDslPath,
-            initial_screenshot: visualizeDidGoto ? visualizeScreenshotPath : null,
-          },
-          files: [visualizePlanPath, visualizeDslPath].concat(visualizeDidGoto ? [visualizeScreenshotPath] : []),
-          metadata: { started_at: runLog.started_at, finished_at: runLog.finished_at },
-        };
-        process.stderr.write(`[clickops.visualize] wrote ${visualizePlanPath}\n`);
-      } catch {
-        // Best-effort; visualize artifacts must not change execution semantics.
-      }
-    }
+    await writeVisualizeArtifactsIfEnabled();
 
     runLog.receipt_hash = computeReceiptHash(runLog);
 
