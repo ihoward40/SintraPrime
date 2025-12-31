@@ -982,6 +982,75 @@ export async function executePlan(rawPlan: unknown): Promise<ExecutionRunLog> {
 
                 await page.goto(urlText, { waitUntil: "load", timeout });
 
+                const isNotionHost = host === "notion.so" || host === "www.notion.so" || host.endsWith(".notion.so");
+
+                const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+                async function clickByTextResilient(textRaw: string, timeoutMsLocal = 10_000) {
+                  const text = String(textRaw ?? "").trim();
+                  if (!text) throw new Error("click:text_missing");
+
+                  const escaped = escapeRegExp(text);
+                  const exactCi = new RegExp(`^\\s*${escaped}\\s*$`, "i");
+                  const containsCi = new RegExp(escaped, "i");
+
+                  const scopes: any[] = [page];
+                  const dialog = page.getByRole("dialog").last();
+                  if (await dialog.count()) scopes.unshift(dialog);
+                  const menu = page.getByRole("menu").last();
+                  if (await menu.count()) scopes.unshift(menu);
+                  const listbox = page.getByRole("listbox").last();
+                  if (await listbox.count()) scopes.unshift(listbox);
+
+                  const perAttemptWait = Math.min(4_000, timeoutMsLocal);
+                  const roles = ["menuitem", "option", "button", "link", "tab", "treeitem", "checkbox", "radio"] as const;
+
+                  const tryOnce = async () => {
+                    for (const scope of scopes) {
+                      // Prefer ARIA roles first (Notion is generally well-instrumented), then fall back to text.
+                      for (const role of roles) {
+                        const locExact = scope.getByRole(role, { name: exactCi }).first();
+                        try {
+                          await locExact.waitFor({ state: "visible", timeout: perAttemptWait });
+                          await locExact.click({ timeout: timeoutMsLocal });
+                          return true;
+                        } catch {}
+
+                        const locContains = scope.getByRole(role, { name: containsCi }).first();
+                        try {
+                          await locContains.waitFor({ state: "visible", timeout: perAttemptWait });
+                          await locContains.click({ timeout: timeoutMsLocal });
+                          return true;
+                        } catch {}
+                      }
+
+                      const tExact = scope.getByText(exactCi).first();
+                      try {
+                        await tExact.waitFor({ state: "visible", timeout: perAttemptWait });
+                        await tExact.click({ timeout: timeoutMsLocal });
+                        return true;
+                      } catch {}
+
+                      const tContains = scope.getByText(containsCi).first();
+                      try {
+                        await tContains.waitFor({ state: "visible", timeout: perAttemptWait });
+                        await tContains.click({ timeout: timeoutMsLocal });
+                        return true;
+                      } catch {}
+                    }
+                    return false;
+                  };
+
+                  // Bounded retries for SPA reflow/menus (Notion frequently re-renders).
+                  for (let attempt = 0; attempt < 3; attempt++) {
+                    const ok = await tryOnce();
+                    if (ok) return;
+                    await page.waitForTimeout(250 + attempt * 250);
+                  }
+
+                  throw new Error(`click:text_not_found:${text}`);
+                }
+
                 // Minimal, boring script DSL:
                 // - wait(500)
                 // - press("Enter") OR press("/") (single char -> type)
@@ -1034,14 +1103,16 @@ export async function executePlan(rawPlan: unknown): Promise<ExecutionRunLog> {
                   const clickTextM = line.match(/^clickText\((?:"([^"]+)"|'([^']+)')\)\s*;?$/);
                   if (clickTextM) {
                     const text = String(clickTextM[1] ?? clickTextM[2] ?? "");
-                    await page.getByText(text).first().click({ timeout: 10_000 });
+                    if (isNotionHost) await clickByTextResilient(text, 10_000);
+                    else await page.getByText(text).first().click({ timeout: 10_000 });
                     continue;
                   }
 
                   const clickM = line.match(/^click\(\s*text\s*=\s*(?:"([^"]+)"|'([^']+)')\s*\)\s*;?$/);
                   if (clickM) {
                     const text = String(clickM[1] ?? clickM[2] ?? "");
-                    await page.getByText(text).first().click({ timeout: 10_000 });
+                    if (isNotionHost) await clickByTextResilient(text, 10_000);
+                    else await page.getByText(text).first().click({ timeout: 10_000 });
                     continue;
                   }
 
