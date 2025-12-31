@@ -485,6 +485,12 @@ export function checkPolicyWithMeta(
       continue;
     }
 
+    // BrowserAgent pause_for_confirmation is a local, non-navigational confirmation gate.
+    // It intentionally has no URL.
+    if (String((step as any).adapter) === "BrowserAgent" && String((step as any).method) === "pause_for_confirmation") {
+      continue;
+    }
+
     let url: URL;
     try {
       url = new URL(String((step as any).url));

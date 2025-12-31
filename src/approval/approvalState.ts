@@ -32,11 +32,19 @@ export type ApprovalState = {
 };
 
 function approvalsDir() {
-  return path.join(process.cwd(), "runs", "approvals");
+  const runsDir =
+    typeof process.env.SINTRAPRIME_RUNS_DIR === "string" && process.env.SINTRAPRIME_RUNS_DIR.trim()
+      ? path.resolve(process.env.SINTRAPRIME_RUNS_DIR.trim())
+      : path.join(process.cwd(), "runs");
+  return path.join(runsDir, "approvals");
+}
+
+function safeRunDirPart(input: string): string {
+  return String(input ?? "").replace(/[\\/<>:\"|?*\x00-\x1F]/g, "_").slice(0, 160);
 }
 
 export function approvalStatePath(executionId: string) {
-  return path.join(approvalsDir(), `${executionId}.json`);
+  return path.join(approvalsDir(), `${safeRunDirPart(executionId)}.json`);
 }
 
 export function writeApprovalState(state: ApprovalState) {
@@ -48,6 +56,13 @@ export function writeApprovalState(state: ApprovalState) {
 
 export function readApprovalState(executionId: string): ApprovalState {
   const p = approvalStatePath(executionId);
-  const text = fs.readFileSync(p, "utf8");
-  return JSON.parse(text) as ApprovalState;
+  try {
+    const text = fs.readFileSync(p, "utf8");
+    return JSON.parse(text) as ApprovalState;
+  } catch {
+    // Legacy fallback (older versions used raw executionId in filename).
+    const legacy = path.join(approvalsDir(), `${executionId}.json`);
+    const text = fs.readFileSync(legacy, "utf8");
+    return JSON.parse(text) as ApprovalState;
+  }
 }

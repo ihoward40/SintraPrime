@@ -1,0 +1,52 @@
+# =========================================================
+# ClickOps Spec: Make.com – Toggle Scenario (BrowserAgent ONLY)
+# =========================================================
+
+kind: WorkflowDefinition
+workflow_id: make.toggle_scenario
+threadId: clickops
+
+dry_run: false
+
+goal: "ClickOps: toggle a Make.com scenario ON/OFF (BrowserAgent-only)"
+
+vars:
+  TARGET_URL: "https://www.make.com/"
+  TARGET_CONTEXT: "(set me)"
+  # Use the exact label you expect to click in the UI (commonly: ON or OFF)
+  DESIRED_STATE: "OFF"
+
+nodes:
+  - id: open_scenario
+    description: "Open the scenario editor URL (allowlisted)"
+    step:
+      adapter: BrowserAgent
+      method: goto
+      url: "{{TARGET_URL}}"
+
+  - id: confirm_toggle
+    description: "Human checkpoint before toggling"
+    step:
+      adapter: BrowserAgent
+      method: pause_for_confirmation
+      message: |
+        You are about to toggle a Make.com scenario.
+
+        Scenario:
+          {{TARGET_CONTEXT}}
+
+        Desired state:
+          {{DESIRED_STATE}}
+
+        Type YES to proceed.
+
+  - id: toggle
+    description: "Toggle scenario state (best-effort: click the desired state label)"
+    step:
+      adapter: BrowserAgent
+      method: run_script
+      url: "{{TARGET_URL}}"
+      headed: true
+      script: |
+        clickText("{{DESIRED_STATE}}")
+        wait(1200)

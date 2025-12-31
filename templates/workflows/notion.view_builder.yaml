@@ -1,0 +1,75 @@
+# =========================================================
+# ClickOps Spec: Notion – View Builder (BrowserAgent ONLY)
+# =========================================================
+# Notes
+# - Notion view/filter UIs change frequently; keep this pause-gated.
+# - Provide view creation commands via VIEWS_DSL (one per line).
+#   This avoids needing template loops.
+# =========================================================
+
+kind: WorkflowDefinition
+workflow_id: notion.view_builder
+threadId: clickops
+
+dry_run: false
+
+goal: "ClickOps: build / update Notion views (BrowserAgent-only)"
+
+vars:
+  TARGET_URL: "https://www.notion.so/"
+  TARGET_CONTEXT: "(set me: database/page)"
+
+  # Provide DSL lines to run (one command per line).
+  # Available baseline DSL: wait, press, type, clickText, click(text=...), uploadFile, addProperty, openSortMenu, sortBy, archiveDuplicateRows
+  # Added helpers: select_all(), focus("<selector>")
+  VIEWS_DSL: |
+    // Example (edit this to your needs)
+    // clickText("Filter")
+    // wait(400)
+
+nodes:
+  - id: open_target
+    description: "Open the Notion database/page URL (allowlisted)"
+    step:
+      adapter: BrowserAgent
+      method: goto
+      url: "{{TARGET_URL}}"
+
+  - id: confirm_views
+    description: "Human checkpoint before editing views"
+    step:
+      adapter: BrowserAgent
+      method: pause_for_confirmation
+      message: |
+        You are about to modify Notion views.
+
+        Target:
+          {{TARGET_CONTEXT}}
+
+        This run will execute the following DSL lines:
+
+        {{VIEWS_DSL}}
+
+        Type YES to proceed.
+
+  - id: apply_views
+    description: "Apply view changes (scripted DSL)"
+    step:
+      adapter: BrowserAgent
+      method: run_script
+      url: "{{TARGET_URL}}"
+      headed: true
+      script: |
+        {{VIEWS_DSL}}
+
+  - id: confirm_done
+    description: "Human checkpoint to verify view results"
+    step:
+      adapter: BrowserAgent
+      method: pause_for_confirmation
+      message: |
+        View builder step complete.
+
+        Please visually confirm the expected views/filters/sorts.
+
+        Type YES to finalize.

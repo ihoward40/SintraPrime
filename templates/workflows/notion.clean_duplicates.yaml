@@ -1,0 +1,61 @@
+# =========================================================
+# ClickOps Spec: Notion – Clean Duplicates (ARCHIVE, never delete)
+# =========================================================
+# Assumptions:
+# - Target is a Notion database in table view
+# - Dedupe key is a visible property/column (exact header match)
+# - This automation is intentionally conservative: visible rows only
+# =========================================================
+
+kind: WorkflowDefinition
+workflow_id: notion.clean_duplicates
+threadId: clickops
+
+dry_run: false
+
+goal: "ClickOps: archive duplicate rows in a Notion database (BrowserAgent-only)"
+
+vars:
+  TARGET_URL: "https://www.notion.so/"
+  TARGET_CONTEXT: "(set me)"
+  DEDUPE_PROPERTY: "Account #"
+
+nodes:
+  - id: open_db
+    description: "Open the Notion database URL (allowlisted)"
+    step:
+      adapter: BrowserAgent
+      method: goto
+      url: "{{TARGET_URL}}"
+
+  - id: confirm_cleanup
+    description: "Human checkpoint before archiving duplicates"
+    step:
+      adapter: BrowserAgent
+      method: pause_for_confirmation
+      message: |
+        You are about to ARCHIVE duplicate rows.
+
+        Database:
+          {{TARGET_CONTEXT}}
+
+        Deduplication key:
+          {{DEDUPE_PROPERTY}}
+
+        No rows will be deleted.
+        Type YES to proceed.
+
+  - id: clean
+    description: "Sort by dedupe property and archive second+ occurrences (visible rows only)"
+    step:
+      adapter: BrowserAgent
+      method: run_script
+      url: "{{TARGET_URL}}"
+      headed: true
+      script: |
+        openSortMenu()
+        sortBy("{{DEDUPE_PROPERTY}}")
+        wait(800)
+
+        archiveDuplicateRows()
+        wait(1200)

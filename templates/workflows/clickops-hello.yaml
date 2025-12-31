@@ -1,0 +1,21 @@
+# ClickOps canonical starter spec (BrowserAgent-only)
+#
+# Notes
+# - Target hostname must be allowlisted in browser.allowlist.json
+# - For live execution: clickops.run requires --confirm (or use --dry-run)
+# - Artifacts (screenshot + HAR) land under runs/ when dry_run=false
+
+kind: WorkflowDefinition
+workflow_id: clickops-hello
+threadId: clickops-hello
+
+dry_run: false
+
+goal: "ClickOps hello world: open github (BrowserAgent only)"
+
+nodes:
+  - id: open_github
+    step:
+      adapter: BrowserAgent
+      method: goto
+      url: https://github.com

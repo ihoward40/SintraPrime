@@ -1,0 +1,101 @@
+# =========================================================
+# ClickOps Spec: Notion – Create Database (BrowserAgent ONLY)
+# =========================================================
+# Purpose
+# - Guides a Notion database creation using the BrowserAgent lane.
+# - Uses confirmation checkpoints (Type YES).
+#
+# Notes
+# - Notion typically requires auth; for best results set WEB_SNAPSHOT_USER_DATA_DIR
+#   to a Chromium profile directory where you are already logged in.
+# - This v1 keeps the script minimal and durable; you can extend the script later.
+# =========================================================
+
+kind: WorkflowDefinition
+workflow_id: notion.create_db
+threadId: clickops
+
+dry_run: false
+
+goal: "Create a Notion database under a parent page (BrowserAgent-only)"
+
+vars:
+  TARGET_URL: "https://www.notion.so/"
+  TARGET_CONTEXT: "(set me)"
+
+  DATABASE_NAME: "Trust Command Center – Cases"
+  DATABASE_PROPERTIES: |
+    - Status (select: Intake, Active, Waiting, Resolved)
+    - Creditor (text)
+    - Account # (text)
+    - Amount (number)
+    - Due Date (date)
+
+nodes:
+  - id: open_parent_page
+    step:
+      adapter: BrowserAgent
+      method: goto
+      url: "{{TARGET_URL}}"
+
+  - id: confirm_create_db
+    step:
+      adapter: BrowserAgent
+      method: pause_for_confirmation
+      message: |
+        You are about to CREATE a new Notion database.
+
+        Database name:
+          {{DATABASE_NAME}}
+
+        Properties:
+        {{DATABASE_PROPERTIES}}
+
+        Target page:
+          {{TARGET_CONTEXT}}
+
+        Type YES to continue.
+
+  - id: create_database_minimal
+    description: "Create inline table, rename it, and add properties (best-effort, fail-fast)"
+    step:
+      adapter: BrowserAgent
+      method: run_script
+      url: "{{TARGET_URL}}"
+      headed: true
+      script: |
+        // Create inline table database (durable across minor UI wording changes)
+        press("/")
+        wait(400)
+        type("table")
+        wait(400)
+        press("Enter")
+        wait(1500)
+
+        // Rename database (best-effort: click the default title then overwrite)
+        clickText("Untitled")
+        wait(250)
+        press("Control+A")
+        type("{{DATABASE_NAME}}")
+        wait(400)
+
+        // Properties (deterministic intent; stop + screenshot if UI not found)
+        addProperty("Status", "select", ["Intake","Active","Waiting","Resolved"])
+        addProperty("Creditor", "text")
+        addProperty("Account #", "text")
+        addProperty("Amount", "number")
+        addProperty("Due Date", "date")
+
+  - id: confirm_result
+    step:
+      adapter: BrowserAgent
+      method: pause_for_confirmation
+      message: |
+        Database creation step complete.
+
+        Please visually confirm:
+        - A table/database block exists on the page
+        - Database title is: {{DATABASE_NAME}}
+        - Properties match DATABASE_PROPERTIES
+
+        Type YES to finalize.

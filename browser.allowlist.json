@@ -1,6 +1,11 @@
 {
   "allow": [
     "example.com",
-    "github.com"
+    "github.com",
+    "notion.so",
+    "www.notion.so",
+    "make.com",
+    "www.make.com",
+    "eu1.make.com"
   ]
 }

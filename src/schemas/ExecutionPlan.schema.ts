@@ -72,14 +72,34 @@ export const BrowserExecutionStepSchema = z.object({
   step_id: z.string(),
   adapter: z.literal("BrowserAgent"),
   action: z.string().optional().default("browser.goto"),
-  method: z.literal("goto"),
-  url: z.string().url(),
+  method: z.enum(["goto", "pause_for_confirmation", "run_script"]),
+  url: z.string().url().optional(),
   timeout_ms: z.number().int().min(1).max(3_600_000).optional(),
+  // pause_for_confirmation
+  message: z.string().min(1).optional(),
+  // run_script
+  script: z.string().min(1).optional(),
+  headed: z.boolean().optional(),
   // Reserved for future (keep validation permissive but explicit)
   expects: z.object({}).optional(),
+}).superRefine((v, ctx) => {
+  if (v.method === "goto") {
+    if (!v.url) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "BrowserAgent goto requires url", path: ["url"] });
+  }
+  if (v.method === "pause_for_confirmation") {
+    if (!v.message) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "BrowserAgent pause_for_confirmation requires message", path: ["message"] });
+  }
+  if (v.method === "run_script") {
+    if (!v.url) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "BrowserAgent run_script requires url", path: ["url"] });
+    if (!v.script) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "BrowserAgent run_script requires script", path: ["script"] });
+  }
 });
 
-export const AnyExecutionStepSchema = z.union([ExecutionStepSchema, ShellExecutionStepSchema, BrowserExecutionStepSchema]);
+export const AnyExecutionStepSchema = z.union([
+  ExecutionStepSchema,
+  ShellExecutionStepSchema,
+  BrowserExecutionStepSchema,
+]);
 
 export const ExecutionPhaseSchema = z.object({
   phase_id: z.string().min(1),

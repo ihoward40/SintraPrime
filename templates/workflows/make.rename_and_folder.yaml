@@ -1,0 +1,98 @@
+# =========================================================
+# ClickOps Spec: Make.com – Rename scenario + move to folder
+# =========================================================
+# Notes
+# - Keep this best-effort and pause-gated; Make UI labels can vary.
+# - Provide a direct scenario URL if you have it.
+# =========================================================
+
+kind: WorkflowDefinition
+workflow_id: make.rename_and_folder
+threadId: clickops
+
+dry_run: false
+
+goal: "ClickOps: Make.com rename a scenario and move it to a folder (BrowserAgent-only)"
+
+vars:
+  TARGET_URL: "https://www.make.com/"
+  TARGET_CONTEXT: "(set me: scenario/team)"
+
+  # If you know the exact scenario editor URL, set it here.
+  SCENARIO_URL: "{{TARGET_URL}}"
+
+  SCENARIO_NAME_OLD: "(set me)"
+  SCENARIO_NAME_NEW: "(set me)"
+  FOLDER_NAME: "(set me)"
+
+nodes:
+  - id: open_make
+    description: "Navigate to Make.com (allowlisted)"
+    step:
+      adapter: BrowserAgent
+      method: goto
+      url: "{{SCENARIO_URL}}"
+
+  - id: confirm_rename
+    description: "Human checkpoint before rename + move"
+    step:
+      adapter: BrowserAgent
+      method: pause_for_confirmation
+      message: |
+        You are about to rename and re-folder a Make.com scenario.
+
+        Context:
+          {{TARGET_CONTEXT}}
+
+        Rename:
+          {{SCENARIO_NAME_OLD}}  ->  {{SCENARIO_NAME_NEW}}
+
+        Move to folder:
+          {{FOLDER_NAME}}
+
+        Type YES to proceed.
+
+  - id: rename_and_folder
+    description: "Rename scenario and move to folder (best-effort UI clicks)"
+    step:
+      adapter: BrowserAgent
+      method: run_script
+      url: "{{TARGET_URL}}"
+      headed: true
+      script: |
+        // If you're not already in the editor, try to get to scenarios list.
+        clickText("Scenarios")
+        wait(1200)
+
+        // Open the scenario by its current name (best-effort).
+        clickText("{{SCENARIO_NAME_OLD}}")
+        wait(2000)
+
+        // Rename (best-effort: click current name then select all).
+        clickText("{{SCENARIO_NAME_OLD}}")
+        wait(300)
+        select_all()
+        type("{{SCENARIO_NAME_NEW}}")
+        wait(300)
+        press("Enter")
+        wait(1200)
+
+        // Move to folder (best-effort; labels differ by Make UI).
+        clickText("Folder")
+        wait(600)
+        clickText("{{FOLDER_NAME}}")
+        wait(1200)
+
+  - id: confirm_done
+    description: "Human checkpoint to verify result"
+    step:
+      adapter: BrowserAgent
+      method: pause_for_confirmation
+      message: |
+        Rename + folder move step complete.
+
+        Please visually confirm:
+        - Scenario name is now: {{SCENARIO_NAME_NEW}}
+        - Scenario is in folder: {{FOLDER_NAME}}
+
+        Type YES to finalize.

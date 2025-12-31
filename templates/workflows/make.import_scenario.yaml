@@ -1,0 +1,82 @@
+kind: WorkflowDefinition
+workflow_id: make.import_scenario
+threadId: clickops
+
+dry_run: false
+
+goal: "ClickOps: Make.com import scenario blueprint (BrowserAgent-only)"
+
+vars:
+  TARGET_URL: "https://www.make.com/"
+  TARGET_CONTEXT: "Make.com Team"
+  BLUEPRINT_PATH: "C:\\SintraClickOps\\imports\\scenario-blueprint.json"
+
+nodes:
+  - id: open_make_team
+    description: "Navigate to Make.com target page (allowlisted)"
+    step:
+      adapter: BrowserAgent
+      method: goto
+      url: "{{TARGET_URL}}"
+
+  - id: preflight_confirm
+    description: "Human checkpoint before importing"
+    step:
+      adapter: BrowserAgent
+      method: pause_for_confirmation
+      message: |
+        Preflight check — Make.com Scenario Import
+
+        Team / Context:
+          {{TARGET_CONTEXT}}
+
+        Blueprint file:
+          {{BLUEPRINT_PATH}}
+
+        This operation will:
+        - Upload the JSON blueprint
+        - Create a new scenario in this team
+
+        No existing scenarios will be modified.
+
+        Type YES to proceed.
+
+  - id: import_scenario
+    description: "Import scenario blueprint via UI"
+    step:
+      adapter: BrowserAgent
+      method: run_script
+      url: "{{TARGET_URL}}"
+      headed: true
+      script: |
+        // Navigate to Scenarios (UI-safe approach)
+        clickText("Scenarios")
+        wait(1500)
+
+        // Open create/import menu
+        clickText("Create")
+        wait(750)
+        clickText("Import")
+        wait(1500)
+
+        // Upload blueprint file
+        uploadFile("{{BLUEPRINT_PATH}}")
+        wait(2000)
+
+        // Confirm import
+        clickText("Import")
+        wait(2500)
+
+  - id: post_import_confirm
+    description: "Human checkpoint to verify import result"
+    step:
+      adapter: BrowserAgent
+      method: pause_for_confirmation
+      message: |
+        Import complete.
+
+        Please visually confirm:
+        - Scenario appears in the list
+        - Name and folder look correct
+
+        Type YES to finalize.

@@ -1,0 +1,75 @@
+# =========================================================
+# ClickOps Canonical Workflow (BrowserAgent ONLY)
+# =========================================================
+# Doctrine:
+# - This workflow may ONLY contain BrowserAgent steps
+# - All navigation is hostname-allowlisted (browser.allowlist.json)
+# - Confirmation checkpoints use BrowserAgent.pause_for_confirmation
+# - Artifacts are captured by the BrowserAgent executor (HAR + screenshot)
+#
+# Notes:
+# - This file is intended to be copied.
+# - Provide TARGET_URL, TARGET_CONTEXT, OPERATION_NAME, and (optionally) BROWSER_SCRIPT via --dotenv/--secrets/vars.
+# - For live runs, ClickOps additionally requires --confirm at the CLI level.
+# =========================================================
+
+kind: WorkflowDefinition
+workflow_id: browser.canonical
+threadId: clickops
+
+dry_run: false
+
+goal: "ClickOps canonical: BrowserAgent-only lane"
+
+vars:
+  TARGET_URL: "https://example.com"
+  TARGET_CONTEXT: "(set me)"
+  OPERATION_NAME: "(set me)"
+  BROWSER_SCRIPT: |
+    # Optional script body for run_script.
+    # Supported commands:
+    #   wait(500)
+    #   press("Enter")
+    #   type("hello")
+    #   click(text="Table")
+    wait(250)
+
+nodes:
+  - id: open_target
+    description: "Navigate to the target URL (allowlisted)"
+    step:
+      adapter: BrowserAgent
+      method: goto
+      url: "{{TARGET_URL}}"
+
+  - id: preflight_pause
+    description: "Human checkpoint before any UI actions"
+    step:
+      adapter: BrowserAgent
+      method: pause_for_confirmation
+      message: |
+        Preflight check:
+        - Target URL: {{TARGET_URL}}
+        - Workspace/Context: {{TARGET_CONTEXT}}
+        - Operation: {{OPERATION_NAME}}
+
+        Type YES to proceed.
+
+  - id: execute_steps
+    description: "Execute a minimal browser script (optional)"
+    step:
+      adapter: BrowserAgent
+      method: run_script
+      url: "{{TARGET_URL}}"
+      headed: true
+      script: "{{BROWSER_SCRIPT}}"
+
+  - id: final_confirmation
+    description: "Final checkpoint"
+    step:
+      adapter: BrowserAgent
+      method: pause_for_confirmation
+      message: |
+        Execution complete.
+        Review the browser state and artifacts.
+        Type YES to finalize and exit.
