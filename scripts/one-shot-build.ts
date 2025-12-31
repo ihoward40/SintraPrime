@@ -92,6 +92,11 @@ function main() {
   const nowArg = argValue(argv, "--now");
   const dryRun = argv.includes("--dry-run");
 
+  if (process.env.CI && !dryRun) {
+    console.error("CI guardrail: only --dry-run is permitted under CI.");
+    process.exit(2);
+  }
+
   if (!caseArg || !nowArg) {
     console.error(usage());
     process.exit(2);

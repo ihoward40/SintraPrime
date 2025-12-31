@@ -1,0 +1,27 @@
+name: One-Shot Dry Run (CI)
+
+on:
+  pull_request:
+    branches: [v2.0]
+
+jobs:
+  oneshot-dry-run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: agent-mode-engine/package-lock.json
+
+      - name: Install
+        working-directory: agent-mode-engine
+        run: npm ci
+
+      - name: One-shot (dry-run only)
+        working-directory: agent-mode-engine
+        env:
+          CI: "1"
+        run: node --import tsx scripts/one-shot-build.ts --dry-run --case IRS-TRANSCRIPT-SET-002 --now 2025-01-01T00:00:00Z

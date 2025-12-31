@@ -73,7 +73,10 @@
     "speech:enumerate": "node --import tsx ./scripts/speech-enumeration-report.ts",
     "speech:enumerate:strict": "node --import tsx ./scripts/speech-enumeration-report.ts --strict",
     "personal:package": "node ./scripts/personal-package-event.mjs",
-    "build:oneshot": "node --import tsx scripts/one-shot-build.ts --clean"
+    "build:oneshot": "node --import tsx scripts/one-shot-build.ts --clean",
+    "build:oneshot:dry-run": "node --import tsx scripts/one-shot-build.ts --dry-run",
+    "build:oneshot:batch": "node --import tsx scripts/one-shot-build-batch.ts",
+    "public:verify-mirror": "node --import tsx scripts/public-verify-mirror.ts"
   },
   "bin": {
     "sintraprimer": "dist/cli/main.js",
