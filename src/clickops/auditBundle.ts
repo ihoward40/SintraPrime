@@ -88,6 +88,45 @@ function tryCreateRfc3161Timestamp(params: {
   }
 }
 
+function parseTsaList(): string[] {
+  const primary = String(process.env.CLICKOPS_TSA_URL ?? "").trim();
+  const listRaw = String(process.env.CLICKOPS_TSA_LIST ?? "").trim();
+  const parts = listRaw
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  const out: string[] = [];
+  const seen = new Set<string>();
+
+  const push = (u: string) => {
+    const v = u.trim();
+    if (!v) return;
+    const k = v.toLowerCase();
+    if (seen.has(k)) return;
+    seen.add(k);
+    out.push(v);
+  };
+
+  // Back-compat: CLICKOPS_TSA_URL participates as highest priority.
+  if (primary) push(primary);
+  for (const p of parts) push(p);
+
+  return out;
+}
+
+function isHttpUrl(s: string): boolean {
+  const v = String(s ?? "").trim();
+  return /^https?:\/\//i.test(v);
+}
+
+function resolvePublishManifestUrl(templateOrUrl: string, runId: string): string | null {
+  const raw = String(templateOrUrl ?? "").trim();
+  if (!raw) return null;
+  const resolved = raw.replace(/\{\{\s*RUN_ID\s*\}\}/g, runId);
+  return isHttpUrl(resolved) ? resolved : null;
+}
+
 // Minimal QR generator + renderer.
 // Uses a dependency-free QR implementation via internal matrix algorithm is overkill;
 // instead we rely on qrcode-generator (tiny, pure JS) if installed.
@@ -246,7 +285,8 @@ function stampPng(params: {
   spec_name: string;
   mode: string;
   timestampIso: string;
-  manifest_sha256: string;
+  manifest_ref: string;
+  qr_payload: string;
 }): Buffer {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { PNG } = require("pngjs");
@@ -257,7 +297,7 @@ function stampPng(params: {
     `SPEC: ${params.spec_name}\n` +
     `TIME: ${params.timestampIso}\n` +
     `MODE: ${params.mode}\n` +
-    `MANIFEST: sha256:${params.manifest_sha256}`;
+    `MANIFEST: ${params.manifest_ref}`;
 
   const scale = 2;
   const padding = 8;
@@ -272,8 +312,7 @@ function stampPng(params: {
   drawRect(img, 6, 6, boxW, boxH, [0, 0, 0, 140]);
   drawText(img, bannerText, 6 + padding, 6 + padding, scale, [255, 255, 255, 255]);
 
-  const qrPayload = `sha256:${params.manifest_sha256}`;
-  const qr = renderQrPng({ text: qrPayload, moduleSize: 2, margin: 2 });
+  const qr = renderQrPng({ text: params.qr_payload, moduleSize: 2, margin: 2 });
   if (qr) {
     const qrImg = PNG.sync.read(qr);
     const qrX = Math.max(0, img.width - qrImg.width - 6);
@@ -323,6 +362,12 @@ export type RunMetadata = {
   dry_run: boolean;
   receipt: unknown;
   error: string | null;
+  publish_manifest_url?: string | null;
+  rfc3161?: {
+    tsa_used: string | null;
+    attempted: string[];
+    status: "success" | "unavailable";
+  };
   policy: {
     browser_allowlist_sha256: string | null;
   };
@@ -358,7 +403,8 @@ export async function createClickOpsAuditBundle(params: {
   receipt: unknown;
   error: string | null;
   lock_state: LockState;
-}): Promise<{ outZipAbs: string; manifest: AuditManifest }>
+  publish_manifest_url?: string | null;
+}): Promise<{ outZipAbs: string; manifest: AuditManifest; manifest_sha256: string; run_metadata: RunMetadata }>
 {
   const runDirAbs = path.resolve(params.runDirAbs);
   const outZipAbs = path.resolve(params.outZipAbs);
@@ -398,16 +444,33 @@ export async function createClickOpsAuditBundle(params: {
   };
 
   const lockStateJson = JSON.stringify(params.lock_state, null, 2) + "\n";
-  const runMetadataJson = JSON.stringify(runMetadata, null, 2) + "\n";
 
   // Compute file list (as it will appear inside the zip).
   const fileEntries: Array<{ zipPath: string; abs?: string; bytes: number; sha256: string; content?: Buffer }> = [];
 
   // Add metadata files (buffers so we can hash deterministically).
   const lockBuf = Buffer.from(lockStateJson, "utf8");
-  const metaBuf = Buffer.from(runMetadataJson, "utf8");
   fileEntries.push({ zipPath: "LOCK_STATE.json", bytes: lockBuf.byteLength, sha256: sha256Buffer(lockBuf), content: lockBuf });
-  fileEntries.push({ zipPath: "RUN_METADATA.json", bytes: metaBuf.byteLength, sha256: sha256Buffer(metaBuf), content: metaBuf });
+  // RFC-3161 metadata is recorded in RUN_METADATA.json, but timestamping is best-effort.
+  // Note: to keep CHECKSUMS/sha256.txt and CHECKSUMS/sha256.tsr consistent with RUN_METADATA.json,
+  // we select a TSA first, then timestamp the final sha256.txt after updating RUN_METADATA.json.
+  const tsaList = parseTsaList();
+  const includeTsq = String(process.env.CLICKOPS_TSA_INCLUDE_TSQ ?? "") === "1";
+  const publishUrl = resolvePublishManifestUrl(
+    String(params.publish_manifest_url ?? process.env.CLICKOPS_PUBLISH_MANIFEST_URL ?? ""),
+    params.run_id
+  );
+  const rfc3161Meta: NonNullable<RunMetadata["rfc3161"]> = {
+    tsa_used: null,
+    attempted: [],
+    status: "unavailable",
+  };
+  if (publishUrl) runMetadata.publish_manifest_url = publishUrl;
+  runMetadata.rfc3161 = rfc3161Meta;
+
+  const initialRunMetadataJson = JSON.stringify(runMetadata, null, 2) + "\n";
+  const initialMetaBuf = Buffer.from(initialRunMetadataJson, "utf8");
+  fileEntries.push({ zipPath: "RUN_METADATA.json", bytes: initialMetaBuf.byteLength, sha256: sha256Buffer(initialMetaBuf), content: initialMetaBuf });
 
   // Manifest (computed over all files except CHECKSUMS).
   const manifest: AuditManifest = {
@@ -424,8 +487,9 @@ export async function createClickOpsAuditBundle(params: {
   const manifestSha = sha256Buffer(manifestBuf);
   fileEntries.push({ zipPath: "MANIFEST.json", bytes: manifestBuf.byteLength, sha256: sha256Buffer(manifestBuf), content: manifestBuf });
 
-  const tsaUrl = String(process.env.CLICKOPS_TSA_URL ?? "").trim();
-  const includeTsq = String(process.env.CLICKOPS_TSA_INCLUDE_TSQ ?? "") === "1";
+  const manifestHashRef = `sha256:${manifestSha}`;
+  const manifestRef = publishUrl ? publishUrl : manifestHashRef;
+  const qrPayload = publishUrl ? publishUrl : manifestHashRef;
 
   const readme =
     "ClickOps Audit Bundle (v2)\n" +
@@ -436,15 +500,16 @@ export async function createClickOpsAuditBundle(params: {
     "- ARTIFACTS/* (screenshots are banner-stamped; partial runs are expected)\n" +
     "- MANIFEST.json (bytes + SHA-256 for each file)\n" +
     "- CHECKSUMS/sha256.txt (sha256sum-compatible)\n" +
-    (tsaUrl ? "- CHECKSUMS/sha256.tsr (RFC-3161 timestamp)\n" : "") +
+    (tsaList.length ? "- CHECKSUMS/sha256.tsr (RFC-3161 timestamp, best-effort)\n" : "") +
+    (publishUrl ? `- Published manifest URL (QR encodes URL): ${publishUrl}\n` : "") +
     "\n" +
     "Verification (PowerShell example):\n" +
     "- Extract the zip\n" +
     "- Compute SHA256 for files and compare with CHECKSUMS/sha256.txt\n" +
-    (tsaUrl
+    (tsaList.length
       ? "\nRFC-3161 Timestamp verification (requires TSA root chain):\n" +
         "openssl ts -verify -data CHECKSUMS/sha256.txt -in CHECKSUMS/sha256.tsr -CAfile tsa_root.pem\n"
-      : "\nTo enable RFC-3161 timestamps, set CLICKOPS_TSA_URL to your TSA endpoint.\n") +
+      : "\nTo enable RFC-3161 timestamps, set CLICKOPS_TSA_LIST (comma-separated) or CLICKOPS_TSA_URL.\n") +
     "\n";
   const readmeBuf = Buffer.from(readme, "utf8");
   fileEntries.push({ zipPath: "README_Verification.txt", bytes: readmeBuf.byteLength, sha256: sha256Buffer(readmeBuf), content: readmeBuf });
@@ -464,7 +529,8 @@ export async function createClickOpsAuditBundle(params: {
         spec_name: params.spec_name,
         mode: params.mode,
         timestampIso: tsIso,
-        manifest_sha256: manifestSha,
+        manifest_ref: manifestRef,
+        qr_payload: qrPayload,
       });
       fileEntries.push({ zipPath, bytes: stamped.byteLength, sha256: sha256Buffer(stamped), content: stamped });
     } else {
@@ -474,20 +540,149 @@ export async function createClickOpsAuditBundle(params: {
 
   // CHECKSUMS/sha256.txt does not include itself, and includes final in-zip content.
   const checksumLines = fileEntries
-    .filter((f) => f.zipPath !== "CHECKSUMS/sha256.txt")
+    .filter(
+      (f) =>
+        f.zipPath !== "CHECKSUMS/sha256.txt" &&
+        f.zipPath !== "CHECKSUMS/sha256.tsr" &&
+        f.zipPath !== "CHECKSUMS/sha256.tsq"
+    )
     .map((f) => `${f.sha256}  ${f.zipPath}`)
     .sort((a, b) => a.localeCompare(b, "en"));
   const checksumText = checksumLines.join("\n") + "\n";
   const checksumBuf = Buffer.from(checksumText, "utf8");
   fileEntries.push({ zipPath: "CHECKSUMS/sha256.txt", bytes: checksumBuf.byteLength, sha256: sha256Buffer(checksumBuf), content: checksumBuf });
 
-  // Optional RFC-3161 timestamp for sha256.txt
-  if (tsaUrl) {
-    const ts = tryCreateRfc3161Timestamp({ sha256Txt: checksumBuf, tsaUrl });
-    if (ts?.tsr) {
-      fileEntries.push({ zipPath: "CHECKSUMS/sha256.tsr", bytes: ts.tsr.byteLength, sha256: sha256Buffer(ts.tsr), content: ts.tsr });
-      if (includeTsq && ts.tsq) {
-        fileEntries.push({ zipPath: "CHECKSUMS/sha256.tsq", bytes: ts.tsq.byteLength, sha256: sha256Buffer(ts.tsq), content: ts.tsq });
+  // Optional RFC-3161 timestamp for sha256.txt (best-effort; fallback TSA list).
+  // Two-pass: select a working TSA first, then timestamp the final sha256.txt after RUN_METADATA.json is updated.
+  let selectedTsa: string | null = null;
+  if (tsaList.length) {
+    for (const tsaUrl of tsaList) {
+      rfc3161Meta.attempted.push(tsaUrl);
+      const probe = tryCreateRfc3161Timestamp({ sha256Txt: checksumBuf, tsaUrl });
+      if (probe?.tsr) {
+        selectedTsa = tsaUrl;
+        break;
+      }
+    }
+  }
+
+  // Update RUN_METADATA.json with the TSA selection result (status reflects final timestamp step below).
+  rfc3161Meta.tsa_used = selectedTsa;
+  rfc3161Meta.status = "unavailable";
+  {
+    const updatedRunMetadataJson = JSON.stringify(runMetadata, null, 2) + "\n";
+    const updatedMetaBuf = Buffer.from(updatedRunMetadataJson, "utf8");
+    const idx = fileEntries.findIndex((f) => f.zipPath === "RUN_METADATA.json");
+    if (idx >= 0) {
+      fileEntries[idx] = {
+        zipPath: "RUN_METADATA.json",
+        bytes: updatedMetaBuf.byteLength,
+        sha256: sha256Buffer(updatedMetaBuf),
+        content: updatedMetaBuf,
+      };
+    }
+  }
+
+  // Recompute CHECKSUMS/sha256.txt because RUN_METADATA.json changed.
+  {
+    const lines = fileEntries
+      .filter(
+        (f) =>
+          f.zipPath !== "CHECKSUMS/sha256.txt" &&
+          f.zipPath !== "CHECKSUMS/sha256.tsr" &&
+          f.zipPath !== "CHECKSUMS/sha256.tsq"
+      )
+      .map((f) => `${f.sha256}  ${f.zipPath}`)
+      .sort((a, b) => a.localeCompare(b, "en"));
+    const txt = lines.join("\n") + "\n";
+    const buf = Buffer.from(txt, "utf8");
+    const idx = fileEntries.findIndex((f) => f.zipPath === "CHECKSUMS/sha256.txt");
+    if (idx >= 0) {
+      fileEntries[idx] = {
+        zipPath: "CHECKSUMS/sha256.txt",
+        bytes: buf.byteLength,
+        sha256: sha256Buffer(buf),
+        content: buf,
+      };
+    }
+  }
+
+  // Final timestamp attempt (if a TSA was selected).
+  if (selectedTsa) {
+    const shaEntry = fileEntries.find((f) => f.zipPath === "CHECKSUMS/sha256.txt");
+    const shaBuf = shaEntry?.content;
+    if (shaBuf) {
+      const ts = tryCreateRfc3161Timestamp({ sha256Txt: shaBuf, tsaUrl: selectedTsa });
+      if (ts?.tsr) {
+        rfc3161Meta.status = "success";
+        fileEntries.push({ zipPath: "CHECKSUMS/sha256.tsr", bytes: ts.tsr.byteLength, sha256: sha256Buffer(ts.tsr), content: ts.tsr });
+        if (includeTsq && ts.tsq) {
+          fileEntries.push({ zipPath: "CHECKSUMS/sha256.tsq", bytes: ts.tsq.byteLength, sha256: sha256Buffer(ts.tsq), content: ts.tsq });
+        }
+
+        // Update RUN_METADATA.json one last time to reflect RFC-3161 success.
+        const finalRunMetadataJson = JSON.stringify(runMetadata, null, 2) + "\n";
+        const finalMetaBuf = Buffer.from(finalRunMetadataJson, "utf8");
+        const idx = fileEntries.findIndex((f) => f.zipPath === "RUN_METADATA.json");
+        if (idx >= 0) {
+          fileEntries[idx] = {
+            zipPath: "RUN_METADATA.json",
+            bytes: finalMetaBuf.byteLength,
+            sha256: sha256Buffer(finalMetaBuf),
+            content: finalMetaBuf,
+          };
+        }
+
+        // Update sha256.txt again since RUN_METADATA.json changed.
+        const lines = fileEntries
+          .filter(
+            (f) =>
+              f.zipPath !== "CHECKSUMS/sha256.txt" &&
+              f.zipPath !== "CHECKSUMS/sha256.tsr" &&
+              f.zipPath !== "CHECKSUMS/sha256.tsq"
+          )
+          .map((f) => `${f.sha256}  ${f.zipPath}`)
+          .sort((a, b) => a.localeCompare(b, "en"));
+        const txt = lines.join("\n") + "\n";
+        const buf = Buffer.from(txt, "utf8");
+        const shaIdx = fileEntries.findIndex((f) => f.zipPath === "CHECKSUMS/sha256.txt");
+        if (shaIdx >= 0) {
+          fileEntries[shaIdx] = {
+            zipPath: "CHECKSUMS/sha256.txt",
+            bytes: buf.byteLength,
+            sha256: sha256Buffer(buf),
+            content: buf,
+          };
+        }
+
+        // Re-timestamp the final sha256.txt (now that RUN_METADATA.json reflects success).
+        const finalShaEntry = fileEntries.find((f) => f.zipPath === "CHECKSUMS/sha256.txt");
+        const finalShaBuf = finalShaEntry?.content;
+        if (finalShaBuf) {
+          const ts2 = tryCreateRfc3161Timestamp({ sha256Txt: finalShaBuf, tsaUrl: selectedTsa });
+          if (ts2?.tsr) {
+            const tsrIdx = fileEntries.findIndex((f) => f.zipPath === "CHECKSUMS/sha256.tsr");
+            if (tsrIdx >= 0) {
+              fileEntries[tsrIdx] = {
+                zipPath: "CHECKSUMS/sha256.tsr",
+                bytes: ts2.tsr.byteLength,
+                sha256: sha256Buffer(ts2.tsr),
+                content: ts2.tsr,
+              };
+            }
+            if (includeTsq && ts2.tsq) {
+              const tsqIdx = fileEntries.findIndex((f) => f.zipPath === "CHECKSUMS/sha256.tsq");
+              if (tsqIdx >= 0) {
+                fileEntries[tsqIdx] = {
+                  zipPath: "CHECKSUMS/sha256.tsq",
+                  bytes: ts2.tsq.byteLength,
+                  sha256: sha256Buffer(ts2.tsq),
+                  content: ts2.tsq,
+                };
+              }
+            }
+          }
+        }
       }
     }
   }
@@ -529,5 +724,5 @@ export async function createClickOpsAuditBundle(params: {
     void archive.finalize();
   });
 
-  return { outZipAbs, manifest };
+  return { outZipAbs, manifest, manifest_sha256: manifestSha, run_metadata: runMetadata };
 }

@@ -26,8 +26,19 @@ This is the **ClickOps lane**: a strictly governed BrowserAgent execution path i
 
 - `--audit`: always emits a deterministic audit ZIP (even on failure/abort).
 - `--audit=auto`: emits the audit ZIP only if the run does not end in `success`.
+- `--audit=success-only`: emits the audit ZIP only if the run ends in `success`.
+
+Optional manifest publishing:
+
+- `--publish-manifest-url <url>`: if provided, the screenshot QR/banner will reference this hosted manifest URL (supports `{{ RUN_ID }}` templating). If omitted, QR/banner uses `sha256:<manifest_sha256>`.
 
 Audit bundles include a manifest, checksums, and remapped artifacts suitable for independent verification.
+
+RFC-3161 (best-effort; never blocks bundle creation):
+
+- `CLICKOPS_TSA_URL=https://...` (single TSA)
+- `CLICKOPS_TSA_LIST=https://tsa1,...,https://tsaN` (ordered fallback list)
+- `CLICKOPS_TSA_INCLUDE_TSQ=1` (also include the `.tsq` request)
 
 ## Lock TTL
 

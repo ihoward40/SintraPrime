@@ -4,6 +4,8 @@ import path from "node:path";
 import crypto from "node:crypto";
 import YAML from "yaml";
 
+import { PDFDocument, StandardFonts } from "pdf-lib";
+
 import { WorkflowDefinitionSchema } from "../workflow/WorkflowDefinition.schema.js";
 import {
   createWorkflowPlan,
@@ -17,7 +19,7 @@ const DEFAULT_LOCK_TTL_MINUTES = 60;
 const MIN_LOCK_TTL_MINUTES = 5;
 const MAX_LOCK_TTL_MINUTES = 6 * 60;
 
-type AuditMode = true | "auto" | undefined;
+type AuditModeV2 = true | "auto" | "success-only" | undefined;
 
 type ClickOpsLockfile = {
   locked: boolean;
@@ -55,14 +57,199 @@ function parseLockTtlMinutes(raw: unknown): number {
   return clamped;
 }
 
-function parseAuditMode(raw: unknown): AuditMode {
+function parseAuditMode(raw: unknown): AuditModeV2 {
   if (raw === true) return true;
   if (typeof raw === "string") {
     const v = raw.trim().toLowerCase();
+    if (v.includes(",")) {
+      throw new Error("clickops: --audit accepts a single mode: auto | success-only");
+    }
     if (!v) return true;
     if (v === "auto") return "auto";
+    if (v === "success-only" || v === "success_only") return "success-only";
   }
   return undefined;
+}
+
+function sha256FileHex(absPath: string): string {
+  const h = crypto.createHash("sha256");
+  h.update(fs.readFileSync(absPath));
+  return h.digest("hex");
+}
+
+async function writeAuditWrapperPdf(params: {
+  outPdfAbs: string;
+  run_id: string;
+  spec_name: string;
+  spec_label: string;
+  started_at: string;
+  finished_at: string;
+  zip_path: string;
+  zip_sha256: string;
+  lock_ttl_minutes: number;
+  operator_id?: string;
+  manifest_sha256?: string;
+  publish_manifest_url?: string | null;
+  rfc3161?: { status: string; tsa_used: string | null };
+}) {
+  const pdf = await PDFDocument.create();
+  const font = await pdf.embedFont(StandardFonts.Helvetica);
+
+  const addPageWithLines = (title: string, lines: string[]) => {
+    const page = pdf.addPage([612, 792]); // US Letter
+    const margin = 54;
+    let y = 792 - margin;
+    const lineH = 14;
+
+    page.drawText(title, { x: margin, y, size: 14, font });
+    y -= lineH * 1.5;
+
+    for (const l of lines) {
+      const text = String(l ?? "");
+      if (!text) {
+        y -= lineH;
+        continue;
+      }
+      // Minimal wrapping by splitting long lines.
+      const maxChars = 95;
+      const chunks = text.length > maxChars ? text.match(new RegExp(`.{1,${maxChars}}`, "g")) ?? [text] : [text];
+      for (const c of chunks) {
+        page.drawText(c, { x: margin, y, size: 11, font });
+        y -= lineH;
+      }
+    }
+  };
+
+  addPageWithLines("ClickOps Audit Bundle — Cover Sheet", [
+    "Tool: SintraPrime ClickOps (v1.0)",
+    `RUN_ID: ${params.run_id}`,
+    `Spec name: ${params.spec_name}`,
+    `Spec label: ${params.spec_label}`,
+    `Start (UTC): ${params.started_at}`,
+    `End (UTC): ${params.finished_at}`,
+    "",
+    "Neutrality statement:",
+    "This package contains factual records of on-screen activity and related verification data.",
+    "It does not contain legal arguments, opinions, or conclusions.",
+  ]);
+
+  addPageWithLines("Contents & Verification", [
+    "This PDF is a wrapper for the ZIP container; the ZIP is the authoritative evidence container.",
+    "",
+    "Expected ZIP contents (high level):",
+    "- Screenshots and network artifacts (as recorded)",
+    "- MANIFEST.json listing files and SHA-256 hashes",
+    "- CHECKSUMS/sha256.txt for independent hash verification",
+    "- Optional CHECKSUMS/sha256.tsr (RFC-3161 timestamp, best-effort)",
+    "",
+    `ZIP file: ${path.basename(params.zip_path)}`,
+    `ZIP SHA-256: ${params.zip_sha256}`,
+    params.manifest_sha256 ? `Manifest SHA-256: ${params.manifest_sha256}` : "Manifest SHA-256: (unknown)",
+    params.publish_manifest_url ? `Manifest URL (if published): ${params.publish_manifest_url}` : "Manifest URL (if published): (not provided)",
+    params.rfc3161 ? `RFC-3161 status: ${params.rfc3161.status}${params.rfc3161.tsa_used ? ` (TSA: ${params.rfc3161.tsa_used})` : ""}` : "RFC-3161 status: (unknown)",
+    "",
+    "How to verify:",
+    "1) Open README_Verification.txt inside the ZIP.",
+    "2) Verify file hashes against CHECKSUMS/sha256.txt.",
+    "3) If present, verify CHECKSUMS/sha256.tsr using your TSA trust chain.",
+  ]);
+
+  const notes: string[] = [];
+  if (params.operator_id) notes.push(`Operator: ${params.operator_id}`);
+  notes.push(`Lock TTL (minutes): ${params.lock_ttl_minutes}`);
+  if (notes.length) {
+    addPageWithLines("Notes", notes);
+  }
+
+  const bytes = await pdf.save({ useObjectStreams: false });
+  fs.mkdirSync(path.dirname(params.outPdfAbs), { recursive: true });
+  fs.writeFileSync(params.outPdfAbs, Buffer.from(bytes));
+}
+
+async function writeClerkOrientationSheetPdf(params: { outPdfAbs: string }) {
+  const pdf = await PDFDocument.create();
+  const font = await pdf.embedFont(StandardFonts.Helvetica);
+
+  const page = pdf.addPage([612, 792]); // US Letter
+  const margin = 54;
+  let y = 792 - margin;
+  const lineH = 14;
+
+  const wrapLine = (s: string, maxChars: number): string[] => {
+    const text = String(s ?? "");
+    if (!text) return [""];
+    const words = text.split(/\s+/g);
+    const out: string[] = [];
+    let cur = "";
+    for (const w of words) {
+      if (!cur) {
+        cur = w;
+        continue;
+      }
+      if ((cur + " " + w).length <= maxChars) {
+        cur = cur + " " + w;
+      } else {
+        out.push(cur);
+        cur = w;
+      }
+    }
+    if (cur) out.push(cur);
+    return out.length ? out : [""];
+  };
+
+  const drawBlock = (lines: string[], opts?: { size?: number; maxChars?: number }) => {
+    const size = opts?.size ?? 11;
+    const maxChars = opts?.maxChars ?? 95;
+    for (const raw of lines) {
+      const l = String(raw ?? "");
+      if (!l) {
+        y -= lineH;
+        continue;
+      }
+      for (const chunk of wrapLine(l, maxChars)) {
+        page.drawText(chunk, { x: margin, y, size, font });
+        y -= lineH;
+      }
+    }
+  };
+
+  // Exact text (wording preserved).
+  drawBlock(["Clerk Orientation Sheet", "(ClickOps Audit Bundle)"], { size: 14, maxChars: 70 });
+  y -= lineH * 0.5;
+
+  drawBlock([
+    "What this is",
+    "This package contains a factual record of a computer-assisted interaction with a public website (e.g., Notion or Make.com). It documents what was displayed on screen and when.",
+    "",
+    "What this is not",
+    "This package does not contain legal arguments, opinions, or conclusions. It does not assert that any party acted unlawfully.",
+    "",
+    "What’s inside",
+    "A ZIP file containing screenshots and network records",
+    "A manifest listing all files and their cryptographic hashes",
+    "A timestamp certificate showing when the record existed",
+    "",
+    "How integrity is ensured",
+    "Each file is hashed using SHA-256",
+    "The hash list is time-stamped by an independent Time Stamping Authority (RFC-3161)",
+    "Screenshots include a visible run identifier and reference to the manifest",
+    "",
+    "How to verify",
+    "Open README_Verification.txt",
+    "Verify hashes using the provided sha256.txt",
+    "Verify the timestamp using sha256.tsr (instructions included)",
+    "",
+    "What the screenshots show",
+    "Exactly what appeared in the browser at the recorded time",
+    "No screenshots are altered other than adding a small identifier banner",
+    "",
+    "Questions",
+    "This record is self-contained. No additional software or accounts are required to review it.",
+  ]);
+
+  const bytes = await pdf.save({ useObjectStreams: false });
+  fs.mkdirSync(path.dirname(params.outPdfAbs), { recursive: true });
+  fs.writeFileSync(params.outPdfAbs, Buffer.from(bytes));
 }
 
 function safeRunDirPart(input: string): string {
@@ -201,7 +388,14 @@ export function registerClickOps(program: Command) {
       "Flight-plan preview: resolves steps, opens the first URL, takes one screenshot, and performs no inputs",
       false
     )
-    .option("--audit [mode]", "Audit bundle mode: --audit (always) or --audit=auto (only on non-success)")
+    .option(
+      "--audit [mode]",
+      "Audit bundle mode: --audit (always) | --audit=auto (non-success only) | --audit=success-only (success only)"
+    )
+    .option(
+      "--publish-manifest-url <url>",
+      "If provided, QR/banner uses this hosted manifest URL (supports {{ RUN_ID }} template)"
+    )
     .option("--confirm", "Required to execute when not --dry-run", false)
     .option("--lock-ttl <minutes>", "Override ClickOps lock TTL in minutes (min 5, max 360)")
     .option("--execution-id <id>", "Override execution id")
@@ -210,8 +404,12 @@ export function registerClickOps(program: Command) {
     .option("--operator-id <id>", "Override operator id for role checks")
     .action(async (opts) => {
       const startedAtIso = nowIso();
-      const auditMode: AuditMode = parseAuditMode((opts as any).audit);
+      const auditMode: AuditModeV2 = parseAuditMode((opts as any).audit);
       const lockTtlMinutes = parseLockTtlMinutes((opts as any).lockTtl);
+      const publishManifestUrlOpt =
+        typeof (opts as any).publishManifestUrl === "string" && String((opts as any).publishManifestUrl).trim()
+          ? String((opts as any).publishManifestUrl).trim()
+          : null;
 
       let runStatus: "success" | "failed" | "aborted" = "failed";
       let receivedSignal: "SIGINT" | "SIGTERM" | null = null;
@@ -395,9 +593,18 @@ export function registerClickOps(program: Command) {
         }
 
         // Audit bundle is non-optional once requested.
-        const shouldEmit =
-          auditMode === true ||
-          (auditMode === "auto" && runStatus !== "success");
+        const shouldEmit = (() => {
+          switch (auditMode) {
+            case true:
+              return true;
+            case "auto":
+              return runStatus !== "success";
+            case "success-only":
+              return runStatus === "success";
+            default:
+              return false;
+          }
+        })();
 
         if (shouldEmit) {
           const executionId = runExecutionId ?? extractExecutionIdFromReceipt(receipt);
@@ -413,7 +620,7 @@ export function registerClickOps(program: Command) {
             }
 
             try {
-              await createClickOpsAuditBundle({
+              const bundle = await createClickOpsAuditBundle({
                 runDirAbs,
                 outZipAbs,
                 run_id: executionId,
@@ -427,7 +634,48 @@ export function registerClickOps(program: Command) {
                 receipt,
                 error: caughtError ? String(caughtError?.message ?? caughtError) : null,
                 lock_state: lockState,
+                publish_manifest_url: publishManifestUrlOpt,
               });
+
+              // Filing-friendly PDF wrapper (references ZIP by hash; no embedded screenshots).
+              try {
+                const zipSha = sha256FileHex(outZipAbs);
+                const outPdfAbs = outZipAbs.replace(/\.zip$/i, ".pdf");
+                await writeAuditWrapperPdf({
+                  outPdfAbs,
+                  run_id: executionId,
+                  spec_name: specNameForBanner,
+                  spec_label: specLabelForAudit,
+                  started_at: startedAtIso,
+                  finished_at: nowIso(),
+                  zip_path: outZipAbs,
+                  zip_sha256: zipSha,
+                  lock_ttl_minutes: lockTtlMinutes,
+                  operator_id: typeof opts.operatorId === "string" ? String(opts.operatorId) : undefined,
+                  manifest_sha256: bundle?.manifest_sha256,
+                  publish_manifest_url: bundle?.run_metadata?.publish_manifest_url ?? null,
+                  rfc3161: bundle?.run_metadata?.rfc3161
+                    ? { status: bundle.run_metadata.rfc3161.status, tsa_used: bundle.run_metadata.rfc3161.tsa_used }
+                    : undefined,
+                });
+                // eslint-disable-next-line no-console
+                console.log(`clickops: wrote audit wrapper PDF: ${outPdfAbs}`);
+              } catch (pdfErr) {
+                // eslint-disable-next-line no-console
+                console.warn(`clickops: audit wrapper PDF failed: ${(pdfErr as any)?.message ?? String(pdfErr)}`);
+              }
+
+              // Clerk-facing one-page orientation sheet.
+              try {
+                const outSheetAbs = path.join(path.dirname(outZipAbs), "CLERK_ORIENTATION_SHEET.pdf");
+                await writeClerkOrientationSheetPdf({ outPdfAbs: outSheetAbs });
+                // eslint-disable-next-line no-console
+                console.log(`clickops: wrote clerk orientation sheet: ${outSheetAbs}`);
+              } catch (sheetErr) {
+                // eslint-disable-next-line no-console
+                console.warn(`clickops: clerk orientation sheet failed: ${(sheetErr as any)?.message ?? String(sheetErr)}`);
+              }
+
               // eslint-disable-next-line no-console
               console.log(`clickops: wrote audit bundle: ${outZipAbs}`);
             } catch (bundleErr) {
