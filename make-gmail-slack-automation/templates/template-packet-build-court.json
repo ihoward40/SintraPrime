@@ -1,0 +1,99 @@
+{
+  "scenario_id": "PACKET_BUILD_COURT",
+  "template_name": "Packet Build — Court (Notion Button)",
+  "template_type": "make.com-scenario-definition",
+  "idempotency_primitive": "hash-delta",
+  "notes": [
+    "Deterministic scenario definition for a Notion button-triggered court packet build.",
+    "Slack is a signal surface only; all authoritative writes go to Runs Ledger and Notion outputs.",
+    "Slack post is allowed only on state change (hash delta)."
+  ],
+  "slack_loop_protection": {
+    "rule": "Ignore bot/self messages to prevent Slack feedback loops.",
+    "recommended_filter": "not(exists(slack.bot_id)) OR slack.bot_id = ''"
+  },
+  "modules": [
+    {
+      "name": "Webhook: Notion Button Trigger",
+      "module": "webhooks:CustomWebhook",
+      "outputs_used": ["case_id", "include_appendix", "include_declaration", "date_range"]
+    },
+    {
+      "name": "Tools: Normalize Inputs",
+      "module": "tools:SetVariables",
+      "settings": {
+        "case_id": "trim({{1.case_id}})",
+        "include_appendix": "{{1.include_appendix}}",
+        "include_declaration": "{{1.include_declaration}}",
+        "date_range": "trim({{1.date_range}})",
+        "run_type": "PACKET",
+        "source_system": "Make",
+        "timestamp_utc": "now()"
+      }
+    },
+    {
+      "name": "Tools: Compute State Hash (sha256)",
+      "module": "tools:SetVariables",
+      "settings": {
+        "prev_hash": "{{prev_hash}}",
+        "this_hash": "sha256(concat({{case_id}},'|',{{date_range}},'|',{{include_appendix}},'|',{{include_declaration}}))"
+      }
+    },
+    {
+      "name": "Filter: State Change Only",
+      "type": "filter",
+      "filter": "exists({{this_hash}}) AND length({{this_hash}}) > 0 AND (not(exists({{prev_hash}})) OR {{prev_hash}} != {{this_hash}})"
+    },
+    {
+      "name": "Notion: Create Runs Ledger Row (PACKET)",
+      "module": "notion:CreateDatabaseItem",
+      "settings": {
+        "database": "Runs Ledger",
+        "properties": {
+          "Run ID": "{{this_hash}}",
+          "Run Type": "PACKET",
+          "Source System": "Make",
+          "Case ID": "{{case_id}}",
+          "Actor ID": "notion_button",
+          "Action": "Build Court Packet",
+          "Outcome": "CREATED",
+          "Artifact Ref": "{{this_hash}}",
+          "Prev Hash": "{{prev_hash}}",
+          "This Hash": "{{this_hash}}",
+          "Timestamp (UTC)": "{{timestamp_utc}}",
+          "Immutable": true
+        }
+      }
+    },
+    {
+      "name": "Tools: Build Packet (placeholder)",
+      "module": "tools:ComposeJson",
+      "settings": {
+        "packet_zip_url": "https://example.invalid/packet/{{case_id}}/{{this_hash}}.zip",
+        "manifest_url": "https://example.invalid/packet/{{case_id}}/{{this_hash}}.manifest.json"
+      }
+    },
+    {
+      "name": "Notion: Update Case Outputs",
+      "module": "notion:UpdateDatabaseItem",
+      "settings": {
+        "database": "Cases",
+        "match_by": "Case ID",
+        "match_value": "{{case_id}}",
+        "properties": {
+          "Last Packet URL": "{{packet_zip_url}}",
+          "Last Packet ZIP Hash": "{{this_hash}}",
+          "Manifest URL": "{{manifest_url}}",
+          "Status": "Packet Ready"
+        }
+      }
+    },
+    {
+      "name": "Slack: Notify (state change only)",
+      "module": "slack:SendMessage",
+      "settings": {
+        "text": "📦 Court packet built (state change)\n\nCase: {{case_id}}\nHash: {{this_hash}}\nZIP: {{packet_zip_url}}\nManifest: {{manifest_url}}"
+      }
+    }
+  ]
+}

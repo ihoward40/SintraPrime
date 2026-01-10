@@ -1,0 +1,87 @@
+{
+  "scenario_id": "PUBLISH_MANIFEST",
+  "template_name": "Publish Manifest + Update Verifier (Notion Button)",
+  "template_type": "make.com-scenario-definition",
+  "idempotency_primitive": "hash-delta",
+  "notes": [
+    "Deterministic scenario definition for publishing a manifest and updating a public verifier index.",
+    "Public verifier is read-only; it must never create facts.",
+    "Slack post is allowed only on state change (hash delta)."
+  ],
+  "slack_loop_protection": {
+    "rule": "Ignore bot/self messages to prevent Slack feedback loops.",
+    "recommended_filter": "not(exists(slack.bot_id)) OR slack.bot_id = ''"
+  },
+  "modules": [
+    {
+      "name": "Webhook: Notion Button Trigger",
+      "module": "webhooks:CustomWebhook",
+      "outputs_used": ["case_id", "manifest_url"]
+    },
+    {
+      "name": "Tools: Normalize Inputs",
+      "module": "tools:SetVariables",
+      "settings": {
+        "case_id": "trim({{1.case_id}})",
+        "manifest_url": "trim({{1.manifest_url}})",
+        "run_type": "EXPORT",
+        "source_system": "Make",
+        "timestamp_utc": "now()"
+      }
+    },
+    {
+      "name": "Tools: Compute State Hash (sha256)",
+      "module": "tools:SetVariables",
+      "settings": {
+        "prev_hash": "{{prev_hash}}",
+        "this_hash": "sha256(concat({{case_id}},'|',{{manifest_url}}))"
+      }
+    },
+    {
+      "name": "Filter: State Change Only",
+      "type": "filter",
+      "filter": "exists({{this_hash}}) AND length({{this_hash}}) > 0 AND (not(exists({{prev_hash}})) OR {{prev_hash}} != {{this_hash}})"
+    },
+    {
+      "name": "Notion: Create Runs Ledger Row (EXPORT)",
+      "module": "notion:CreateDatabaseItem",
+      "settings": {
+        "database": "Runs Ledger",
+        "properties": {
+          "Run ID": "{{this_hash}}",
+          "Run Type": "EXPORT",
+          "Source System": "Make",
+          "Case ID": "{{case_id}}",
+          "Actor ID": "notion_button",
+          "Action": "Publish Manifest",
+          "Outcome": "CREATED",
+          "Artifact Ref": "{{manifest_url}}",
+          "Prev Hash": "{{prev_hash}}",
+          "This Hash": "{{this_hash}}",
+          "Timestamp (UTC)": "{{timestamp_utc}}",
+          "Immutable": true
+        }
+      }
+    },
+    {
+      "name": "Notion: Update Case Outputs",
+      "module": "notion:UpdateDatabaseItem",
+      "settings": {
+        "database": "Cases",
+        "match_by": "Case ID",
+        "match_value": "{{case_id}}",
+        "properties": {
+          "Manifest URL": "{{manifest_url}}",
+          "Status": "Published"
+        }
+      }
+    },
+    {
+      "name": "Slack: Notify (state change only)",
+      "module": "slack:SendMessage",
+      "settings": {
+        "text": "📣 Manifest published (state change)\n\nCase: {{case_id}}\nManifest: {{manifest_url}}\nHash: {{this_hash}}"
+      }
+    }
+  ]
+}

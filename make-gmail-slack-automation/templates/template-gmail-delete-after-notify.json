@@ -1,0 +1,46 @@
+{
+  "template_name": "Gmail-Delete-After-Notify",
+  "template_type": "make.com-scenario-definition",
+  "idempotency_primitive": "gmail-label-gate",
+  "notes": [
+    "This is a deterministic scenario definition (not an exported Make blueprint).",
+    "To create an importable blueprint JSON, export your scenario from Make.com and store it here.",
+    "This file exists to lock the click-path and safety ordering: delete only after POSTED label exists."
+  ],
+  "gmail_labels": {
+    "posted": "ALERT_SLACK_POSTED"
+  },
+  "modules": [
+    {
+      "name": "Gmail: Watch Emails (v2)",
+      "module": "google-email:TriggerNewEmail",
+      "settings": {
+        "filter_type": "gmail_search",
+        "query": "label:ALERT_SLACK_POSTED",
+        "folder": "[Gmail]/All Mail",
+        "markSeen": true,
+        "maxResults": 1
+      },
+      "outputs_used": ["id"]
+    },
+    {
+      "name": "Router (safety)",
+      "type": "router",
+      "routes": [
+        {
+          "name": "Delete route",
+          "filter": "exists({{1.id}})"
+        }
+      ]
+    },
+    {
+      "name": "Gmail: Delete Email",
+      "module": "google-email:DeleteEmail",
+      "settings": {
+        "email_uid": "{{1.id}}",
+        "folder": "[Gmail]/All Mail",
+        "expunge": false
+      }
+    }
+  ]
+}

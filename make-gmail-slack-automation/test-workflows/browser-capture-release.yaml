@@ -1,0 +1,46 @@
+kind: WorkflowDefinition
+workflow_id: browser-capture-release
+threadId: test_browser_capture_release_v1_3_0
+
+dry_run: true
+goal: "Capture a BrowserAgent snapshot (HAR + screenshot) and optionally notify Slack"
+
+# NOTE:
+# - This is scaffolded as dry_run by default.
+# - To run for real:
+#   1) Set dry_run: false
+#   2) Add the hostname of TARGET_URL to browser.allowlist.json (or policy.overrides.json)
+
+uses:
+  - adapter: browser
+    scopes: [read]
+  - adapter: webhook
+    scopes: [write]
+
+vars:
+  TARGET_URL: "https://github.com"
+  # Default points to the local mock server; replace with your real Slack webhook URL.
+  # Start mock server with: npm run mock:server (from agent-mode-engine/)
+  SLACK_WEBHOOK_URL: "http://127.0.0.1:8787/status/200"
+
+nodes:
+  - id: capture
+    description: "BrowserAgent goto (writes HAR + screenshot artifacts when not dry_run)"
+    on_success: notify_slack
+    step:
+      adapter: BrowserAgent
+      method: goto
+      url: "{{TARGET_URL}}"
+
+  - id: notify_slack
+    description: "Notify Slack that artifacts are available under runs/<execution_id>/step-XX/"
+    step:
+      action: webhook.request
+      adapter: WebhookAdapter
+      method: POST
+      read_only: false
+      url: "{{SLACK_WEBHOOK_URL}}"
+      payload:
+        text: "Browser capture complete for {{TARGET_URL}}. Check runs/<execution_id>/step-XX/screenshot.png and network.har"
+      expects:
+        http_status: [200]

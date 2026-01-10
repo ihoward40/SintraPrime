@@ -1,0 +1,127 @@
+{
+  "scenario_id": "MAIL_LABEL_PRINT",
+  "template_name": "Mailing — Label Request + Print (Notion Button)",
+  "template_type": "make.com-scenario-definition",
+  "idempotency_primitive": "hash-delta",
+  "notes": [
+    "Governed contract: request/record a USPS label and attach a printable URL.",
+    "This template is intentionally abstract about the label provider (USPS API / broker) and focuses on auditable outputs.",
+    "All writes are append-only (Runs Ledger) plus a single Mailing row update/create.",
+    "Slack is notify-only; no approvals or decision logic."
+  ],
+  "slack_loop_protection": {
+    "rule": "Ignore bot/self messages to prevent Slack feedback loops.",
+    "recommended_filter": "not(exists(slack.bot_id)) OR slack.bot_id = ''"
+  },
+  "modules": [
+    {
+      "name": "Webhook: Notion Button Trigger",
+      "module": "webhooks:CustomWebhook",
+      "outputs_used": [
+        "case_id",
+        "carrier",
+        "service",
+        "recipient_name",
+        "recipient_address",
+        "return_receipt"
+      ]
+    },
+    {
+      "name": "Tools: Normalize Inputs",
+      "module": "tools:SetVariables",
+      "settings": {
+        "case_id": "trim({{1.case_id}})",
+        "carrier": "trim({{1.carrier}})",
+        "service": "trim({{1.service}})",
+        "recipient_name": "trim({{1.recipient_name}})",
+        "recipient_address": "trim({{1.recipient_address}})",
+        "return_receipt": "trim({{1.return_receipt}})",
+        "run_type": "MAIL",
+        "source_system": "Make",
+        "timestamp_utc": "now()"
+      }
+    },
+    {
+      "name": "Tools: Compute Request Hash (sha256)",
+      "module": "tools:SetVariables",
+      "settings": {
+        "prev_hash": "{{prev_hash}}",
+        "this_hash": "sha256(concat({{case_id}},'|',{{carrier}},'|',{{service}},'|',{{recipient_name}},'|',{{recipient_address}},'|',{{return_receipt}}))",
+        "mailing_id": "concat('MAIL_', substring({{this_hash}}, 0, 12))"
+      }
+    },
+    {
+      "name": "Filter: State Change Only",
+      "type": "filter",
+      "filter": "exists({{this_hash}}) AND length({{this_hash}}) > 0 AND (not(exists({{prev_hash}})) OR {{prev_hash}} != {{this_hash}})"
+    },
+    {
+      "name": "HTTP: Label Provider (placeholder)",
+      "module": "http:MakeARequest",
+      "settings": {
+        "method": "POST",
+        "url": "{{LABEL_PROVIDER_ENDPOINT}}",
+        "body": {
+          "case_id": "{{case_id}}",
+          "carrier": "{{carrier}}",
+          "service": "{{service}}",
+          "recipient_name": "{{recipient_name}}",
+          "recipient_address": "{{recipient_address}}",
+          "return_receipt": "{{return_receipt}}",
+          "request_hash": "{{this_hash}}"
+        }
+      },
+      "outputs_used": ["label_url", "tracking_number", "label_pdf_sha256"]
+    },
+    {
+      "name": "Notion: Upsert Mailing Row (by Mailing ID)",
+      "module": "notion:CreateDatabaseItem",
+      "settings": {
+        "database": "Mailings",
+        "properties": {
+          "Mailing ID": "{{mailing_id}}",
+          "Case ID": "{{case_id}}",
+          "Carrier": "{{carrier}}",
+          "Service": "{{service}}",
+          "Tracking Number": "{{tracking_number}}",
+          "Status": "Accepted",
+          "Label Mode": "API",
+          "Label Hash": "{{this_hash}}",
+          "Label URL": "{{label_url}}",
+          "Label SHA-256": "{{label_pdf_sha256}}",
+          "Tracking Status": "Label created",
+          "Status Hash": "sha256(concat({{mailing_id}},'|',{{tracking_number}},'|',{{label_pdf_sha256}},'|',{{timestamp_utc}}))",
+          "Last Checked (UTC)": "{{timestamp_utc}}"
+        }
+      }
+    },
+    {
+      "name": "Notion: Create Runs Ledger Row (MAIL_LABEL_PRINT)",
+      "module": "notion:CreateDatabaseItem",
+      "settings": {
+        "database": "Runs Ledger",
+        "properties": {
+          "Run ID": "sha256(concat({{mailing_id}},'|',{{this_hash}},'|',{{timestamp_utc}}))",
+          "Run Type": "MAIL",
+          "Source System": "Make",
+          "Case ID": "{{case_id}}",
+          "Actor ID": "notion_button",
+          "Action": "MAIL_LABEL_PRINT",
+          "Outcome": "LABEL_CREATED",
+          "Artifact Ref": "{{label_url}}",
+          "Prev Hash": "{{prev_hash}}",
+          "This Hash": "{{this_hash}}",
+          "Timestamp (UTC)": "{{timestamp_utc}}",
+          "Immutable": true
+        }
+      }
+    },
+    {
+      "name": "Slack: Notify (state change only)",
+      "module": "slack:SendMessage",
+      "settings": {
+        "text": "✉️ USPS label created (state change)\n\nCase: {{case_id}}\nMailing: {{mailing_id}}\nService: {{service}}\nTracking: {{tracking_number}}\nLabel: {{label_url}}\nHash: {{this_hash}}"
+      }
+    }
+  ]
+}

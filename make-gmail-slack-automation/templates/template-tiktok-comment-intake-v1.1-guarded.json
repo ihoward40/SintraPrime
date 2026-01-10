@@ -1,0 +1,166 @@
+{
+  "template_name": "TikTok_Comment_Intake_Core_v1.1_Guarded",
+  "template_type": "make.com-scenario-definition",
+  "idempotency_primitive": "datastore-dedup",
+  "notes": [
+    "This is a deterministic scenario definition (not an exported Make blueprint).",
+    "Export the scenario from Make.com for a true importable blueprint JSON.",
+    "Primary goals: block empty/heartbeat payloads, prevent bot/self loops, deduplicate by comment_id, and only alert Slack on high intent.",
+    "Do not enable this scenario until filters + dedupe are in place."
+  ],
+  "required_variables": {
+    "SLACK_CHANNEL_LEADS": "#tiktok-leads",
+    "BOT_USER_ID": "<your_slack_bot_user_id>",
+    "DATASTORE_NAME": "tiktok_comment_registry"
+  },
+  "guardrails_asserted": {
+    "A_empty_payload_kill_switch": {
+      "required": true,
+      "intent": "Drop heartbeat/empty events before any side effects.",
+      "expression_reference": "exists(comment.id) AND exists(comment.text) AND length(trim(comment.text)) > 2 AND exists(comment.username) AND length(trim(comment.username)) > 0",
+      "implemented_by_module": "Filter: Real Comment (Hard Gate)"
+    },
+    "B_bot_self_ignore": {
+      "required_when": "If any downstream scenario is Slack-triggered (Watch Messages/Events).",
+      "intent": "Prevent feedback loops (including /invite loops).",
+      "recommended_filter_reference": "exists(slack.user) AND slack.user != BOT_USER_ID AND (not(exists(slack.bot_id)) OR slack.bot_id = '') AND not(startsWith(slack.text, '/invite'))"
+    },
+    "C_dedupe_datastore": {
+      "required": true,
+      "primary_key": "comment_id",
+      "flow": [
+        "Get record by comment_id",
+        "If exists: STOP",
+        "Else: Create record and continue"
+      ],
+      "implemented_by_modules": [
+        "Data store: Get a record (Dedup Lookup)",
+        "Filter: Not Seen Before",
+        "Data store: Create a record (Dedup Register)"
+      ]
+    }
+  },
+  "modules": [
+    {
+      "name": "TikTok: Watch Comments",
+      "module": "tiktok:WatchComments",
+      "settings": {
+        "event": "new_comment_on_video",
+        "limit": 1
+      },
+      "outputs_used": [
+        "comment.id",
+        "comment.text",
+        "comment.username",
+        "comment.video_id",
+        "comment.created_at"
+      ]
+    },
+    {
+      "name": "Filter: Real Comment (Hard Gate)",
+      "type": "filter",
+      "filter": "exists({{1.comment.id}}) AND exists({{1.comment.text}}) AND length(trim({{1.comment.text}})) > 2 AND exists({{1.comment.username}}) AND length(trim({{1.comment.username}})) > 0"
+    },
+    {
+      "name": "Tools: Set Variables (Normalize)",
+      "module": "tools:SetVariables",
+      "settings": {
+        "clean_comment": "lower(trim({{1.comment.text}}))",
+        "clean_username": "trim({{1.comment.username}})",
+        "comment_id": "{{1.comment.id}}",
+        "video_id": "{{1.comment.video_id}}",
+        "event_time": "now()"
+      }
+    },
+    {
+      "name": "Data store: Get a record (Dedup Lookup)",
+      "module": "datastore:GetRecord",
+      "settings": {
+        "datastore": "{{DATASTORE_NAME}}",
+        "key": "{{comment_id}}"
+      }
+    },
+    {
+      "name": "Filter: Not Seen Before",
+      "type": "filter",
+      "filter": "not(exists({{4.key}}))"
+    },
+    {
+      "name": "Data store: Create a record (Dedup Register)",
+      "module": "datastore:CreateRecord",
+      "settings": {
+        "datastore": "{{DATASTORE_NAME}}",
+        "key": "{{comment_id}}",
+        "value": {
+          "comment_id": "{{comment_id}}",
+          "video_id": "{{video_id}}",
+          "username": "{{clean_username}}",
+          "created_at": "{{event_time}}"
+        }
+      }
+    },
+    {
+      "name": "Google Sheets: Add a Row (Silent Log)",
+      "module": "google-sheets:AddRow",
+      "guard": "exists({{comment_id}}) AND length({{comment_id}}) > 0 AND exists({{clean_username}}) AND length({{clean_username}}) > 0 AND exists({{clean_comment}}) AND length({{clean_comment}}) > 2",
+      "settings": {
+        "fields": {
+          "Timestamp": "{{event_time}}",
+          "Platform": "TikTok",
+          "Username": "{{clean_username}}",
+          "Comment": "{{1.comment.text}}",
+          "CommentID": "{{comment_id}}",
+          "VideoID": "{{video_id}}",
+          "Status": "logged"
+        }
+      }
+    },
+    {
+      "name": "Router: Intent Detection",
+      "type": "router",
+      "routes": [
+        {
+          "name": "Ignore",
+          "filter": "true"
+        },
+        {
+          "name": "Educational Reply (Optional)",
+          "filter": "contains({{clean_comment}},'how') OR contains({{clean_comment}},'what') OR contains({{clean_comment}},'explain')"
+        },
+        {
+          "name": "Lead Candidate",
+          "filter": "contains({{clean_comment}},'help') OR contains({{clean_comment}},'fix') OR contains({{clean_comment}},'credit') OR contains({{clean_comment}},'trust') OR contains({{clean_comment}},'consult') OR contains({{clean_comment}},'$') OR contains({{clean_comment}},'paid')"
+        }
+      ]
+    },
+    {
+      "name": "Tools: Set Variables (Lead Scoring)",
+      "module": "tools:SetVariables",
+      "settings": {
+        "lead_score": "0 + (if(contains({{clean_comment}},'credit'),3,0)) + (if(contains({{clean_comment}},'trust'),3,0)) + (if(contains({{clean_comment}},'fix'),2,0)) + (if(contains({{clean_comment}},'help'),2,0)) + (if(contains({{clean_comment}},'consult'),5,0)) + (if(contains({{clean_comment}},'$') OR contains({{clean_comment}},'paid'),5,0))"
+      }
+    },
+    {
+      "name": "Filter: Score Threshold",
+      "type": "filter",
+      "filter": "{{lead_score}} >= 6"
+    },
+    {
+      "name": "Slack: Send a Message (High Signal Only)",
+      "module": "slack:SendMessage",
+      "guardrails": [
+        "no_slash_commands",
+        "no_admin_actions",
+        "no_channel_mentions"
+      ],
+      "settings": {
+        "channel": "{{SLACK_CHANNEL_LEADS}}",
+        "text": "🔥 TikTok Lead Detected\n\nUser: @{{clean_username}}\nScore: {{lead_score}}\nComment: \"{{1.comment.text}}\"\nVideo ID: {{video_id}}\nComment ID: {{comment_id}}\n"
+      }
+    }
+  ],
+  "slack_loop_protection": {
+    "rule": "If you have Slack-triggered scenarios elsewhere, add a filter to ignore bot/self messages.",
+    "recommended_filter": "exists({{slack.user}}) AND {{slack.user}} != {{BOT_USER_ID}} AND (not(exists({{slack.bot_id}})) OR {{slack.bot_id}} = '') AND not(startsWith({{slack.text}},'/invite'))"
+  }
+}

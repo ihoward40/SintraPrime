@@ -1,0 +1,60 @@
+kind: WorkflowDefinition
+workflow_id: gmail-forward-to-notion
+threadId: test_gmail_forward_to_notion_v1_3_0
+
+dry_run: true
+goal: "Poll Gmail label 'logme' and insert a summary row into Notion"
+
+# NOTE:
+# - This is scaffolded as dry_run by default.
+# - Set dry_run: false after configuring Gmail OAuth + Notion database_id.
+
+uses:
+  - adapter: gmail
+    scopes: [read]
+  - adapter: notion
+    scopes: [write]
+
+vars:
+  # Gmail selection
+  GMAIL_QUERY: "label:logme newer_than:7d"
+  EMAIL_VENDOR: "auto"
+
+  # Ops ingest (optional; used by GmailAdapter pull+ingest)
+  EMAIL_INGEST_BASE: "http://127.0.0.1:8788"
+  EMAIL_INGEST_SECRET: ""
+
+  # Notion target
+  NOTION_DATABASE_ID: "<REPLACE_WITH_YOUR_DATABASE_ID>"
+
+nodes:
+  - id: gmail_pull_ingest
+    description: "Pull matching Gmail messages and ingest into ops server"
+    step:
+      action: gmail.pull_ingest
+      adapter: GmailAdapter
+      method: POST
+      read_only: false
+      # Placeholder URL to satisfy schema; execution is handled by GmailAdapter.
+      url: "https://gmail.googleapis.com/gmail/v1/users/me/messages"
+      payload:
+        vendor: "{{EMAIL_VENDOR}}"
+        maxMessages: 10
+        query: "{{GMAIL_QUERY}}"
+        labelIds: null
+        emailIngestBase: "{{EMAIL_INGEST_BASE}}"
+        emailIngestSecret: "{{EMAIL_INGEST_SECRET}}"
+      expects:
+        http_status: [200]
+
+  - id: insert_notion_summary
+    description: "Insert a Notion page indicating the run completed"
+    step:
+      adapter: NotionAdapter
+      method: insert
+      database_id: "{{NOTION_DATABASE_ID}}"
+      content:
+        Title: "Gmail → Notion (logme)"
+        Source: "GmailAdapter"
+        Query: "{{GMAIL_QUERY}}"
+        Notes: "Scaffolded workflow; customize mapping to email fields as needed."

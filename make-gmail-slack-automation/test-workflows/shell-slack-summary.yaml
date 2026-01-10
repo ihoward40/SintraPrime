@@ -1,0 +1,43 @@
+kind: WorkflowDefinition
+workflow_id: shell-slack-summary
+threadId: test_shell_slack_summary_v1_3_0
+
+dry_run: true
+goal: "Run npm test and notify Slack on failure"
+
+# NOTE:
+# - This is scaffolded as dry_run by default.
+# - Set dry_run: false to execute locally.
+
+uses:
+  - adapter: shell
+    scopes: [write]
+  - adapter: webhook
+    scopes: [write]
+
+vars:
+  # Default points to the local mock server; replace with your real Slack webhook URL.
+  # Start mock server with: npm run mock:server (from agent-mode-engine/)
+  SLACK_WEBHOOK_URL: "http://127.0.0.1:8787/status/200"
+
+nodes:
+  - id: run_tests
+    description: "Execute unit tests (non-zero exit routes to Slack notify)"
+    on_failure: notify_slack
+    step:
+      adapter: ShellAdapter
+      shell: pwsh
+      command: "npm test"
+
+  - id: notify_slack
+    description: "Slack notification for failed tests"
+    step:
+      action: webhook.request
+      adapter: WebhookAdapter
+      method: POST
+      read_only: false
+      url: "{{SLACK_WEBHOOK_URL}}"
+      payload:
+        text: "npm test failed. See run logs/receipts under runs/<execution_id>/step-XX/"
+      expects:
+        http_status: [200]

@@ -1,0 +1,94 @@
+{
+  "scenario_id": "MAIL_CREATE_TRACK",
+  "template_name": "Mailing — Create + Track (Notion Button)",
+  "template_type": "make.com-scenario-definition",
+  "idempotency_primitive": "hash-delta",
+  "notes": [
+    "Deterministic scenario definition for creating a mailing record and tracking it.",
+    "Slack post is allowed only on state change (hash delta).",
+    "Proof-of-delivery capture and periodic checks are Phase VI; this definition reserves the contract."
+  ],
+  "slack_loop_protection": {
+    "rule": "Ignore bot/self messages to prevent Slack feedback loops.",
+    "recommended_filter": "not(exists(slack.bot_id)) OR slack.bot_id = ''"
+  },
+  "modules": [
+    {
+      "name": "Webhook: Notion Button Trigger",
+      "module": "webhooks:CustomWebhook",
+      "outputs_used": ["case_id", "carrier", "service", "tracking_number"]
+    },
+    {
+      "name": "Tools: Normalize Inputs",
+      "module": "tools:SetVariables",
+      "settings": {
+        "case_id": "trim({{1.case_id}})",
+        "carrier": "trim({{1.carrier}})",
+        "service": "trim({{1.service}})",
+        "tracking_number": "trim({{1.tracking_number}})",
+        "run_type": "MAIL",
+        "source_system": "Make",
+        "timestamp_utc": "now()"
+      }
+    },
+    {
+      "name": "Tools: Compute State Hash (sha256)",
+      "module": "tools:SetVariables",
+      "settings": {
+        "prev_hash": "{{prev_hash}}",
+        "this_hash": "sha256(concat({{case_id}},'|',{{carrier}},'|',{{service}},'|',{{tracking_number}}))"
+      }
+    },
+    {
+      "name": "Filter: State Change Only",
+      "type": "filter",
+      "filter": "exists({{this_hash}}) AND length({{this_hash}}) > 0 AND (not(exists({{prev_hash}})) OR {{prev_hash}} != {{this_hash}})"
+    },
+    {
+      "name": "Notion: Create Mailing Row",
+      "module": "notion:CreateDatabaseItem",
+      "settings": {
+        "database": "Mailings",
+        "properties": {
+          "Mailing ID": "{{this_hash}}",
+          "Case ID": "{{case_id}}",
+          "Carrier": "{{carrier}}",
+          "Service": "{{service}}",
+          "Tracking Number": "{{tracking_number}}",
+          "Status": "Draft",
+          "Label Mode": "API",
+          "Label Hash": "{{this_hash}}",
+          "Last Checked (UTC)": "{{timestamp_utc}}"
+        }
+      }
+    },
+    {
+      "name": "Notion: Create Runs Ledger Row (MAIL)",
+      "module": "notion:CreateDatabaseItem",
+      "settings": {
+        "database": "Runs Ledger",
+        "properties": {
+          "Run ID": "{{this_hash}}",
+          "Run Type": "MAIL",
+          "Source System": "Make",
+          "Case ID": "{{case_id}}",
+          "Actor ID": "notion_button",
+          "Action": "Create Mailing + Track",
+          "Outcome": "CREATED",
+          "Artifact Ref": "{{tracking_number}}",
+          "Prev Hash": "{{prev_hash}}",
+          "This Hash": "{{this_hash}}",
+          "Timestamp (UTC)": "{{timestamp_utc}}",
+          "Immutable": true
+        }
+      }
+    },
+    {
+      "name": "Slack: Notify (state change only)",
+      "module": "slack:SendMessage",
+      "settings": {
+        "text": "✉️ Mailing recorded (state change)\n\nCase: {{case_id}}\nService: {{service}}\nTracking: {{tracking_number}}\nHash: {{this_hash}}"
+      }
+    }
+  ]
+}

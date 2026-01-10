@@ -1,0 +1,108 @@
+{
+  "scenario_id": "MAIL_TRACK_CERTIFIED",
+  "template_name": "Mailing — Track USPS Certified (Scheduled)",
+  "template_type": "make.com-scenario-definition",
+  "idempotency_primitive": "hash-delta",
+  "notes": [
+    "Governed contract: scheduled tracker for USPS Certified / Certified+Return mailings.",
+    "Must be state-change gated to avoid periodic Slack spam.",
+    "Writes updates to Mailings + append-only Runs Ledger.",
+    "This template is provider-agnostic about USPS tracking API specifics; it records normalized status fields only."
+  ],
+  "slack_loop_protection": {
+    "rule": "Ignore bot/self messages to prevent Slack feedback loops.",
+    "recommended_filter": "not(exists(slack.bot_id)) OR slack.bot_id = ''"
+  },
+  "modules": [
+    {
+      "name": "Scheduler: Every 6 hours",
+      "module": "tools:Sleep",
+      "settings": {
+        "interval": "6h"
+      }
+    },
+    {
+      "name": "Notion: Query Mailings to Track",
+      "module": "notion:SearchObjects",
+      "settings": {
+        "database": "Mailings",
+        "filter": {
+          "and": [
+            { "property": "Carrier", "equals": "USPS" },
+            { "property": "Service", "in": ["Certified", "Certified+Return"] },
+            { "property": "Tracking Number", "is_not_empty": true }
+          ]
+        }
+      },
+      "outputs_used": ["mailing_id", "case_id", "tracking_number", "prev_status_hash", "prev_status"]
+    },
+    {
+      "name": "HTTP: USPS Tracking Lookup (placeholder)",
+      "module": "http:MakeARequest",
+      "settings": {
+        "method": "GET",
+        "url": "concat({{USPS_TRACKING_ENDPOINT}}, '?tracking=', {{tracking_number}})"
+      },
+      "outputs_used": ["status", "status_utc", "proof_of_delivery_url", "delivered_utc"]
+    },
+    {
+      "name": "Tools: Compute Status Hash (sha256)",
+      "module": "tools:SetVariables",
+      "settings": {
+        "timestamp_utc": "now()",
+        "this_status": "trim({{status}})",
+        "this_status_hash": "sha256(concat({{mailing_id}},'|',{{tracking_number}},'|',{{this_status}},'|',{{status_utc}},'|',{{proof_of_delivery_url}}))",
+        "prev_hash": "{{prev_status_hash}}",
+        "this_hash": "{{this_status_hash}}"
+      }
+    },
+    {
+      "name": "Filter: State Change Only",
+      "type": "filter",
+      "filter": "exists({{this_hash}}) AND length({{this_hash}}) > 0 AND (not(exists({{prev_hash}})) OR {{prev_hash}} != {{this_hash}})"
+    },
+    {
+      "name": "Notion: Update Mailing Row",
+      "module": "notion:UpdateDatabaseItem",
+      "settings": {
+        "id": "{{mailing_id}}",
+        "properties": {
+          "Tracking Status": "{{this_status}}",
+          "Status Hash": "{{this_status_hash}}",
+          "Last Checked (UTC)": "{{timestamp_utc}}",
+          "Delivered At (UTC)": "{{delivered_utc}}",
+          "Proof of Delivery URL": "{{proof_of_delivery_url}}",
+          "Status": "{{this_status}}"
+        }
+      }
+    },
+    {
+      "name": "Notion: Create Runs Ledger Row (MAIL_TRACK_CERTIFIED)",
+      "module": "notion:CreateDatabaseItem",
+      "settings": {
+        "database": "Runs Ledger",
+        "properties": {
+          "Run ID": "sha256(concat({{mailing_id}},'|',{{this_status_hash}},'|',{{timestamp_utc}}))",
+          "Run Type": "MAIL",
+          "Source System": "Make",
+          "Case ID": "{{case_id}}",
+          "Actor ID": "scheduler",
+          "Action": "MAIL_TRACK_CERTIFIED",
+          "Outcome": "STATUS_UPDATED",
+          "Artifact Ref": "{{proof_of_delivery_url}}",
+          "Prev Hash": "{{prev_hash}}",
+          "This Hash": "{{this_hash}}",
+          "Timestamp (UTC)": "{{timestamp_utc}}",
+          "Immutable": true
+        }
+      }
+    },
+    {
+      "name": "Slack: Notify (state change only)",
+      "module": "slack:SendMessage",
+      "settings": {
+        "text": "📬 USPS tracking update (state change)\n\nCase: {{case_id}}\nMailing: {{mailing_id}}\nTracking: {{tracking_number}}\nStatus: {{this_status}}\nPOD: {{proof_of_delivery_url}}\nHash: {{this_hash}}"
+      }
+    }
+  ]
+}
