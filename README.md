@@ -1,5 +1,13 @@
 # Agent Mode Engine
 
+## Governance
+
+### Governance (Authoritative)
+
+- **Current Governance Checkpoint:**  
+  Phase X Lock v1.4 — Read-Only Analysis Integration  
+  https://github.com/ihoward40/SintraPrime/releases/tag/phaseX-lock-v1.4
+
 ## Windows path note
 
 You may see the repo at both:
