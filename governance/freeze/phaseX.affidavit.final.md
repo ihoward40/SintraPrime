@@ -1,54 +1,43 @@
-# Phase X Integrity Affidavit (Final)
+# AFFIDAVIT OF GOVERNANCE FREEZE AND INTEGRITY
+**State of ____________ )**  
+**County of __________ )**
 
-Date: 2026-01-10
+I, **Isiah Tarik Howard**, being duly sworn, declare under penalty of perjury as follows:
 
-This affidavit attests to the integrity and reproducibility of a governed automation snapshot ("Phase X") for the repository.
+1. **Identity and capacity.** I am the lawful custodian and operator of a governed automation and record-keeping system used to generate and preserve administrative and evidentiary materials.
 
-## Referenced artifacts (authoritative)
+2. **Purpose.** This affidavit is offered solely to establish the **authenticity, integrity, and time-of-existence** of the referenced digital materials. It does not assert legal conclusions regarding the merits of any underlying dispute.
 
-- Authoritative freeze commit (lock commit): `ada828b2a4085ec084eb9900aff56d60042fa997`
-- Frozen source commit (the governed surface commit the lock describes): `6bc5743b847a26559c62396778a30b4251b010e3`
+3. **Authoritative freeze.** An authoritative governance freeze ("**Phase X**") was completed and committed to the repository. The lock file is **phaseX.lock.json**.
 
-- Phase X lock file:
-  - Path: `governance/freeze/phaseX.lock.json`
-  - SHA-256: `e243211e901dd210a2e01a82ab07e3e4be8b9890cb52e160ce24320bc4f1c252`
+4. **Lock commit and frozen source commit.**
+   - The lock file **phaseX.lock.json** is committed at:  
+     **ada828b2a4085ec084eb9900aff56d60042fa997**
+   - The lock captures the frozen pre-lock commit:  
+     **6bc5743b847a26559c62396778a30b4251b010e3**, and records **tree_clean = true**.
 
-- Phase X governed-surface root hash (from lock):
-  - `34252399507137d80824a2d02ce83fe42a3318fb06b48d1546f04f202b083f7a`
+5. **Integrity values (SHA-256).**
+   - **Lock file path:** governance/freeze/phaseX.lock.json
+   - **Lock file SHA-256:**  
+     **e243211e901dd210a2e01a82ab07e3e4be8b9890cb52e160ce24320bc4f1c252**
+   - **Phase X root hash (from committed lock):**  
+     **34252399507137d80824a2d02ce83fe42a3318fb06b48d1546f04f202b083f7a**
+   - **Deterministic bundle filename:** ike-governance-phaseX.zip  
+   - **Bundle SHA-256:**  
+     **8b94fb2456b4549ab8de76d0438e9853e889e65e7e7a441004c0fda3d35a1d2b**
 
-- Deterministic bundle (zip) created by the Phase X freeze tool:
-  - Path (local build output, not committed): `dist/phaseX/ike-governance-phaseX.zip`
-  - SHA-256: `8b94fb2456b4549ab8de76d0438e9853e889e65e7e7a441004c0fda3d35a1d2b`
+6. **Independent verification.** The lock file records a deterministic inventory of governed materials and their hashes, permitting any third party to verify that (a) they possess the same bundle and (b) the governed materials have not changed since the freeze, by comparing SHA-256 values.
 
-## Statement of method
+7. **RFC-3161 TSA statement (no TSA evidence attached).** No RFC-3161 timestamp response (.tsr) is attached to this affidavit. This affidavit makes no claim of third-party timestamping. The integrity claims in this affidavit rely on deterministic hashing, the committed lock, and repository provenance.
 
-1. The Phase X freeze generator computed SHA-256 for each governed file in-scope and recorded them in the lock.
-2. The lock also records a governed-surface root hash computed as SHA-256 over the sorted lines:
-   `"<sha256>  <path>"` for each governed file.
-3. The Phase X bundle ZIP was produced deterministically and its SHA-256 is recorded above.
-4. Verification was performed using the repository’s verifier script (`scripts/phaseX-freeze-verify.mjs`) against the committed lock.
+Executed on: ____________________ (date)      At: ____________________ (time/location)
 
-## RFC-3161 timestamp posture (explicit)
+Signature: ________________________________  
+Name: **Isiah Tarik Howard**
 
-No RFC-3161 Time-Stamp Authority (TSA) evidence is attached to this Phase X lock.
+**SUBSCRIBED AND SWORN** before me on this _____ day of __________, 20___.
 
-- The lock’s `timestamp` section is present only as a structured placeholder.
-- No `tsr_path` / `tsr_sha256` is asserted.
-- No TSA serial is asserted.
-
-This affidavit makes no claim of third-party timestamping.
-
-## Exhibits (recommended attachments)
-
-- Exhibit A: `governance/freeze/phaseX.lock.json` (printed and/or digitally attached)
-- Exhibit B: SHA-256 of the lock file (this affidavit section and/or sidecar)
-- Exhibit C: SHA-256 of the deterministic Phase X bundle ZIP (as produced locally)
-
----
-
-Signature: ________________________________
-
-Name: ________________________________
-
-Title/Role: ________________________________
+Notary Public: ____________________________  
+Commission No.: ___________________________  
+My Commission Expires: ____________________
 

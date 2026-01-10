@@ -1,0 +1,27 @@
+{
+  "scenario_id": "MAIL_TRACK_CERTIFIED",
+  "version": "vNext",
+  "purpose": "Poll USPS tracking for open mailings; update only on status change; append Runs Ledger; Slack notify only on change.",
+  "phaseX": {
+    "lock_commit_sha": "ada828b2a4085ec084eb9900aff56d60042fa997",
+    "frozen_commit_sha": "6bc5743b847a26559c62396778a30b4251b010e3",
+    "tree_clean": true,
+    "phaseX_root_hash_sha256": "34252399507137d80824a2d02ce83fe42a3318fb06b48d1546f04f202b083f7a",
+    "bundle_sha256": "8b94fb2456b4549ab8de76d0438e9853e889e65e7e7a441004c0fda3d35a1d2b"
+  },
+  "inputs": [
+    "mailing_record_id",
+    "tracking_number"
+  ],
+  "outputs": [
+    "status",
+    "last_event_utc",
+    "proof_of_delivery_url",
+    "run_id"
+  ],
+  "guards": {
+    "slack_notify": "state_change_only",
+    "no_periodic_invites": true,
+    "dedupe_key": "tracking_number+status"
+  }
+}

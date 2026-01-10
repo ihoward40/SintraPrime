@@ -1,0 +1,10 @@
+{
+  "scenario_id": "MAIL_TRACK_CERTIFIED",
+  "lint_profile": "notify-only",
+  "rules": {
+    "require_state_change_gate_for_slack": true,
+    "forbid_periodic_invites": true,
+    "require_dedupe_gate": true,
+    "require_runs_ledger_append_only": true
+  }
+}

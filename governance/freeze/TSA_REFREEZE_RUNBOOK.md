@@ -116,3 +116,19 @@ Do not re-freeze unless you need third-party time attestation strength. The curr
 - reproducible scope + verifier
 - repository history
 - human notarization layer
+
+---
+
+## TSA re-freeze is a supersession, not an edit
+
+A TSA-enabled Phase X requires generating a new lock and committing it. That action supersedes the current authoritative lock commit:
+
+- Current lock commit (no TSA): `ada828b2a4085ec084eb9900aff56d60042fa997`
+
+Supersession rules:
+
+1) Create a new branch (e.g., `phaseX-tsa-supersession`).
+2) Re-run Phase X freeze with timestamp-required verification and OpenSSL available.
+3) Capture the RFC-3161 `.tsr` and include it in notarization exhibits.
+4) Commit the new `governance/freeze/phaseX.lock.json` (new commit).
+5) Publish a transparency entry indicating supersession and linking both lock commits.
