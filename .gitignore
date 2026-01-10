@@ -14,6 +14,9 @@ logs/
 artifacts/
 runs/
 
+# NotebookLM exports (keep manifests, ignore copied files)
+analysis/notebooklm/source_set/files/
+
 # Freeze scratch + derived helpers (locks are committed explicitly)
 governance/freeze/_out/
 governance/freeze/phaseX.roothash.txt

@@ -13,6 +13,8 @@
     "ci:detect-tiers": "node deepthink/tiers/detect-tiers.mjs",
     "ci:verify-tier-declaration": "node deepthink/tiers/verify-tier-declaration.mjs",
     "notebooklm:pin-source-set": "node scripts/notebooklm/pin-source-set.mjs",
+    "notebooklm:export-source-set": "node scripts/notebooklm/export-source-set.mjs",
+    "notebooklm:build-analysis-package": "node scripts/notebooklm/build-analysis-package.mjs",
     "ci:notebooklm-boundary": "node scripts/ci/check-notebooklm-boundary.mjs",
     "phaseX:freeze": "node scripts/phaseX-freeze.mjs",
     "phaseX:freeze-verify": "node scripts/phaseX-freeze-verify.mjs",

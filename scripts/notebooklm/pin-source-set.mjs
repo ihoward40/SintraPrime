@@ -4,7 +4,8 @@ import fs from 'node:fs/promises';
 import crypto from 'node:crypto';
 import path from 'node:path';
 
-const WORKSPACE_ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..', '..');
+// Script is expected to run from the workspace root.
+const WORKSPACE_ROOT = process.cwd();
 
 function toPosix(p) {
   return p.replace(/\\/g, '/');
@@ -30,7 +31,12 @@ function sha256Hex(text) {
 }
 
 async function main() {
-  const rel = process.argv[2] ?? 'analysis/notebooklm/source_set.json';
+  const argRel = process.argv[2] ?? null;
+
+  const preferred = 'analysis/notebooklm/source_set/source_set.json';
+  const legacy = 'analysis/notebooklm/source_set.json';
+
+  const rel = argRel ?? ((await pathExists(path.resolve(WORKSPACE_ROOT, preferred))) ? preferred : legacy);
   const abs = path.resolve(WORKSPACE_ROOT, rel);
 
   if (!(await pathExists(abs))) {

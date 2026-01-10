@@ -36,6 +36,9 @@ jobs:
       - name: DeepThink gates
         run: npm run -s ci:deepthink-gates
 
+      - name: NotebookLM boundary (no-action)
+        run: npm run -s ci:notebooklm-boundary
+
       - name: Scenario index
         run: npm run -s ci:scenario-index
 
