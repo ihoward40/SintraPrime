@@ -1,0 +1,15 @@
+{
+  "kind": "make.blueprint.placeholder",
+  "version": "v1",
+  "notes": "Replace with actual Make.com blueprint export JSON when available. This placeholder exists so linting + governance can run immediately.",
+  "flow": [
+    { "type": "trigger", "name": "scenario_registry_updated" },
+    { "type": "tool", "name": "parse_scenario_export" },
+    { "type": "tool", "name": "apply_lint_profile" },
+    { "type": "router", "name": "lint_verdict_router", "routes": ["LINT_PASS", "LINT_WARN", "LINT_FAIL"] },
+    { "type": "http", "name": "emit_refusal_pack" },
+    { "type": "make", "name": "auto_disable_scenario" },
+    { "type": "slack", "name": "notify_lint_result" },
+    { "type": "error", "name": "error_handler" }
+  ]
+}

@@ -1,0 +1,50 @@
+{
+  "kind": "make.scenario.governance",
+  "version": "v1",
+  "folder": "SINTRAPRIME / LINT",
+  "scenario_name": "LINT · Scenario Guardrails → Enforce → Refuse",
+  "modules": [
+    {
+      "order": 1,
+      "module": "Notion / Drive Trigger",
+      "route_name": "scenario_registry_updated"
+    },
+    {
+      "order": 2,
+      "module": "Tools → JSON Parse",
+      "route_name": "parse_scenario_export"
+    },
+    {
+      "order": 3,
+      "module": "Tools → Run Script",
+      "route_name": "apply_lint_profile"
+    },
+    {
+      "order": 4,
+      "module": "Router",
+      "route_name": "lint_verdict_router",
+      "routes": [
+        "LINT_PASS",
+        "LINT_WARN",
+        "LINT_FAIL"
+      ]
+    },
+    {
+      "order": 5,
+      "module": "HTTP / Local Exec (FAIL only)",
+      "route_name": "emit_refusal_pack"
+    },
+    {
+      "order": 6,
+      "module": "Make → Disable Scenario (FAIL only)",
+      "route_name": "auto_disable_scenario"
+    },
+    {
+      "order": 7,
+      "module": "Slack → Post Message",
+      "route_name": "notify_lint_result"
+    }
+  ],
+  "declared_at": "2026-01-10",
+  "source": "Operator-provided canonical Make.com route names (verbatim)"
+}

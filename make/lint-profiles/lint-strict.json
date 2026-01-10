@@ -1,0 +1,17 @@
+{
+  "required_routes": [
+    "lint_verdict_router",
+    "emit_refusal_pack",
+    "auto_disable_scenario",
+    "notify_lint_result"
+  ],
+  "forbidden_modules": [
+    "HTTP Make a request (unauthenticated)",
+    "Webhook response (write)"
+  ],
+  "requirements": {
+    "router_present": true,
+    "error_handler_present": true,
+    "scenario_disabled_on_fail": true
+  }
+}

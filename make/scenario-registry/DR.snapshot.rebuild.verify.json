@@ -1,0 +1,40 @@
+{
+  "kind": "make.scenario.governance",
+  "version": "v1",
+  "folder": "SINTRAPRIME / DR",
+  "scenario_name": "DR · Snapshot Rebuild → Verify → Report",
+  "modules": [
+    {
+      "order": 1,
+      "module": "Manual Trigger / Schedule",
+      "route_name": "dr_trigger"
+    },
+    {
+      "order": 2,
+      "module": "Google Drive → Download Folder",
+      "route_name": "fetch_snapshot_bundle"
+    },
+    {
+      "order": 3,
+      "module": "Tools → JSON Parse",
+      "route_name": "parse_manifest"
+    },
+    {
+      "order": 4,
+      "module": "HTTP / Local Exec",
+      "route_name": "rebuild_from_snapshot_only"
+    },
+    {
+      "order": 5,
+      "module": "HTTP / Local Exec",
+      "route_name": "run_deepthink_gates"
+    },
+    {
+      "order": 6,
+      "module": "Slack → Post Message",
+      "route_name": "notify_dr_status"
+    }
+  ],
+  "declared_at": "2026-01-10",
+  "source": "Operator-provided canonical Make.com route names (verbatim)"
+}

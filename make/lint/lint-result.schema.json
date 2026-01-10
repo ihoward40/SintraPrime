@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MakeBlueprintLintResult",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["blueprint", "profile", "verdict", "errors", "warnings", "checked_at"],
+  "properties": {
+    "blueprint": { "type": "string", "minLength": 1 },
+    "profile": { "type": "string", "minLength": 1 },
+    "verdict": { "type": "string", "enum": ["PASS", "WARN", "FAIL"] },
+    "errors": { "type": "array", "items": { "type": "string" } },
+    "warnings": { "type": "array", "items": { "type": "string" } },
+    "checked_at": { "type": "string", "minLength": 1 },
+    "facts": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "route_names": { "type": "array", "items": { "type": "string" } },
+        "module_labels": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  }
+}

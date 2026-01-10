@@ -1,0 +1,17 @@
+{
+  "required_routes": [
+    "mode_router",
+    "operator_gate_check",
+    "invoke_local_deepthink_runner",
+    "notify_build_completion"
+  ],
+  "forbidden_modules": [
+    "HTTP Make a request (unauthenticated)",
+    "Webhook response (write)"
+  ],
+  "requirements": {
+    "router_present": true,
+    "error_handler_present": true,
+    "scenario_disabled_on_fail": false
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "kind": "make.blueprint.placeholder",
+  "version": "v1",
+  "notes": "Replace with actual Make.com blueprint export JSON when available. This placeholder exists so linting + governance can run immediately.",
+  "flow": [
+    { "type": "webhook", "name": "deepthink_request_in" },
+    { "type": "tool", "name": "parse_deepthink_request" },
+    { "type": "tool", "name": "set_execution_context" },
+    { "type": "router", "name": "mode_router", "routes": ["MODE_DEMO", "MODE_OBSERVE", "MODE_EXECUTE"] },
+    { "type": "datastore", "name": "operator_gate_check" },
+    { "type": "tool", "name": "emit_deepthink_request_json" },
+    { "type": "http", "name": "invoke_local_deepthink_runner" },
+    { "type": "http", "name": "fetch_public_runs_json" },
+    { "type": "drive", "name": "publish_runs_json" },
+    { "type": "drive", "name": "publish_merkle_and_sidecars" },
+    { "type": "drive", "name": "publish_latest_public_pointer" },
+    { "type": "slack", "name": "notify_build_completion" }
+  ]
+}

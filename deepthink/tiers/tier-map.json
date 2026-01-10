@@ -1,0 +1,9 @@
+{
+  "Tier 1": ["*.sha256"],
+  "Tier 1.5": ["runs.merkle.json"],
+  "Tier 2": ["*.sig"],
+  "Tier 2.5": ["tpm_attestation.json"],
+  "Tier 3": ["*.tsa", "endorsement_record.json"],
+  "Tier 4": ["refusal.pdf", "refusal.html"],
+  "Tier 5": ["dr_rebuild_report.json"]
+}

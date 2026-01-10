@@ -1,0 +1,20 @@
+{
+  "version": "v1",
+  "runs": [
+    {
+      "blueprint": "make/blueprints/BUILD.deepthink.snapshot.publish.json",
+      "profile": "make/lint-profiles/strict.json",
+      "out": "artifacts/lint/build.blueprint.json"
+    },
+    {
+      "blueprint": "make/blueprints/DR.snapshot.rebuild.verify.json",
+      "profile": "make/lint-profiles/audit-only.json",
+      "out": "artifacts/lint/dr.blueprint.json"
+    },
+    {
+      "blueprint": "make/blueprints/LINT.scenario.guardrails.enforce.json",
+      "profile": "make/lint-profiles/lint-strict.json",
+      "out": "artifacts/lint/lint.blueprint.json"
+    }
+  ]
+}

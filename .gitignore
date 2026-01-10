@@ -9,6 +9,11 @@ make-gmail-slack-automation/dist/
 governance/make-lint/lint-report.json
 governance/slack-workflows/workflows-report.json
 
+# Local CI logs / artifacts
+logs/
+artifacts/
+runs/
+
 # Freeze scratch + derived helpers (locks are committed explicitly)
 governance/freeze/_out/
 governance/freeze/phaseX.roothash.txt

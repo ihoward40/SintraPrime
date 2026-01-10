@@ -30,6 +30,12 @@ jobs:
       - name: Make guards
         run: npm run -s ci:make-guards
 
+      - name: Validate Make blueprints
+        run: npm run -s ci:make-blueprints
+
+      - name: DeepThink gates
+        run: npm run -s ci:deepthink-gates
+
       - name: Scenario index
         run: npm run -s ci:scenario-index
 
@@ -39,8 +45,14 @@ jobs:
       - name: Slack workflows (hard fail)
         run: npm run -s ci:slack-workflows
 
-        - name: Public verifier index check
-          run: npm run -s ci:public-verifier
+      - name: Public verifier index check
+        run: npm run -s ci:public-verifier
+
+      - name: Detect tiers
+        run: npm run -s ci:detect-tiers
+
+      - name: Verify Tier Declaration matches artifacts
+        run: npm run -s ci:verify-tier-declaration
 
       - name: Phase X freeze verify (hard fail if lock exists)
         run: npm run -s ci:phaseX-freeze-verify
@@ -61,10 +73,10 @@ jobs:
           path: governance/slack-workflows/workflows-report.json
           if-no-files-found: warn
 
-        - name: Upload public verifier index
-          if: always()
-          uses: actions/upload-artifact@v4
-          with:
-            name: public_verifier_index
-            path: public-verifier/index.json
-            if-no-files-found: warn
+      - name: Upload public verifier index
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: public_verifier_index
+          path: public-verifier/index.json
+          if-no-files-found: warn

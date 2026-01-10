@@ -1,0 +1,13 @@
+{
+  "kind": "make.blueprint.placeholder",
+  "version": "v1",
+  "notes": "Replace with actual Make.com blueprint export JSON when available. This placeholder exists so linting + governance can run immediately.",
+  "flow": [
+    { "type": "trigger", "name": "dr_trigger" },
+    { "type": "drive", "name": "fetch_snapshot_bundle" },
+    { "type": "tool", "name": "parse_manifest" },
+    { "type": "http", "name": "rebuild_from_snapshot_only" },
+    { "type": "http", "name": "run_deepthink_gates" },
+    { "type": "slack", "name": "notify_dr_status" }
+  ]
+}

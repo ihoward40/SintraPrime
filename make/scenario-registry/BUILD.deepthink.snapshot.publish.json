@@ -1,0 +1,76 @@
+{
+  "kind": "make.scenario.governance",
+  "version": "v1",
+  "folder": "SINTRAPRIME / BUILD",
+  "scenario_name": "BUILD · DeepThink → Snapshot → Publish",
+  "modules": [
+    {
+      "order": 1,
+      "module": "Webhook (Custom)",
+      "route_name": "deepthink_request_in"
+    },
+    {
+      "order": 2,
+      "module": "Tools → JSON Parse",
+      "route_name": "parse_deepthink_request"
+    },
+    {
+      "order": 3,
+      "module": "Tools → Set Variables",
+      "route_name": "set_execution_context"
+    },
+    {
+      "order": 4,
+      "module": "Router",
+      "route_name": "mode_router",
+      "routes": [
+        "MODE_DEMO",
+        "MODE_OBSERVE",
+        "MODE_EXECUTE"
+      ]
+    },
+    {
+      "order": 5,
+      "module": "Data Store / Approval Check (MODE_EXECUTE only)",
+      "route_name": "operator_gate_check"
+    },
+    {
+      "order": 6,
+      "module": "Tools → JSON Create",
+      "route_name": "emit_deepthink_request_json"
+    },
+    {
+      "order": 7,
+      "module": "HTTP → Make a Request",
+      "route_name": "invoke_local_deepthink_runner",
+      "notes": "Calls the local deepthink runner via dev.mjs deepthink or a tunnel."
+    },
+    {
+      "order": 8,
+      "module": "HTTP → Get a File",
+      "route_name": "fetch_public_runs_json"
+    },
+    {
+      "order": 9,
+      "module": "Google Drive → Upload a File",
+      "route_name": "publish_runs_json"
+    },
+    {
+      "order": 10,
+      "module": "Google Drive → Upload a File",
+      "route_name": "publish_merkle_and_sidecars"
+    },
+    {
+      "order": 11,
+      "module": "Google Drive → Upload a File",
+      "route_name": "publish_latest_public_pointer"
+    },
+    {
+      "order": 12,
+      "module": "Slack → Post Message",
+      "route_name": "notify_build_completion"
+    }
+  ],
+  "declared_at": "2026-01-10",
+  "source": "Operator-provided canonical Make.com route names (verbatim)"
+}

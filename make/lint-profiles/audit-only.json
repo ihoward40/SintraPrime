@@ -1,0 +1,9 @@
+{
+  "required_routes": [],
+  "forbidden_modules": [],
+  "requirements": {
+    "router_present": false,
+    "error_handler_present": false,
+    "scenario_disabled_on_fail": false
+  }
+}
