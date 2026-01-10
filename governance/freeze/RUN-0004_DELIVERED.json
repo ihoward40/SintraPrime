@@ -1,0 +1,42 @@
+{
+  "run_id": "RUN-0004",
+  "run_type": "USPS_TRACK_EVENT",
+  "scenario_id": "MAIL_TRACK_CERTIFIED",
+  "case_id": "PHASEX-0001",
+  "status": "DELIVERED",
+
+  "occurred": {
+    "date_as_shown_by_carrier": "June 30, 2022",
+    "occurred_utc": null,
+    "timestamp_note": "USPS return receipt shows date only; no time-of-day/timezone displayed. occurred_utc intentionally null."
+  },
+
+  "phaseX": {
+    "lock_commit_sha": "ada828b2a4085ec084eb9900aff56d60042fa997",
+    "phaseX_root_hash_sha256": "34252399507137d80824a2d02ce83fe42a3318fb06b48d1546f04f202b083f7a",
+    "bundle_sha256": "8b94fb2456b4549ab8de76d0438e9853e889e65e7e7a441004c0fda3d35a1d2b"
+  },
+
+  "tracking": {
+    "tracking_number_raw": "9414 7118 9956 2447 5315 14",
+    "tracking_number": "9414711899562447531514",
+    "event": "Delivered",
+    "event_location": "NEWPORT BEACH, CA",
+    "carrier_status": "Delivered",
+    "proof_of_delivery": "USPS Certified Mail Return Receipt (green card)",
+    "proof_of_delivery_url": null
+  },
+
+  "guards": {
+    "append_only": true,
+    "slack_state_change_only": true,
+    "dedupe_key": "9414711899562447531514+DELIVERED+2022-06-30"
+  },
+
+  "source": {
+    "type": "operator_provided_image",
+    "description": "UNITED AUTO CREDIT NO RESPONSE (1).pdf, page 4 (green card + tracking)"
+  },
+
+  "notes": "Delivery confirmed by USPS return receipt (green card). Carrier did not display time-of-day; date recorded exactly as shown."
+}

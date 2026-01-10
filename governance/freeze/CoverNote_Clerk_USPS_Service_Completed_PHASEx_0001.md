@@ -1,0 +1,1 @@
+Enclosed please find a one-page addendum documenting final USPS delivery of Certified Mail associated with this matter. The addendum references an append-only run entry (RUN-0004) and the previously established Phase X integrity anchors. No prior filings are modified; this submission solely records the carrier’s delivery confirmation.
