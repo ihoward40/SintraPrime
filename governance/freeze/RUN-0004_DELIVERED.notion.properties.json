@@ -1,0 +1,35 @@
+{
+  "database": "Runs Ledger",
+  "properties": {
+    "Run ID": "RUN-0004",
+    "Run Type": "MAIL",
+    "Source System": "Notion",
+
+    "Case ID": "PHASEX-0001",
+    "Actor ID": "operator",
+    "Action": "MAIL_TRACK_CERTIFIED",
+    "Outcome": "STATUS_UPDATED",
+    "Artifact Ref": "USPS Certified Mail Return Receipt (green card); UNITED AUTO CREDIT NO RESPONSE (1).pdf p.4",
+
+    "Prev Hash": "",
+    "This Hash": "cc0bd11615ce761487d903fc92fc674718b7846feaffa2dc8af12c55e0dea136",
+    "Timestamp (UTC)": "2022-06-30",
+    "Immutable": true
+  },
+  "normalized_tracking": {
+    "tracking_number_raw": "9414 7118 9956 2447 5315 14",
+    "tracking_number": "9414711899562447531514",
+    "status": "Delivered",
+    "delivered_date_as_shown_by_carrier": "June 30, 2022",
+    "delivered_location_as_shown_by_carrier": "NEWPORT BEACH, CA",
+    "proof_of_delivery_url": null,
+    "timestamp_note": "Carrier proof shows date only; no time-of-day/timezone displayed. Notion date stored as YYYY-MM-DD."
+  },
+  "hash_basis": {
+    "style": "sha256(mailing_id|tracking_number|status|status_utc|proof_of_delivery_url)",
+    "mailing_id": "MAIL-0001",
+    "status_utc": "2022-06-30",
+    "proof_of_delivery_url": "",
+    "input": "MAIL-0001|9414711899562447531514|Delivered|2022-06-30|"
+  }
+}
