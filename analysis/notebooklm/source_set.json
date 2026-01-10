@@ -1,0 +1,6 @@
+{
+  "version": "notebooklm.source_set.v1",
+  "created_utc": null,
+  "note": "List only post-freeze, read-only sources uploaded to NotebookLM. Do not include pre-freeze materials or secrets.",
+  "sources": []
+}
