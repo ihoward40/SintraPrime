@@ -1,11 +1,11 @@
 {
   "phase": "X",
   "lock_version": "phaseX.lock.v1",
-  "created_utc": "2026-01-10T19:19:02.917Z",
-  "created_at": "2026-01-10T19:19:02.917Z",
+  "created_utc": "2026-01-10T19:41:17.901Z",
+  "created_at": "2026-01-10T19:41:17.901Z",
   "git": {
     "is_git": true,
-    "head": "a86a5e62888a6ba68e4486196948754b00429e6d",
+    "head": "2077dec9028aeedac215216c7901d966ca4c7b49",
     "branch": "master",
     "dirty": false,
     "tree_clean": true
@@ -16,14 +16,14 @@
   },
   "scope": {
     "note": "Governed surface snapshot for Notion → Make → Slack chain.",
-    "file_count": 81,
-    "root_hash_sha256": "1438760a9d0d51090c51036a22886dae2335a802ca25c26c94110b0ecf31207c"
+    "file_count": 85,
+    "root_hash_sha256": "5b4c3e560489cfe33ad571877a7c91fc898f722af9e1c7fd89182055162be697"
   },
   "bundle": {
     "filename": "ike-governance-phaseX.zip",
     "path": "dist/phaseX/ike-governance-phaseX.zip",
-    "sha256": "32516965cda5354d0a4e8f9ec705f8b894decde40dd22ab35563435c87f70d1f",
-    "byte_size": 113307,
+    "sha256": "ddafa88c831202e2c235ab1e2865845b8171d246e8edcf6f8458aa75b7977bbe",
+    "byte_size": 121396,
     "zip_date_fixed_utc": "2000-01-01T00:00:00.000Z"
   },
   "timestamp": {
@@ -307,8 +307,8 @@
     },
     {
       "path": "package.json",
-      "sha256": "863993203f6a88a25d249f4ef934060a7c49ccd6f3c0a86aad2169d62dee5e26",
-      "size": 1722
+      "sha256": "aefbe3498a1820025e10afddecdffa8af5074b2e108cf131f6911176dffb1e99",
+      "size": 2060
     },
     {
       "path": "scenarios/FOIA_BUILD_PACKET.lint.json",
@@ -376,9 +376,29 @@
       "size": 5723
     },
     {
+      "path": "scripts/ci/check-notebooklm-boundary.mjs",
+      "sha256": "7b9397d7823b2bd31d862b5928e398b497f55b2def0c335b179dd02467ca4d5c",
+      "size": 3959
+    },
+    {
       "path": "scripts/lint-utils.mjs",
       "sha256": "3fb9ccc94bd6d88db932033a302b30f9bf40c079e7ca860a789fb2f90afb0e22",
       "size": 4569
+    },
+    {
+      "path": "scripts/notebooklm/build-analysis-package.mjs",
+      "sha256": "eaa5fe4cdd256b940d8468e29cf9e4d7f093fbb8bec1f3641c49a284d6327010",
+      "size": 8250
+    },
+    {
+      "path": "scripts/notebooklm/export-source-set.mjs",
+      "sha256": "01a558c2b264185d3c4364e266a5a99ff5a9f4ce74b8196058cf4ae430379793",
+      "size": 5494
+    },
+    {
+      "path": "scripts/notebooklm/pin-source-set.mjs",
+      "sha256": "08932338bd79fc008aacc94962153ee49d19e3b892d2a9003db1d9d738d8a8d2",
+      "size": 1853
     },
     {
       "path": "scripts/phaseX-freeze-scope.mjs",
@@ -768,8 +788,8 @@
     },
     {
       "path": "package.json",
-      "sha256": "863993203f6a88a25d249f4ef934060a7c49ccd6f3c0a86aad2169d62dee5e26",
-      "size": 1722,
+      "sha256": "aefbe3498a1820025e10afddecdffa8af5074b2e108cf131f6911176dffb1e99",
+      "size": 2060,
       "role": "governed-file"
     },
     {
@@ -851,9 +871,33 @@
       "role": "validator-script"
     },
     {
+      "path": "scripts/ci/check-notebooklm-boundary.mjs",
+      "sha256": "7b9397d7823b2bd31d862b5928e398b497f55b2def0c335b179dd02467ca4d5c",
+      "size": 3959,
+      "role": "validator-script"
+    },
+    {
       "path": "scripts/lint-utils.mjs",
       "sha256": "3fb9ccc94bd6d88db932033a302b30f9bf40c079e7ca860a789fb2f90afb0e22",
       "size": 4569,
+      "role": "validator-script"
+    },
+    {
+      "path": "scripts/notebooklm/build-analysis-package.mjs",
+      "sha256": "eaa5fe4cdd256b940d8468e29cf9e4d7f093fbb8bec1f3641c49a284d6327010",
+      "size": 8250,
+      "role": "validator-script"
+    },
+    {
+      "path": "scripts/notebooklm/export-source-set.mjs",
+      "sha256": "01a558c2b264185d3c4364e266a5a99ff5a9f4ce74b8196058cf4ae430379793",
+      "size": 5494,
+      "role": "validator-script"
+    },
+    {
+      "path": "scripts/notebooklm/pin-source-set.mjs",
+      "sha256": "08932338bd79fc008aacc94962153ee49d19e3b892d2a9003db1d9d738d8a8d2",
+      "size": 1853,
       "role": "validator-script"
     },
     {
