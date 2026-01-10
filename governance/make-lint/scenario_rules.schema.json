@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sintraprime.local/schemas/make-lint/scenario_rules.schema.json",
+  "title": "Make Lint Scenario Declaration",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["scenario_id", "lint_profile"],
+  "properties": {
+    "scenario_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Stable identifier for this scenario (used as the enforcement key)."
+    },
+    "lint_profile": {
+      "type": "string",
+      "enum": ["strict", "notify-only", "audit-only"],
+      "description": "Baseline policy profile used as defaults."
+    },
+    "authority_level": {
+      "type": "string",
+      "enum": ["notify", "acknowledge", "decision", "audit"],
+      "description": "Operational authority level for this scenario (used for interactive requirements)."
+    },
+    "expected_modules": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "state_hash_compare": { "type": "boolean" },
+        "hash_before_export": { "type": "boolean" },
+        "ledger_write": { "type": "boolean" },
+        "slack_post": { "type": "boolean" },
+        "slack_interactive": { "type": "boolean" }
+      },
+      "description": "Scenario-specific expectations (in addition to profile enforcement)."
+    }
+  }
+}

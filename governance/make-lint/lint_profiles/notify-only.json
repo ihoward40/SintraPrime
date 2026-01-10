@@ -1,0 +1,12 @@
+{
+  "name": "notify-only",
+  "allowed": {
+    "scheduler": true
+  },
+  "required": {
+    "state_hash_compare": true
+  },
+  "forbidden": {
+    "authority_action": true
+  }
+}

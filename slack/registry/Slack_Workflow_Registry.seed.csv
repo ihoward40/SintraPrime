@@ -1,0 +1,4 @@
+Workflow ID,Workflow Name,Class,Owner,Created At,Last Modified,Status,Notes
+IKE_CASE_INTAKE_v1,Case Intake,INTAKE,ops@ikesolutions.local,2026-01-10T00:00:00Z,2026-01-10T00:00:00Z,OK,Seeded from repo contract (Phase IV)
+IKE_DECISION_CHECKPOINT_v1,Decision Checkpoint,DECISION,ops@ikesolutions.local,2026-01-10T00:00:00Z,2026-01-10T00:00:00Z,OK,Seeded from repo contract (Phase IV)
+IKE_AUDIT_SNAPSHOT_v1,Audit Snapshot,AUDIT,ops@ikesolutions.local,2026-01-10T00:00:00Z,2026-01-10T00:00:00Z,OK,Seeded from repo contract (Phase IV)

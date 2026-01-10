@@ -1,4 +1,5 @@
 {
+  "scenario_id": "TIKTOK_COMMENT_INTAKE_CORE_v1_1",
   "template_name": "TikTok_Comment_Intake_Core_v1.1_Guarded",
   "template_type": "make.com-scenario-definition",
   "idempotency_primitive": "datastore-dedup",

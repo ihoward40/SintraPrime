@@ -1,0 +1,13 @@
+{
+  "name": "audit-only",
+  "allowed": {
+    "scheduler": true
+  },
+  "required": {
+    "hash_before_export": true,
+    "runs_ledger_write": true
+  },
+  "forbidden": {
+    "slack_interactive": true
+  }
+}

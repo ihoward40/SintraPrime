@@ -1,0 +1,37 @@
+{
+  "contract": "ike_legal_ops_command_center",
+  "version": "v1.0.0",
+  "database": {
+    "name": "FOIA Requests",
+    "purpose": "FOIA lifecycle + statutory timers.",
+    "properties": [
+      { "name": "FOIA Request ID", "type": "title" },
+      { "name": "Case ID", "type": "text" },
+      { "name": "Agency", "type": "text" },
+
+      { "name": "Request Date", "type": "date" },
+      { "name": "Determination Date", "type": "date" },
+      { "name": "Appeal Filed Date", "type": "date" },
+      { "name": "Appeal Due Date", "type": "date" },
+      { "name": "Agency Appeal Response Due", "type": "date" },
+      { "name": "Expedite Denial Date", "type": "date" },
+      { "name": "Expedite Appeal Due", "type": "date" },
+      { "name": "Timer Status", "type": "select", "options": ["OK", "Due Soon", "Overdue", "Completed"] },
+
+      { "name": "Related Case", "type": "relation", "to_database": "Cases", "cardinality": "at_most_one" },
+      { "name": "Runs Ledger", "type": "relation", "to_database": "Runs Ledger", "cardinality": "many" },
+      {
+        "name": "Latest FOIA Event (UTC)",
+        "type": "rollup",
+        "relation": "Runs Ledger",
+        "rollup_property": "Timestamp (UTC)",
+        "aggregation": "latest_date",
+        "notes": "Tracks latest Runs Ledger timestamp linked to this FOIA Request."
+      }
+    ],
+    "defaults": {
+      "Timer Status": "OK"
+    }
+  },
+  "neutrality": "Schema only. No conclusions asserted."
+}

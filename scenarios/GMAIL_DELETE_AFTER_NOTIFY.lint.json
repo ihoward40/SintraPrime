@@ -1,0 +1,9 @@
+{
+  "$schema": "../governance/make-lint/scenario_rules.schema.json",
+  "scenario_id": "GMAIL_DELETE_AFTER_NOTIFY",
+  "lint_profile": "notify-only",
+  "authority_level": "notify",
+  "expected_modules": {
+    "state_hash_compare": true
+  }
+}

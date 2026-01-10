@@ -1,0 +1,35 @@
+{
+  "contract": "ike_legal_ops_command_center",
+  "version": "v1.0.0",
+  "database": {
+    "name": "Scenario Registry",
+    "purpose": "Make.com governance. Prevent bad automation from existing.",
+    "properties": [
+      { "name": "Scenario ID", "type": "title" },
+      { "name": "Scenario Name", "type": "text" },
+      { "name": "Lint Profile", "type": "select", "options": ["strict", "notify-only", "audit-only"] },
+      { "name": "Domain", "type": "select", "options": ["credit", "irs", "banking", "vendor", "internal"] },
+      { "name": "Authority Level", "type": "select", "options": ["notify", "acknowledge", "decision", "audit"] },
+      { "name": "Lint Status", "type": "select", "options": ["PASS", "FAIL", "DISABLED"] },
+      { "name": "Fail Reasons", "type": "text", "notes": "Multi-line." },
+      { "name": "Policy Hash", "type": "text" },
+      { "name": "Is Active", "type": "checkbox" },
+      { "name": "Auto-Disable Enabled", "type": "checkbox" },
+      { "name": "Last Lint Run", "type": "date" },
+      { "name": "Runs Ledger", "type": "relation", "to_database": "Runs Ledger", "cardinality": "many" },
+      {
+        "name": "Last Lint Outcome",
+        "type": "rollup",
+        "relation": "Runs Ledger",
+        "rollup_property": "Outcome",
+        "aggregation": "show_original",
+        "notes": "Mirrors latest lint outcome recorded in Runs Ledger."
+      }
+    ]
+  },
+  "alignment": {
+    "source_of_truth": "Repo enforcement via scenarios/*.lint.json and Make Lint CI",
+    "note": "This registry mirrors enforcement state for operators; it does not define enforcement by itself."
+  },
+  "neutrality": "Schema only. No conclusions asserted."
+}

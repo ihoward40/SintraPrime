@@ -1,0 +1,133 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sintraprime.example/schemas/verizon-guardian-output.v1.0.1.schema.json",
+  "title": "VERIZON_GUARDIAN Output Schema v1.0.1",
+  "type": "object",
+  "additionalProperties": true,
+  "properties": {
+    "agent": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "id": { "type": "string" },
+        "version": { "type": "string" }
+      },
+      "required": ["id", "version"]
+    },
+    "email_summary": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "from": { "type": "string" },
+        "subject": { "type": "string" },
+        "date_received": { "type": "string" },
+        "gmail_message_id": { "type": "string" },
+        "gmail_link": { "type": "string" }
+      },
+      "required": ["from", "subject", "date_received", "gmail_message_id", "gmail_link"]
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "drive_pdf_url": { "type": "string" }
+      }
+    },
+    "meta": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "case_number": { "type": "string" },
+        "undetermined_fields": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "validation": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "is_verizon_related": { "type": "boolean" },
+        "verizon_match_basis": {
+          "type": "string",
+          "enum": ["sender_domain", "body_indicators", "unknown"]
+        },
+        "email_type": {
+          "type": "string",
+          "enum": [
+            "billing",
+            "service_status",
+            "collections",
+            "equipment_returns",
+            "dispute_or_legal",
+            "marketing",
+            "unknown"
+          ]
+        }
+      },
+      "required": ["is_verizon_related", "verizon_match_basis", "email_type"]
+    },
+    "issue_indicators": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "type": { "type": "string" },
+          "strength": { "type": "string", "enum": ["Strong", "Moderate", "Weak"] },
+          "triggering_excerpts": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        },
+        "required": ["type", "strength", "triggering_excerpts"]
+      }
+    },
+    "impact": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "estimated_amount_usd": { "type": "string" },
+        "confidence": { "type": "string", "enum": ["High", "Medium", "Low"] },
+        "notes": { "type": "string" }
+      },
+      "required": ["estimated_amount_usd", "confidence", "notes"]
+    },
+    "recommended_actions": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "routing": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "severity": { "type": "string", "enum": ["CRITICAL", "HIGH", "MEDIUM", "LOW"] },
+        "slack_priority": { "type": "string", "enum": ["Critical", "High", "Medium", "Low"] },
+        "notion_urgency": { "type": "string", "enum": ["Immediate", "Soon", "Routine"] },
+        "notify_owner": { "type": "boolean" }
+      },
+      "required": ["severity", "slack_priority", "notion_urgency", "notify_owner"]
+    },
+    "system_error": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "is_error": { "type": "boolean" },
+        "failed_module": { "type": "string" },
+        "original_email_preserved": { "type": "boolean" }
+      },
+      "required": ["is_error", "failed_module", "original_email_preserved"]
+    }
+  },
+  "required": [
+    "agent",
+    "email_summary",
+    "validation",
+    "issue_indicators",
+    "impact",
+    "recommended_actions",
+    "routing",
+    "system_error"
+  ]
+}

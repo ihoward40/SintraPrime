@@ -1,0 +1,41 @@
+{
+  "contract": "ike_legal_ops_command_center",
+  "version": "v1.0.1",
+  "database": {
+    "name": "Mailings",
+    "purpose": "Physical-world evidence with tracking and proof.",
+    "properties": [
+      { "name": "Mailing ID", "type": "title" },
+      { "name": "Case ID", "type": "text" },
+      { "name": "Carrier", "type": "select", "options": ["USPS"] },
+      { "name": "Service", "type": "select", "options": ["Certified", "Priority", "Certified+Return"] },
+      { "name": "Tracking Number", "type": "text" },
+      { "name": "Status", "type": "select", "options": ["Draft", "Accepted", "In Transit", "Delivered", "Exception"] },
+      { "name": "Label Mode", "type": "select", "options": ["API", "LABEL_BROKER"] },
+      { "name": "Label Hash", "type": "text" },
+      { "name": "Label URL", "type": "url" },
+      { "name": "Label SHA-256", "type": "text" },
+      { "name": "Last Checked (UTC)", "type": "date" },
+      { "name": "Delivered At (UTC)", "type": "date" },
+      { "name": "Proof of Delivery URL", "type": "url" },
+      { "name": "Tracking Status", "type": "text" },
+      { "name": "Status Hash", "type": "text" },
+
+      { "name": "Related Case", "type": "relation", "to_database": "Cases", "cardinality": "at_most_one" },
+      { "name": "Runs Ledger", "type": "relation", "to_database": "Runs Ledger", "cardinality": "many" },
+      {
+        "name": "Latest Mail Event (UTC)",
+        "type": "rollup",
+        "relation": "Runs Ledger",
+        "rollup_property": "Timestamp (UTC)",
+        "aggregation": "latest_date",
+        "notes": "Tracks latest Runs Ledger timestamp linked to this Mailing."
+      }
+    ],
+    "defaults": {
+      "Carrier": "USPS",
+      "Status": "Draft"
+    }
+  },
+  "neutrality": "Schema only. No conclusions asserted."
+}

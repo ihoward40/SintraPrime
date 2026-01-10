@@ -1,0 +1,414 @@
+{
+  "release_id": "governance-release-v1.0",
+  "artifact": "release.bundle.zip",
+  "artifact_sha256": "73ae4846f3d28d36b1fdd61bde2ef0cec643ecae94b3cfa1d1e9bf5969870f56",
+  "governed_root_hash_sha256": "5532ad16c2b7e5fd4df478201b13b609134f0c06efb0e49c4367aa8e589a6ddf",
+  "generated_at": "2026-01-10T16:49:44.189Z",
+  "files": [
+    {
+      "path": "docs/notion-button-webhook-contract.md",
+      "sha256": "9ed753d0691d8200f966db59da1bfc247138ec7afd53e39796ad634ac7105e9e",
+      "size": 2639
+    },
+    {
+      "path": "governance/freeze/phaseX.lock.json",
+      "sha256": "a3400ad8cb3be592e8643fc1ca2dfd5b483da7d110385e07f77333ecd94d48da",
+      "size": 32782
+    },
+    {
+      "path": "governance/make-lint/lint_profiles/audit-only.json",
+      "sha256": "8d410f3e3b27508665c12b01333079d4fb2f4fec70a0da2edd9d05a7af39cc3e",
+      "size": 217
+    },
+    {
+      "path": "governance/make-lint/lint_profiles/notify-only.json",
+      "sha256": "ffc9fddb1cabd3187e2702f31396b429bf5f3d38c6dde86c50c77311ea1c6fed",
+      "size": 185
+    },
+    {
+      "path": "governance/make-lint/lint_profiles/strict.json",
+      "sha256": "976f7ca30c1112008a1ffc51e360cbc1208209f84e1e9eb8b30d7ba42e581571",
+      "size": 235
+    },
+    {
+      "path": "governance/make-lint/README.md",
+      "sha256": "8fd81ff39182e4e5f2acc5cabb19b4fba56525ec59fef2e6edbece227bb64e1a",
+      "size": 462
+    },
+    {
+      "path": "governance/make-lint/scenario_rules.schema.json",
+      "sha256": "6cddf1bb12e7ab599c6717e5a4de7f88b424bc3a25aa9819e6673e15d30466c5",
+      "size": 1378
+    },
+    {
+      "path": "make-gmail-slack-automation/.markdownlint.json",
+      "sha256": "925d272136799b166932eed269a3371b8c348c4582a40eb420be0aea28e35146",
+      "size": 215
+    },
+    {
+      "path": "make-gmail-slack-automation/docs/complaint-packet-builder.md",
+      "sha256": "e6eb3e48514815ddb5922152e820d2a9485d70661818f765df4a53156330ee0b",
+      "size": 5883
+    },
+    {
+      "path": "make-gmail-slack-automation/docs/gmail-slack-label-gated-runbook.md",
+      "sha256": "fb1671f6effe2ec41ef6f117455cca14fa6b49afe298d360e053013b784ffd20",
+      "size": 4291
+    },
+    {
+      "path": "make-gmail-slack-automation/docs/incident-response-gmail-slack.md",
+      "sha256": "24832e51ca9e721fbbdf9dfc27934ac8c7c1860ce815fefdd44e5057bc478f93",
+      "size": 2973
+    },
+    {
+      "path": "make-gmail-slack-automation/docs/INDEX.md",
+      "sha256": "76e29cdbfc7b3aed37dd4d0a26a2aed4cbd5999d43688641b3af71f44cdd5def",
+      "size": 4491
+    },
+    {
+      "path": "make-gmail-slack-automation/docs/make-scenario-electrical-panel-architecture.md",
+      "sha256": "b0bb5a859519576ab813c84a2fd1faa7df10b4ffc87178994f880cde72f31b66",
+      "size": 4350
+    },
+    {
+      "path": "make-gmail-slack-automation/docs/make-slack-automation-hardening.md",
+      "sha256": "fecc3c56fa61db3c92a12c991fcffff04e3d6a98e60a75b466abcf7db74b900d",
+      "size": 8534
+    },
+    {
+      "path": "make-gmail-slack-automation/docs/notion-claim-summary-db.md",
+      "sha256": "8443515b4e57ce89e301b6644abea6aec3ab5b1d72313a90eb90fb305417b9d2",
+      "size": 1189
+    },
+    {
+      "path": "make-gmail-slack-automation/docs/notion-escalation-fields.md",
+      "sha256": "26adfc7134228f3e2aed17444e87bccd514d028f232bcf3f5036cdc3f125b275",
+      "size": 1273
+    },
+    {
+      "path": "make-gmail-slack-automation/docs/notion-packet-record-db.md",
+      "sha256": "abb4369c97a87c94d337ad7e54ce05c6b810c66d3cb151cc0dd3dde34d2db948",
+      "size": 5269
+    },
+    {
+      "path": "make-gmail-slack-automation/docs/notion-patterns-db.md",
+      "sha256": "b7e166b4d9679bd691059115dadb9b00f0154885a12ca88eb7b2531b6d3a5c51",
+      "size": 1441
+    },
+    {
+      "path": "make-gmail-slack-automation/docs/onboarding-slide-deck-outline.md",
+      "sha256": "4b5222a400063239d3d3dba89fc1fb9722a27a0a9b79b398108d7fdd87d9adc1",
+      "size": 1393
+    },
+    {
+      "path": "make-gmail-slack-automation/docs/operator-checklist-gmail-slack.md",
+      "sha256": "5877ee903e4a99afca7b6931538d4f2c24ff90fe644786ca8ad0e3b8d5491132",
+      "size": 1065
+    },
+    {
+      "path": "make-gmail-slack-automation/docs/packet-build-checklist.md",
+      "sha256": "e246ce8db83dec8e5d2fe4aeb8a184e60df6773059ba742d330b08eab2a26eae",
+      "size": 2983
+    },
+    {
+      "path": "make-gmail-slack-automation/docs/packet-rebuild-comparison.md",
+      "sha256": "783c3ca57a0b7b7f212bef383dd75702ad9c65ad0c7cdc16a1c90d3a86a1260d",
+      "size": 2868
+    },
+    {
+      "path": "make-gmail-slack-automation/docs/release-notes-v1.0.0.md",
+      "sha256": "a3dcee5a3be82d4487a79ab9ad0ff2877aea7078bcd2898f5ad8897a88e617a5",
+      "size": 1165
+    },
+    {
+      "path": "make-gmail-slack-automation/docs/scenario-index.md",
+      "sha256": "349c334b0f9ba1f062fb4ad8232f4e4f4247374cfbc93ab4236ee9539df22e87",
+      "size": 7658
+    },
+    {
+      "path": "make-gmail-slack-automation/docs/slack-templates.md",
+      "sha256": "6bc4d5ef1a253a5c78e95b2e453e60c54061e45e694224799d0008e1ed319c0b",
+      "size": 4348
+    },
+    {
+      "path": "make-gmail-slack-automation/docs/verizon-guardian-notion-consumption.v1.0.1.md",
+      "sha256": "09382a3bd272814266c35192713e99e98914b4dd5dcc7678ca199370e7cd4534",
+      "size": 3137
+    },
+    {
+      "path": "make-gmail-slack-automation/docs/verizon-guardian-primary-pipeline.v1.0.0.md",
+      "sha256": "a81486da7e0eb9aec1316557c38678f699852caf585bd0da771ae36e2d23ceb9",
+      "size": 5339
+    },
+    {
+      "path": "make-gmail-slack-automation/docs/verizon-guardian-prompts.v1.0.1.md",
+      "sha256": "048ffb263ba91abb283e1c1818e4d4b6bc96ee9da7d3d8abeecb774774cfd7f3",
+      "size": 4679
+    },
+    {
+      "path": "make-gmail-slack-automation/phase3/README.md",
+      "sha256": "fb0d65a41f39135643ecfd98dcfb7c2ba373f38a9aaab67779f4743d340e9cc1",
+      "size": 933
+    },
+    {
+      "path": "make-gmail-slack-automation/phase6/README.md",
+      "sha256": "089bc41d53fd99b4e041431d3c7778dfe1fac5be861d19da5546cf4789e6978c",
+      "size": 1087
+    },
+    {
+      "path": "make-gmail-slack-automation/schemas/verizon-guardian-output.v1.0.1.schema.json",
+      "sha256": "a5a14971068a67bbc955a05453f21c69a72219cddef88902d4738b9a26ae0d46",
+      "size": 4134
+    },
+    {
+      "path": "make-gmail-slack-automation/templates/template-foia-build-packet.json",
+      "sha256": "0823ef685ff7fd499809033847dae7fd10e81f0f69af740490037a3092d93522",
+      "size": 3405
+    },
+    {
+      "path": "make-gmail-slack-automation/templates/template-gmail-alert-to-slack-notify.json",
+      "sha256": "8e5fd314fe25aaefb163ca7805474f5d7154573bf8343d9f3b6ff3fcf6ba66e5",
+      "size": 2534
+    },
+    {
+      "path": "make-gmail-slack-automation/templates/template-gmail-delete-after-notify.json",
+      "sha256": "0a86c6d12459b3ec97fa3ffcea3313271e3bef07c8f45f45bc3a9289d86c8335",
+      "size": 1371
+    },
+    {
+      "path": "make-gmail-slack-automation/templates/template-mail-create-track.json",
+      "sha256": "14ed4c2c7df5b09bd36158c6a3aaf8f975f18909a7d84a1c959e93358c444a15",
+      "size": 3154
+    },
+    {
+      "path": "make-gmail-slack-automation/templates/template-mail-label-print.json",
+      "sha256": "d973641aa3b1e18882525c4756c2459ad8670da20ea1137bd4d6dab3a6121955",
+      "size": 4638
+    },
+    {
+      "path": "make-gmail-slack-automation/templates/template-mail-track-certified.json",
+      "sha256": "c0b3ac575e3041aab08be59f60874d05bcded3444e33474400412de2f77b576f",
+      "size": 3960
+    },
+    {
+      "path": "make-gmail-slack-automation/templates/template-packet-build-court.json",
+      "sha256": "017b1b4fca7a19b902c42f67accafec96ac7c75b2dc4dbb0b10704f74b780d1f",
+      "size": 3415
+    },
+    {
+      "path": "make-gmail-slack-automation/templates/template-publish-manifest.json",
+      "sha256": "096e3f1979dbad8691d5bab244a5b76ca11b45bb4680b4548c0e9b40b171efee",
+      "size": 2743
+    },
+    {
+      "path": "make-gmail-slack-automation/templates/template-tiktok-comment-intake-v1.1-guarded.json",
+      "sha256": "86d80ef064af1fbccfed9383661f6f4fdb3fb9fb0a4478c18e914a7a2e31de7d",
+      "size": 6693
+    },
+    {
+      "path": "notion/migrations/Cases.csv",
+      "sha256": "b5a8ad5b7f726a0cfa4fe134b5d71de131d956e0cd72be20250e37783091dad2",
+      "size": 306
+    },
+    {
+      "path": "notion/migrations/FOIA_Requests.csv",
+      "sha256": "4e01f01f27b9dd2be7f38f19a5d48a4e4c46e2b07c97395dd881483189c6a69e",
+      "size": 236
+    },
+    {
+      "path": "notion/migrations/Mailings.csv",
+      "sha256": "58585546a0e2268c7f1003338a042f2d992b7f2b65bb80d91d6ef5fe1cdc41fb",
+      "size": 247
+    },
+    {
+      "path": "notion/migrations/Runs_Ledger.csv",
+      "sha256": "eebb8d43ca4c3820b847e40e613583f4ca62bdc1515896ee8f9dc170c0fa782d",
+      "size": 218
+    },
+    {
+      "path": "notion/migrations/Scenario_Registry.csv",
+      "sha256": "a5361768724a0b364a21fbe26fab95cb1d706190c3c69cdeb79332810ac6943d",
+      "size": 300
+    },
+    {
+      "path": "notion/migrations/Slack_Workflow_Registry.csv",
+      "sha256": "ca9ae0546ec682256b6b8f87464046b9530a386f2e357461c76003868ec26ec4",
+      "size": 260
+    },
+    {
+      "path": "notion/README.md",
+      "sha256": "7804458ad69b87de0fdf3b95990ffe07e9742c44e6c12e56da9d82838c03c6e1",
+      "size": 792
+    },
+    {
+      "path": "notion/schemas/Cases.schema.json",
+      "sha256": "4da25f92312f5e1ed6a153459bd0571b2cacf5ba49628ba4938dae5eb6c9c9a2",
+      "size": 2823
+    },
+    {
+      "path": "notion/schemas/FOIA_Requests.schema.json",
+      "sha256": "6b54e81bc4c0536de2d068eb6109595aadd6417289b75c2f7388aaa86f2b45cf",
+      "size": 1494
+    },
+    {
+      "path": "notion/schemas/Mailings.schema.json",
+      "sha256": "db61806ec66f6c72c491049c07f0c6b65e8c60da9881ecef23cc59734ad68021",
+      "size": 1823
+    },
+    {
+      "path": "notion/schemas/Runs_Ledger.schema.json",
+      "sha256": "f207914a7d6abacda9d8fd3e12e3e4f2e1c8b1d88479f7474cbe660002c1782b",
+      "size": 2136
+    },
+    {
+      "path": "notion/schemas/Scenario_Registry.schema.json",
+      "sha256": "137ffd4ddb8e0330738106550815ae53e5204204012b319edc9701170b157ebc",
+      "size": 1717
+    },
+    {
+      "path": "notion/schemas/Slack_Workflow_Registry.schema.json",
+      "sha256": "f1b82429f68d80722f4f44cf4392647fc19976a2668df3c9a9269d2a2abf78bb",
+      "size": 1367
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "4f8001162f44a87d3fe46a393607a62990d6dea37fb9c567f178409fd12c0e7e",
+      "size": 51031
+    },
+    {
+      "path": "package.json",
+      "sha256": "13999edb42004eddbd70d5b5ac37c0950169db4fd69a4bdb8126cff73f1dfe49",
+      "size": 1419
+    },
+    {
+      "path": "scenarios/FOIA_BUILD_PACKET.lint.json",
+      "sha256": "4a7b9a6599747af58fe1a940b24031cf244c0c1dbc4fcf1c2cce52126f203a77",
+      "size": 324
+    },
+    {
+      "path": "scenarios/GMAIL_ALERT_TO_SLACK_NOTIFY.lint.json",
+      "sha256": "d405f1d252bcea8bf90d8868bf6f2f2f70617c0dc05cc825a93b1818cbea6736",
+      "size": 276
+    },
+    {
+      "path": "scenarios/GMAIL_DELETE_AFTER_NOTIFY.lint.json",
+      "sha256": "d02740d9c8565d3d879b96e10de5d547c2f60a876b02d1e290f548aabd37a9a1",
+      "size": 249
+    },
+    {
+      "path": "scenarios/MAIL_CREATE_TRACK.lint.json",
+      "sha256": "8b532852ef1e049e4ad85a92455ed1d944c2a25c6ccc80e647e06e8ec749748b",
+      "size": 324
+    },
+    {
+      "path": "scenarios/MAIL_LABEL_PRINT.lint.json",
+      "sha256": "87ee2b4f4cf531348357ffa3e760217d16dbe3a59af27ee5bd867be0348a1392",
+      "size": 323
+    },
+    {
+      "path": "scenarios/MAIL_TRACK_CERTIFIED.lint.json",
+      "sha256": "7edf657efe31c5e69d57e49099fcc069d4b29b0d781b8f42bf7b333b17682a14",
+      "size": 296
+    },
+    {
+      "path": "scenarios/PACKET_BUILD_COURT.lint.json",
+      "sha256": "901003fa68587298f48335c4e5bed4c1b50b563320c27afbe11f96d9e868c842",
+      "size": 325
+    },
+    {
+      "path": "scenarios/PUBLISH_MANIFEST.lint.json",
+      "sha256": "6b86405f508875d2961f7128ba65cb63f3f5803137e2a623393e4d54fbe0b073",
+      "size": 323
+    },
+    {
+      "path": "scenarios/TIKTOK_COMMENT_INTAKE_CORE_v1_1.lint.json",
+      "sha256": "22d12cb5fbaf54b6e2e05930d6aee6fce21b1dfdfd73719ba47760a2e3dec08c",
+      "size": 280
+    },
+    {
+      "path": "scripts/build-phase3-scenarios-zip.mjs",
+      "sha256": "407da911f14fb86105c8ebc2506441bb07c4c7e93c3720b02c588de6fe30d37d",
+      "size": 5850
+    },
+    {
+      "path": "scripts/check-make-lint.mjs",
+      "sha256": "b9cb292b8fb76ed86ec2784b017b08648197c5d894f425bf9d4edb6dc059041c",
+      "size": 10571
+    },
+    {
+      "path": "scripts/check-public-verifier.mjs",
+      "sha256": "13c040f0ba234fe027b5dc6fa92527e34a8d7ca3adfdb6591344a4ab6c823fb2",
+      "size": 2676
+    },
+    {
+      "path": "scripts/check-slack-workflows.mjs",
+      "sha256": "0d889d96063b0993ceab40104244bfd3940c05ce8b0e9ac0dfdb7d569aca1c4d",
+      "size": 5723
+    },
+    {
+      "path": "scripts/lint-utils.mjs",
+      "sha256": "3fb9ccc94bd6d88db932033a302b30f9bf40c079e7ca860a789fb2f90afb0e22",
+      "size": 4569
+    },
+    {
+      "path": "scripts/phaseX-freeze-scope.mjs",
+      "sha256": "3c8f977c9f4a49bfbf4807499aad2c4f17b1b2da8986dd167b9af483ef133d75",
+      "size": 4751
+    },
+    {
+      "path": "scripts/phaseX-freeze-verify.mjs",
+      "sha256": "471401254d5a58b993351d3c7bf8e4dce5f53d2ea8ed0a3076fc7889b151668f",
+      "size": 4988
+    },
+    {
+      "path": "scripts/phaseX-freeze.mjs",
+      "sha256": "f4adbe7723fcaab2f435552383ad6fa73b38758e8550a3a690a6ba7f9d7eda7a",
+      "size": 8999
+    },
+    {
+      "path": "scripts/phaseX-rfc3161.mjs",
+      "sha256": "d9ea57d60c21ca09ef29487f1fbe9937b5ad5a28e51e490395c6bc9091b15913",
+      "size": 5330
+    },
+    {
+      "path": "scripts/release/build-release-bundle.mjs",
+      "sha256": "93751a38390375041f5c2aedca9003d54c36b5b767b0bd3fc641728809f41553",
+      "size": 5316
+    },
+    {
+      "path": "scripts/release/check-release-freeze.mjs",
+      "sha256": "d6267542a2911e94c7aae4dbcc14ed0eb1a7075779a537d507d2c27f3b3d381e",
+      "size": 4131
+    },
+    {
+      "path": "scripts/zip-deterministic.mjs",
+      "sha256": "1c0b281136c59eb328cd94146cf80ff70677cd99b9e788d6df1c15061095b500",
+      "size": 985
+    },
+    {
+      "path": "slack/registry/Slack_Workflow_Registry.seed.csv",
+      "sha256": "e0d8deda986bce4211a4c97bdb2e69d370ca16300cdbceedb3fdb83509a41527",
+      "size": 532
+    },
+    {
+      "path": "slack/workflows/README.md",
+      "sha256": "bdd22582e9f0faa23077724a253dc0f1d39f9ba17ab3249f35e1040f8358d9d7",
+      "size": 756
+    },
+    {
+      "path": "slack/workflows/workflow-audit-snapshot.v1.json",
+      "sha256": "7ef3a331c9bad53b0eed6bea4cb6353327530cae51e59cbe8318f4cf0e594669",
+      "size": 1538
+    },
+    {
+      "path": "slack/workflows/workflow-case-decision-checkpoint.v1.json",
+      "sha256": "96e7b50b7ff9569fdfdcd7d0dc736ed09a28ba74a65ea983d1240ebe6019e529",
+      "size": 1534
+    },
+    {
+      "path": "slack/workflows/workflow-case-intake.v1.json",
+      "sha256": "ffafcfc63718a8a926a2fdfb24fdc5cb95fd4118cc1ea7ec63ffa0b297c1345a",
+      "size": 1288
+    }
+  ]
+}

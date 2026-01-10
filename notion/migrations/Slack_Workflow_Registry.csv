@@ -1,0 +1,2 @@
+Workflow ID,Workflow Name,Class,Required Name,Name Compliant,Owner,Created At,Last Modified,Status,Notes
+WF_0001,Example Workflow,INTAKE,,FALSE,owner@example,2026-01-10T00:00:00Z,2026-01-10T00:00:00Z,VIOLATION,"Fill Required Name formula and enforce naming"

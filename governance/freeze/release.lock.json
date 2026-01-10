@@ -1,0 +1,19 @@
+{
+  "release_id": "governance-release-v1.0",
+  "artifact": {
+    "path": "dist/phaseX/release.bundle.zip",
+    "sha256": "73ae4846f3d28d36b1fdd61bde2ef0cec643ecae94b3cfa1d1e9bf5969870f56"
+  },
+  "governed_root_hash_sha256": "5532ad16c2b7e5fd4df478201b13b609134f0c06efb0e49c4367aa8e589a6ddf",
+  "hashes": {
+    "hashes_json": "governance/freeze/hashes.json",
+    "hashes_sha256_txt": "governance/freeze/hashes.sha256.txt"
+  },
+  "rfc3161": {
+    "tsa_url": null,
+    "tsr_path": null,
+    "tsr_sha256": null,
+    "timestamp_utc": null,
+    "serial": null
+  }
+}

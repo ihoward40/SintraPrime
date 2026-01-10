@@ -1,0 +1,2 @@
+Run ID,Run Type,Source System,Case ID,Actor ID,Action,Outcome,Artifact Ref,Prev Hash,This Hash,Timestamp (UTC),Immutable
+RUN_0001,LINT,Make,CASE_0001,operator@example,"Initial lint",PASS,,,,2026-01-10T00:00:00Z,TRUE

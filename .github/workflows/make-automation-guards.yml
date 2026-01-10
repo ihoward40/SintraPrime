@@ -1,0 +1,70 @@
+name: make-automation-guards
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  make_governance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Make guards
+        run: npm run -s ci:make-guards
+
+      - name: Scenario index
+        run: npm run -s ci:scenario-index
+
+      - name: Make lint (hard fail)
+        run: npm run -s ci:make-lint
+
+      - name: Slack workflows (hard fail)
+        run: npm run -s ci:slack-workflows
+
+        - name: Public verifier index check
+          run: npm run -s ci:public-verifier
+
+      - name: Phase X freeze verify (hard fail if lock exists)
+        run: npm run -s ci:phaseX-freeze-verify
+
+      - name: Upload make lint report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: make_lint_report
+          path: governance/make-lint/lint-report.json
+          if-no-files-found: warn
+
+      - name: Upload slack workflows report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: slack_workflows_report
+          path: governance/slack-workflows/workflows-report.json
+          if-no-files-found: warn
+
+        - name: Upload public verifier index
+          if: always()
+          uses: actions/upload-artifact@v4
+          with:
+            name: public_verifier_index
+            path: public-verifier/index.json
+            if-no-files-found: warn

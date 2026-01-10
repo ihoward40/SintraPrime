@@ -1,0 +1,37 @@
+{
+  "workflow_id": "IKE_AUDIT_SNAPSHOT_v1",
+  "workflow_name": "Audit Snapshot",
+  "class": "AUDIT",
+  "required_name": "AUDIT · Audit Snapshot",
+  "purpose": "Capture operator-observed context (channel, timestamp range, offenders) so it can be written to Runs Ledger as an audit trail reference.",
+  "lane": "Slack (human observation capture)",
+  "inputs": [
+    { "name": "Case ID", "type": "text", "required": true },
+    { "name": "Channel", "type": "text", "required": true },
+    { "name": "Time Window (UTC)", "type": "text", "required": true },
+    { "name": "Offender Links", "type": "text", "required": false },
+    { "name": "Notes", "type": "text", "required": false }
+  ],
+  "steps": [
+    {
+      "type": "form",
+      "title": "Audit Snapshot",
+      "fields": [
+        { "name": "Time Window (UTC)", "type": "text", "required": true },
+        { "name": "Offender Links", "type": "text", "required": false },
+        { "name": "Notes", "type": "text", "required": false }
+      ]
+    }
+  ],
+  "outputs": [
+    { "name": "Channel", "type": "text" },
+    { "name": "Time Window (UTC)", "type": "text" },
+    { "name": "Offender Links", "type": "text" },
+    { "name": "Actor User ID", "type": "text" },
+    { "name": "Snapshot Timestamp (UTC)", "type": "date" }
+  ],
+  "invariants": [
+    "This workflow captures pointers/observations only; it does not prove DM completeness.",
+    "Artifacts referenced here must be stored elsewhere (Runs Ledger attachments / evidence store)."
+  ]
+}

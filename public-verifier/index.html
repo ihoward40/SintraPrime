@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Public Verifier — SHA-256</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <main class="container">
+      <header>
+        <h1>Public Verifier</h1>
+        <p class="subtitle">Client-side SHA-256 verification. No uploads.</p>
+      </header>
+
+      <section class="card">
+        <h2>Verify a file</h2>
+        <div class="row">
+          <label class="label">Expected SHA-256 (optional)</label>
+          <input id="expectedHash" class="input" placeholder="64 hex chars (optional)" autocomplete="off" />
+        </div>
+
+        <div class="row">
+          <label class="label">Choose file</label>
+          <input id="fileInput" class="input" type="file" />
+        </div>
+
+        <div class="row">
+          <button id="verifyBtn" class="btn" type="button">Compute & compare</button>
+        </div>
+
+        <div id="result" class="result" aria-live="polite"></div>
+        <div class="small">Computed hash never leaves your browser.</div>
+      </section>
+
+      <section class="card">
+        <h2>Published manifest</h2>
+        <div class="row">
+          <button id="refreshBtn" class="btn secondary" type="button">Reload index.json</button>
+        </div>
+        <div id="manifestMeta" class="small"></div>
+        <div id="manifest" class="manifest"></div>
+      </section>
+
+      <footer class="footer">
+        <div class="small">This verifier is a read-only surface. It asserts no new facts.</div>
+      </footer>
+    </main>
+
+    <script src="./app.js"></script>
+  </body>
+</html>

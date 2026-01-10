@@ -1,0 +1,39 @@
+name: release-freeze
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  release_freeze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Release freeze verify (hard fail if lock exists)
+        run: npm run -s ci:release-freeze
+
+      - name: Upload freeze lock
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release_freeze_lock
+          path: governance/freeze/release.lock.json
+          if-no-files-found: warn

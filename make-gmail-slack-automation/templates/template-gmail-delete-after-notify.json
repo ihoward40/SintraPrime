@@ -1,4 +1,5 @@
 {
+  "scenario_id": "GMAIL_DELETE_AFTER_NOTIFY",
   "template_name": "Gmail-Delete-After-Notify",
   "template_type": "make.com-scenario-definition",
   "idempotency_primitive": "gmail-label-gate",

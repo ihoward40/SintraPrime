@@ -1,0 +1,2 @@
+Mailing ID,Case ID,Carrier,Service,Tracking Number,Status,Label Mode,Label Hash,Label URL,Label SHA-256,Last Checked (UTC),Delivered At (UTC),Proof of Delivery URL,Tracking Status,Status Hash
+MAIL_0001,CASE_0001,USPS,Certified,,Draft,API,,,,,,,

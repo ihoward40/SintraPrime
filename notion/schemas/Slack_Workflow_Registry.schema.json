@@ -1,0 +1,32 @@
+{
+  "contract": "ike_legal_ops_command_center",
+  "version": "v1.0.0",
+  "database": {
+    "name": "Slack Workflow Registry",
+    "purpose": "Enforce naming, scope, and auditability of Slack workflows.",
+    "properties": [
+      { "name": "Workflow ID", "type": "title" },
+      { "name": "Workflow Name", "type": "text" },
+      { "name": "Class", "type": "select", "options": ["INTAKE", "REVIEW", "DECISION", "DEADLINE", "AUDIT"] },
+      {
+        "name": "Required Name",
+        "type": "formula",
+        "formula": "concat(prop(\"Class\"), \" · \", prop(\"Workflow Name\"))",
+        "notes": "Naming contract: '<CLASS> · <Workflow Name>'."
+      },
+      {
+        "name": "Name Compliant",
+        "type": "formula",
+        "formula": "prop(\"Workflow Name\") = prop(\"Required Name\")",
+        "notes": "True when Workflow Name matches Required Name exactly."
+      },
+      { "name": "Owner", "type": "text" },
+      { "name": "Created At", "type": "date" },
+      { "name": "Last Modified", "type": "date" },
+      { "name": "Status", "type": "select", "options": ["OK", "VIOLATION", "REMEDIATED"] },
+      { "name": "Notes", "type": "text" },
+      { "name": "Runs Ledger", "type": "relation", "to_database": "Runs Ledger", "cardinality": "many" }
+    ]
+  },
+  "neutrality": "Schema only. No conclusions asserted."
+}

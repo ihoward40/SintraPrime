@@ -1,0 +1,65 @@
+{
+  "contract": "ike_legal_ops_command_center",
+  "version": "v1.0.0",
+  "database": {
+    "name": "Cases",
+    "purpose": "Primary command database. One row = one matter (court, FOIA, enforcement, dispute). All operator buttons live here.",
+    "properties": [
+      { "name": "Case ID", "type": "title" },
+      { "name": "Status", "type": "select", "options": ["Intake", "In Progress", "Packet Ready", "Mailed", "Delivered", "Published", "Closed"] },
+
+      { "name": "Agency", "type": "text" },
+      { "name": "Date Range", "type": "text", "notes": "Kept as text so Make controls date math." },
+      { "name": "FOIA Variant", "type": "select", "options": ["STANDARD", "FEE_WAIVER", "EXPEDITED", "APPEAL"] },
+
+      { "name": "Include Appendix", "type": "checkbox" },
+      { "name": "Include Declaration", "type": "checkbox" },
+
+      { "name": "Carrier", "type": "select", "options": ["USPS"] },
+      { "name": "Service", "type": "select", "options": ["Certified", "Priority", "Certified+Return"] },
+      { "name": "Tracking Number", "type": "text" },
+      { "name": "Mailing Status", "type": "select", "options": ["Draft", "Accepted", "In Transit", "Delivered", "Exception"] },
+
+      { "name": "Last Packet URL", "type": "url" },
+      { "name": "Last Packet ZIP Hash", "type": "text" },
+      { "name": "Manifest URL", "type": "url" },
+      { "name": "Public Verifier URL", "type": "url" },
+
+      { "name": "Runs Ledger", "type": "relation", "to_database": "Runs Ledger", "cardinality": "many" },
+      { "name": "Mailings", "type": "relation", "to_database": "Mailings", "cardinality": "many" },
+      { "name": "FOIA Requests", "type": "relation", "to_database": "FOIA Requests", "cardinality": "many" },
+
+      {
+        "name": "Latest Run Timestamp (UTC)",
+        "type": "rollup",
+        "relation": "Runs Ledger",
+        "rollup_property": "Timestamp (UTC)",
+        "aggregation": "latest_date",
+        "notes": "Read-only operator convenience. Never used as a source of truth."
+      },
+      {
+        "name": "Latest Run Outcome",
+        "type": "rollup",
+        "relation": "Runs Ledger",
+        "rollup_property": "Outcome",
+        "aggregation": "show_original",
+        "notes": "Read-only operator convenience."
+      },
+      {
+        "name": "Active FOIA Timers",
+        "type": "rollup",
+        "relation": "FOIA Requests",
+        "rollup_property": "Timer Status",
+        "aggregation": "count_values",
+        "notes": "Counts Timer Status values across related FOIA Requests rows."
+      }
+    ],
+    "defaults": {
+      "Include Appendix": true,
+      "Include Declaration": true,
+      "Carrier": "USPS",
+      "Mailing Status": "Draft"
+    }
+  },
+  "neutrality": "Schema only. No conclusions asserted."
+}

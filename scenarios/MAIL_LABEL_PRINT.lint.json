@@ -1,0 +1,12 @@
+{
+  "$schema": "../governance/make-lint/scenario_rules.schema.json",
+  "scenario_id": "MAIL_LABEL_PRINT",
+  "lint_profile": "audit-only",
+  "authority_level": "audit",
+  "expected_modules": {
+    "state_hash_compare": true,
+    "hash_before_export": true,
+    "ledger_write": true,
+    "slack_post": true
+  }
+}

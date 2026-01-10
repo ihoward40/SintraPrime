@@ -1,0 +1,11 @@
+{
+  "$schema": "../governance/make-lint/scenario_rules.schema.json",
+  "scenario_id": "MAIL_TRACK_CERTIFIED",
+  "lint_profile": "notify-only",
+  "authority_level": "notify",
+  "expected_modules": {
+    "state_hash_compare": true,
+    "ledger_write": true,
+    "slack_post": true
+  }
+}

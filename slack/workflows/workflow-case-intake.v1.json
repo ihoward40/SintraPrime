@@ -1,0 +1,35 @@
+{
+  "workflow_id": "IKE_CASE_INTAKE_v1",
+  "workflow_name": "Case Intake",
+  "class": "INTAKE",
+  "required_name": "INTAKE · Case Intake",
+  "purpose": "Structured intake that creates a clean, operator-readable record without inventing facts.",
+  "lane": "Slack (signal surface only)",
+  "inputs": [
+    { "name": "Case ID", "type": "text", "required": true },
+    { "name": "Agency", "type": "text", "required": false },
+    { "name": "Date Range", "type": "text", "required": false },
+    { "name": "Summary", "type": "text", "required": true },
+    { "name": "Evidence Links", "type": "text", "required": false }
+  ],
+  "steps": [
+    {
+      "type": "form",
+      "title": "Intake Form",
+      "fields": [
+        { "name": "Summary", "type": "text", "required": true },
+        { "name": "Evidence Links", "type": "text", "required": false }
+      ]
+    }
+  ],
+  "outputs": [
+    { "name": "Intake Summary", "type": "text" },
+    { "name": "Evidence Links", "type": "text" },
+    { "name": "Actor User ID", "type": "text" },
+    { "name": "Intake Timestamp (UTC)", "type": "date" }
+  ],
+  "invariants": [
+    "No retroactive edits to ledger facts.",
+    "Slack workflow output must be mirrored to Notion/Runs Ledger by governed automation."
+  ]
+}

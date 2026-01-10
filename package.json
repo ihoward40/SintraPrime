@@ -2,18 +2,32 @@
   "scripts": {
     "prepare": "husky install",
     "ci:make-guards": "node make-gmail-slack-automation/scripts/ci/check-make-guards.mjs",
-    "ci:make-guards:summary": "node make-gmail-slack-automation/scripts/ci/emit-make-guards-summary.mjs"
+    "ci:make-guards:summary": "node make-gmail-slack-automation/scripts/ci/emit-make-guards-summary.mjs",
+    "ci:scenario-index": "node make-gmail-slack-automation/scripts/ci/check-scenario-index.mjs",
+    "ci:make-lint": "node scripts/check-make-lint.mjs",
+    "ci:phase3-zip": "node scripts/build-phase3-scenarios-zip.mjs",
+    "ci:slack-workflows": "node scripts/check-slack-workflows.mjs",
+    "ci:freeze-hashes": "npm --prefix agent-mode-engine run -s ci:freeze-hashes",
+    "phaseX:freeze": "node scripts/phaseX-freeze.mjs",
+    "phaseX:freeze-verify": "node scripts/phaseX-freeze-verify.mjs",
+    "ci:phaseX-freeze-verify": "node scripts/phaseX-freeze-verify.mjs",
+    "phaseX:timestamp": "node scripts/phaseX-rfc3161.mjs",
+    "phaseX:release-bundle": "node scripts/release/build-release-bundle.mjs",
+    "ci:release-freeze": "node scripts/release/check-release-freeze.mjs",
+    "ci:public-verifier": "node scripts/check-public-verifier.mjs"
   },
   "devDependencies": {
     "husky": "^8.0.0"
   },
   "dependencies": {
+    "archiver": "^7.0.1",
     "@notionhq/client": "^5.6.0",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "docx": "^9.5.1",
     "pdf-lib": "^1.17.1",
     "react": "^19.2.3",
-    "react-dom": "^19.2.3"
+    "react-dom": "^19.2.3",
+    "yazl": "^3.3.1"
   }
 }

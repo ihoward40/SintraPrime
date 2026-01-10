@@ -1,0 +1,2 @@
+Scenario ID,Scenario Name,Lint Profile,Domain,Authority Level,Lint Status,Fail Reasons,Policy Hash,Is Active,Auto-Disable Enabled,Last Lint Run
+GMAIL_ALERT_TO_SLACK_NOTIFY,"Gmail-Alert-to-Slack (Notify Only)",notify-only,internal,notify,PASS,,POLICY_HASH_PLACEHOLDER,TRUE,TRUE,2026-01-10T00:00:00Z

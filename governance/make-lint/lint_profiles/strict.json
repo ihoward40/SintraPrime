@@ -1,0 +1,12 @@
+{
+  "name": "strict",
+  "forbidden": {
+    "scheduler": true,
+    "periodic_slack": true
+  },
+  "required": {
+    "state_hash_compare": true,
+    "slack_interactive_for_authority": true,
+    "runs_ledger_write": true
+  }
+}

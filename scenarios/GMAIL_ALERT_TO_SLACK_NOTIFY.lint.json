@@ -1,0 +1,10 @@
+{
+  "$schema": "../governance/make-lint/scenario_rules.schema.json",
+  "scenario_id": "GMAIL_ALERT_TO_SLACK_NOTIFY",
+  "lint_profile": "notify-only",
+  "authority_level": "notify",
+  "expected_modules": {
+    "state_hash_compare": true,
+    "slack_post": true
+  }
+}

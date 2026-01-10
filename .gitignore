@@ -1,5 +1,16 @@
 # Dependencies
 node_modules/
 
+# Generated lint output
+governance/make-lint/lint-report.json
+
+# Generated Slack workflows governance output
+governance/slack-workflows/workflows-report.json
+
 # Build / generated outputs
 make-gmail-slack-automation/dist/
+
+# Phase X (Freeze) outputs
+dist/phaseX/
+governance/freeze/_out/
+governance/freeze/phaseX.roothash.txt

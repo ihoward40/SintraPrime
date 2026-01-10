@@ -1,0 +1,37 @@
+{
+  "workflow_id": "IKE_DECISION_CHECKPOINT_v1",
+  "workflow_name": "Decision Checkpoint",
+  "class": "DECISION",
+  "required_name": "DECISION · Decision Checkpoint",
+  "purpose": "Final human checkpoint for authority actions. Produces an explicit approve/reject decision that can be mirrored into Runs Ledger.",
+  "lane": "Slack (human checkpoint only)",
+  "inputs": [
+    { "name": "Case ID", "type": "text", "required": true },
+    { "name": "Scenario ID", "type": "text", "required": true },
+    { "name": "Action", "type": "text", "required": true },
+    { "name": "Prev Hash", "type": "text", "required": false },
+    { "name": "This Hash", "type": "text", "required": true },
+    { "name": "Artifact URL", "type": "url", "required": false },
+    { "name": "Notes", "type": "text", "required": false }
+  ],
+  "steps": [
+    {
+      "type": "form",
+      "title": "Approve or Reject",
+      "fields": [
+        { "name": "Decision", "type": "select", "options": ["APPROVE", "REJECT"], "required": true },
+        { "name": "Decision Notes", "type": "text", "required": false }
+      ]
+    }
+  ],
+  "outputs": [
+    { "name": "Decision", "type": "select" },
+    { "name": "Decision Notes", "type": "text" },
+    { "name": "Actor User ID", "type": "text" },
+    { "name": "Decision Timestamp (UTC)", "type": "date" }
+  ],
+  "invariants": [
+    "No external side effects from Slack workflow itself.",
+    "Decision must be mirrored into Runs Ledger by a governed executor (Make/engine)."
+  ]
+}

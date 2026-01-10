@@ -1,0 +1,41 @@
+{
+  "contract": "ike_legal_ops_command_center",
+  "version": "v1.0.0",
+  "database": {
+    "name": "Runs Ledger",
+    "purpose": "Authoritative event spine. Append-only log of everything that matters. Nothing here is ever edited or deleted.",
+    "properties": [
+      { "name": "Run ID", "type": "title", "notes": "UUID or hash." },
+      { "name": "Run Type", "type": "select", "options": ["LINT", "DECISION", "EXPORT", "AUDIT", "MAIL", "FOIA_TIMER", "PACKET"] },
+      { "name": "Source System", "type": "select", "options": ["Make", "Slack", "Notion"] },
+
+      { "name": "Case ID", "type": "text" },
+      { "name": "Actor ID", "type": "text" },
+      { "name": "Action", "type": "text" },
+      { "name": "Outcome", "type": "select", "options": ["PASS", "FAIL", "CREATED", "APPROVED", "REJECTED"] },
+      { "name": "Artifact Ref", "type": "text", "notes": "Hash or immutable ID." },
+
+      { "name": "Prev Hash", "type": "text" },
+      { "name": "This Hash", "type": "text" },
+      { "name": "Timestamp (UTC)", "type": "date" },
+      { "name": "Immutable", "type": "checkbox", "notes": "Default = checked." },
+
+      { "name": "Related Case", "type": "relation", "to_database": "Cases", "cardinality": "at_most_one" },
+      { "name": "Related Scenario", "type": "relation", "to_database": "Scenario Registry", "cardinality": "at_most_one" },
+      { "name": "Related Workflow", "type": "relation", "to_database": "Slack Workflow Registry", "cardinality": "at_most_one" },
+      { "name": "Related Mailing", "type": "relation", "to_database": "Mailings", "cardinality": "at_most_one" },
+      { "name": "Related FOIA Request", "type": "relation", "to_database": "FOIA Requests", "cardinality": "at_most_one" },
+
+      {
+        "name": "Hash Present",
+        "type": "formula",
+        "formula": "and(length(prop(\"This Hash\")) > 0, length(prop(\"Prev Hash\")) > 0)",
+        "notes": "Operator QA only. Does not compute new hashes; only checks presence."
+      }
+    ],
+    "defaults": {
+      "Immutable": true
+    }
+  },
+  "neutrality": "Schema only. No conclusions asserted."
+}
