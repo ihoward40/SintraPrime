@@ -14,3 +14,9 @@ make-gmail-slack-automation/dist/
 dist/phaseX/
 governance/freeze/_out/
 governance/freeze/phaseX.roothash.txt
+
+# Phase X / release build outputs
+/dist/
+/governance/freeze/_out/
+/governance/freeze/phaseX.roothash.txt
+
