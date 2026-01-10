@@ -4,3 +4,14 @@ dist/
 .DS_Store
 runs/
 tmp/
+
+# Local CI outputs (non-authoritative)
+logs/
+artifacts/
+
+# Generated governance reports (outputs, not inputs)
+governance/make-lint/lint-report.json
+governance/slack-workflows/workflows-report.json
+
+# Phase X runtime output
+governance/freeze/phaseX.roothash.txt
