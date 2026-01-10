@@ -9,6 +9,14 @@
       "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
       "created_at": "2000-01-01T00:00:00.000Z",
       "notes": "Placeholder entry. Replace with real release bundle + SHA-256; keep append-only."
+    },
+    {
+      "id": "phaseX_ike_governance_2026-01-10",
+      "file_name": "ike-governance-phaseX.zip",
+      "url": "./artifacts/ike-governance-phaseX.zip",
+      "sha256": "8b94fb2456b4549ab8de76d0438e9853e889e65e7e7a441004c0fda3d35a1d2b",
+      "created_at": "2026-01-10T00:00:00.000Z",
+      "notes": "Phase X governed-surface bundle. lock=governance/freeze/phaseX.lock.json; lock_sha256=e243211e901dd210a2e01a82ab07e3e4be8b9890cb52e160ce24320bc4f1c252; root_hash_sha256=34252399507137d80824a2d02ce83fe42a3318fb06b48d1546f04f202b083f7a; frozen_source_commit=6bc5743b847a26559c62396778a30b4251b010e3; no_rfc3161_tsa=true"
     }
   ]
 }
