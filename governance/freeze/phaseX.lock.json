@@ -1,11 +1,11 @@
 {
   "phase": "X",
   "lock_version": "phaseX.lock.v1",
-  "created_utc": "2026-01-10T17:35:31.291Z",
-  "created_at": "2026-01-10T17:35:31.291Z",
+  "created_utc": "2026-01-10T19:19:02.917Z",
+  "created_at": "2026-01-10T19:19:02.917Z",
   "git": {
     "is_git": true,
-    "head": "6bc5743b847a26559c62396778a30b4251b010e3",
+    "head": "a86a5e62888a6ba68e4486196948754b00429e6d",
     "branch": "master",
     "dirty": false,
     "tree_clean": true
@@ -16,14 +16,14 @@
   },
   "scope": {
     "note": "Governed surface snapshot for Notion → Make → Slack chain.",
-    "file_count": 80,
-    "root_hash_sha256": "34252399507137d80824a2d02ce83fe42a3318fb06b48d1546f04f202b083f7a"
+    "file_count": 81,
+    "root_hash_sha256": "1438760a9d0d51090c51036a22886dae2335a802ca25c26c94110b0ecf31207c"
   },
   "bundle": {
     "filename": "ike-governance-phaseX.zip",
     "path": "dist/phaseX/ike-governance-phaseX.zip",
-    "sha256": "8b94fb2456b4549ab8de76d0438e9853e889e65e7e7a441004c0fda3d35a1d2b",
-    "byte_size": 112084,
+    "sha256": "32516965cda5354d0a4e8f9ec705f8b894decde40dd22ab35563435c87f70d1f",
+    "byte_size": 113307,
     "zip_date_fixed_utc": "2000-01-01T00:00:00.000Z"
   },
   "timestamp": {
@@ -147,8 +147,13 @@
     },
     {
       "path": "make-gmail-slack-automation/docs/scenario-index.md",
-      "sha256": "349c334b0f9ba1f062fb4ad8232f4e4f4247374cfbc93ab4236ee9539df22e87",
-      "size": 7658
+      "sha256": "a527829c7d7d7886f81d3db3e9e3a38f516ac924db839f9721c61c9b1f4937fd",
+      "size": 9135
+    },
+    {
+      "path": "make-gmail-slack-automation/docs/sintra-scenario-sources.v1.md",
+      "sha256": "99493257305a23965a7ebd8453b0dd8f8cba11962a76c27aa18bc4cd11605d70",
+      "size": 1360
     },
     {
       "path": "make-gmail-slack-automation/docs/slack-templates.md",
@@ -302,8 +307,8 @@
     },
     {
       "path": "package.json",
-      "sha256": "13999edb42004eddbd70d5b5ac37c0950169db4fd69a4bdb8126cff73f1dfe49",
-      "size": 1419
+      "sha256": "863993203f6a88a25d249f4ef934060a7c49ccd6f3c0a86aad2169d62dee5e26",
+      "size": 1722
     },
     {
       "path": "scenarios/FOIA_BUILD_PACKET.lint.json",
@@ -571,8 +576,14 @@
     },
     {
       "path": "make-gmail-slack-automation/docs/scenario-index.md",
-      "sha256": "349c334b0f9ba1f062fb4ad8232f4e4f4247374cfbc93ab4236ee9539df22e87",
-      "size": 7658,
+      "sha256": "a527829c7d7d7886f81d3db3e9e3a38f516ac924db839f9721c61c9b1f4937fd",
+      "size": 9135,
+      "role": "governed-file"
+    },
+    {
+      "path": "make-gmail-slack-automation/docs/sintra-scenario-sources.v1.md",
+      "sha256": "99493257305a23965a7ebd8453b0dd8f8cba11962a76c27aa18bc4cd11605d70",
+      "size": 1360,
       "role": "governed-file"
     },
     {
@@ -757,8 +768,8 @@
     },
     {
       "path": "package.json",
-      "sha256": "13999edb42004eddbd70d5b5ac37c0950169db4fd69a4bdb8126cff73f1dfe49",
-      "size": 1419,
+      "sha256": "863993203f6a88a25d249f4ef934060a7c49ccd6f3c0a86aad2169d62dee5e26",
+      "size": 1722,
       "role": "governed-file"
     },
     {
