@@ -4,9 +4,11 @@
 
 ### Governance (Authoritative)
 
+- Governance documents: [docs/governance/index.md](docs/governance/index.md)
+
 - **Current Governance Checkpoint:**  
   Phase X Lock v1.4 — Read-Only Analysis Integration  
-  https://github.com/ihoward40/SintraPrime/releases/tag/phaseX-lock-v1.4
+  [phaseX-lock-v1.4](https://github.com/ihoward40/SintraPrime/releases/tag/phaseX-lock-v1.4)
 
 ## Windows path note
 

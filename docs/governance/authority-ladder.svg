@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360">
+  <rect x="0" y="0" width="640" height="360" fill="#ffffff" />
+
+  <style>
+    .t { font: 16px sans-serif; fill: #000000; }
+    .s { stroke: #000000; stroke-width: 2; }
+  </style>
+
+  <text class="t" x="40" y="60">Human Operator</text>
+  <text class="t" x="40" y="130">SintraPrime Agent (Boot Mode)</text>
+  <text class="t" x="40" y="200">Temporary Authorization Artifact</text>
+  <text class="t" x="40" y="270">Single-Run Automation</text>
+
+  <line class="s" x1="320" y1="70" x2="320" y2="105" />
+  <polygon points="320,115 312,105 328,105" fill="#000000" />
+
+  <line class="s" x1="320" y1="140" x2="320" y2="175" />
+  <polygon points="320,185 312,175 328,175" fill="#000000" />
+
+  <line class="s" x1="320" y1="210" x2="320" y2="245" />
+  <polygon points="320,255 312,245 328,245" fill="#000000" />
+</svg>
