@@ -52,6 +52,7 @@ if (args.help) {
       "  --court <text>      Court header line (optional)",
       "  --case <text>       Case number/caption (optional)",
       "  --date <YYYY-MM-DD> Date line (optional)",
+      "  --no-header         Do not inject a header block (verbatim body only)",
       "  --variant <full|half>  Page size: full=Letter, half=Half-letter",
       "",
     ].join("\n")
@@ -81,13 +82,16 @@ const title = String(args.title ?? path.basename(inPath));
 const court = args.court ? String(args.court) : "";
 const caseLine = args.case ? String(args.case) : "";
 const dateLine = args.date ? String(args.date) : "";
+const noHeader = !!args["no-header"];
 
-const headerLines = [
-  court && escapeHtml(court),
-  caseLine && escapeHtml(caseLine),
-  escapeHtml(title),
-  dateLine && escapeHtml(dateLine),
-].filter(Boolean);
+const headerLines = noHeader
+  ? []
+  : [
+      court && escapeHtml(court),
+      caseLine && escapeHtml(caseLine),
+      escapeHtml(title),
+      dateLine && escapeHtml(dateLine),
+    ].filter(Boolean);
 
 const headerHtml = headerLines.length
   ? `<div class="court-header">${headerLines

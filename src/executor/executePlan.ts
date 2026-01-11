@@ -3,9 +3,10 @@ import { ExecutionPlanSchema } from "../schemas/ExecutionPlan.schema.js";
 import crypto from "node:crypto";
 import { computePlanHash } from "../utils/planHash.js";
 import { proposeStatus } from "../analysis/proposeStatus.js";
-import { notionLiveGet } from "../adapters/notionLiveRead.js";
+import { notionLiveGet, notionLiveWhoAmI } from "../adapters/notionLiveRead.js";
 import { notionLivePatchWithIdempotency } from "../adapters/notionLiveWrite.js";
 import { writeNotionLiveWriteArtifact } from "../artifacts/writeNotionLiveWriteArtifact.js";
+import { writeDocsCaptureArtifact } from "../artifacts/writeDocsCaptureArtifact.js";
 import { getIdempotencyRecord, writeIdempotencyRecord } from "../idempotency/idempotencyLedger.js";
 
 type RunStatus =
@@ -214,6 +215,52 @@ async function executeStep(step: ExecutionStep, timeoutMs: number) {
   }
 }
 
+async function executeDocsCaptureStep(step: ExecutionStep, timeoutMs: number, execution_id: string) {
+  const headers: Record<string, string> = { ...(step.headers ?? {}) };
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const res = await fetch(step.url, {
+      method: step.method,
+      headers,
+      signal: controller.signal,
+    });
+
+    const ab = await res.arrayBuffer();
+    const buf = Buffer.from(ab);
+    const sha256_hex = crypto.createHash("sha256").update(buf).digest("hex");
+    const content_type = res.headers.get("content-type");
+
+    const { metaFile, bodyFile } = writeDocsCaptureArtifact({
+      execution_id,
+      step_id: step.step_id,
+      url: step.url,
+      http_status: res.status,
+      content_type,
+      sha256_hex,
+      body_bytes: buf,
+    });
+
+    const response = {
+      sha256_hex,
+      byte_length: buf.length,
+      content_type,
+      artifact: { metaFile, bodyFile },
+    };
+
+    return {
+      ok: res.ok,
+      status: res.status,
+      response,
+      responseJson: response,
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 export async function executePlan(rawPlan: unknown): Promise<ExecutionRunLog> {
   const plan = ExecutionPlanSchema.parse(rawPlan);
   const nowIso = () => new Date().toISOString();
@@ -395,6 +442,8 @@ export async function executePlan(rawPlan: unknown): Promise<ExecutionRunLog> {
                         responseJson: r.redacted,
                       };
                     })()
+                : step.action === "docs.capture"
+                  ? await executeDocsCaptureStep(step, timeoutMs, plan.execution_id)
                 : await executeStep(step, timeoutMs);
           stepLog.http_status = out.status;
           stepLog.response = out.response;
@@ -423,7 +472,31 @@ export async function executePlan(rawPlan: unknown): Promise<ExecutionRunLog> {
               : !statusOk
                 ? `Unexpected status (${out.status}); expected one of ${step.expects.http_status.join(",")}`
                 : "Missing required json path";
-            stepLog.error = why;
+
+            let hint: string | null = null;
+            if (
+              step.action === "notion.live.read" &&
+              out.status === 404 &&
+              isPlainObject(out.responseJson) &&
+              (out.responseJson as any).code === "object_not_found"
+            ) {
+              try {
+                const me = await notionLiveWhoAmI();
+                if (me.ok && isPlainObject(me.me)) {
+                  const name = typeof (me.me as any).name === "string" ? (me.me as any).name : null;
+                  const id = typeof (me.me as any).id === "string" ? (me.me as any).id : null;
+                  const workspaceName =
+                    isPlainObject((me.me as any).bot) && typeof ((me.me as any).bot as any).workspace_name === "string"
+                      ? (((me.me as any).bot as any).workspace_name as string)
+                      : null;
+                  hint = `Token integration: ${name ?? id ?? "(unknown)"}${workspaceName ? ` (workspace: ${workspaceName})` : ""}. Ensure this integration is shared on the database AND its parent page.`;
+                }
+              } catch {
+                // Best-effort diagnostics only.
+              }
+            }
+
+            stepLog.error = hint ? `${why}. ${hint}` : why;
           }
         }
       } catch (e: any) {

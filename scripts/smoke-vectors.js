@@ -1733,7 +1733,25 @@ for (const v of vectors) {
 
           if (postAssert.contains_subset && typeof postAssert.contains_subset === "object") {
             if (!deepSubsetMatch(json, postAssert.contains_subset)) {
-              throw new Error(`[POST_ASSERT] Artifact JSON did not match expected subset: ${latest}`);
+              // On some filesystems (notably Windows) multiple artifacts can share the same
+              // mtimeMs when SMOKE_FIXED_NOW_ISO pins timestamps. In that case, selecting the
+              // "latest" artifact can be non-deterministic. Fall back to scanning all artifacts.
+              let found = false;
+              for (const name of files) {
+                try {
+                  const full = path.join(artifactDir, name);
+                  const candidate = JSON.parse(fs.readFileSync(full, "utf8"));
+                  if (deepSubsetMatch(candidate, postAssert.contains_subset)) {
+                    found = true;
+                    break;
+                  }
+                } catch {
+                  // ignore
+                }
+              }
+              if (!found) {
+                throw new Error(`[POST_ASSERT] Artifact JSON did not match expected subset: ${latest}`);
+              }
             }
           }
         }

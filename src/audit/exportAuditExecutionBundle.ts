@@ -164,6 +164,18 @@ function writeVerifyScript(absPath: string) {
     "",
     "function sha256(buf){return crypto.createHash('sha256').update(buf).digest('hex');}",
     "function sha256File(p){return sha256(fs.readFileSync(p));}",
+    "function stableJsonStringify(value){",
+    "  const stable=(v)=>{",
+    "    if(v===null||v===undefined) return v;",
+    "    if(Array.isArray(v)) return v.map(stable);",
+    "    if(typeof v!=='object') return v;",
+    "    const keys=Object.keys(v).sort();",
+    "    const out={};",
+    "    for(const k of keys) out[k]=stable(v[k]);",
+    "    return out;",
+    "  };",
+    "  return JSON.stringify(stable(value), null, 2) + '\\n';",
+    "}",
     "function toPosixRel(p){return String(p).replace(/\\\\/g,'/');}",
     "function listFilesRecursive(dirAbs){",
     "  const out=[];",
@@ -201,6 +213,7 @@ function writeVerifyScript(absPath: string) {
     "const root=path.resolve(process.cwd(),dirArg||'.');",
     "const hashesPath=path.join(root,'hashes.json');",
     "const manifestPath=path.join(root,'manifest.json');",
+    "const roothashPath=path.join(root,'roothash.txt');",
     "",
     "const result={",
     "  kind:'AuditBundleVerification',",
@@ -208,6 +221,9 @@ function writeVerifyScript(absPath: string) {
     "  bundle_root: toPosixRel(root),",
     "  execution_id:null,",
     "  schema_version:null,",
+    "  roothash_file: null,",
+    "  roothash_computed: null,",
+    "  roothash_ok: null,",
     "  files_expected:0,",
     "  files_checked:0,",
     "  missing:[],",
@@ -254,8 +270,24 @@ function writeVerifyScript(absPath: string) {
     "    for(const rel of expectedFiles) present.delete(rel);",
     "    // hashes.json is intentionally excluded from hashes",
     "    present.delete('hashes.json');",
+    "    // roothash.txt is an anchoring convenience and is NOT part of hashes.json",
+    "    present.delete('roothash.txt');",
     "    const extra = Array.from(present).sort((a,b)=>a.localeCompare(b));",
     "    if(extra.length) result.extra = extra;",
+    "  }",
+    "  if(fs.existsSync(roothashPath) && fs.statSync(roothashPath).isFile()){",
+    "    try{",
+    "      const file = String(fs.readFileSync(roothashPath,'utf8')||'').trim();",
+    "      result.roothash_file = file || null;",
+    "      const computed = sha256(Buffer.from(stableJsonStringify({ manifest, hashes }), 'utf8'));",
+    "      result.roothash_computed = computed;",
+    "      result.roothash_ok = (file && file.toLowerCase() === computed.toLowerCase()) ? true : false;",
+    "      if(file && result.roothash_ok === false){",
+    "        result.errors.push('roothash.txt mismatch');",
+    "      }",
+    "    }catch(e){",
+    "      result.errors.push('Failed to verify roothash.txt: '+String(e&&e.message||e));",
+    "    }",
     "  }",
     "  result.ok = result.errors.length===0 && result.missing.length===0 && result.mismatched.length===0 && (!strict || result.extra.length===0);",
     "  if(!jsonOnly){",
@@ -351,14 +383,15 @@ export async function exportAuditExecutionBundle(opts: { execution_id: string; r
   mkdirp(exportDirAbs);
 
   // Core bundle files
-  writeJsonFile(path.join(exportDirAbs, "manifest.json"), {
+  const manifest = {
     execution_id,
     plan_hash,
     started_at,
     finished_at,
     status,
     includes,
-  }, { redact: false });
+  };
+  writeJsonFile(path.join(exportDirAbs, "manifest.json"), manifest, { redact: false });
 
   writeJsonFile(path.join(exportDirAbs, "receipt.json"), receipt ?? { kind: "ReceiptNotFound", execution_id }, { redact });
 
@@ -441,6 +474,11 @@ export async function exportAuditExecutionBundle(opts: { execution_id: string; r
   }
 
   fs.writeFileSync(path.join(exportDirAbs, "hashes.json"), stableJsonStringify(hashes), "utf8");
+
+  // Root hash (hash-of-hashes) for easy anchoring.
+  // Intentionally written after hashes.json so roothash.txt is NOT included in hashes.json.
+  const rootHash = sha256(Buffer.from(stableJsonStringify({ manifest, hashes }), "utf8"));
+  fs.writeFileSync(path.join(exportDirAbs, "roothash.txt"), rootHash + "\n", "utf8");
 
   // Zip
   const zipAbs = generateUniquePath(path.join(baseRoot, `${rootName}.zip`));

@@ -15,11 +15,12 @@ function redact(obj: any, redactKeys: Set<string>): any {
 }
 
 export async function notionLiveGet(path: string) {
-  const base = process.env.NOTION_API_BASE || "https://api.notion.com";
-  const token = process.env.NOTION_TOKEN;
+  const env = process.env as Record<string, string | undefined>;
+  const base = env.NOTION_API_BASE || "https://api.notion.com";
+  const token = env.NOTION_TOKEN;
   if (!token) throw new Error("NOTION_TOKEN missing");
 
-  const version = process.env.NOTION_API_VERSION || "2022-06-28";
+  const version = env.NOTION_API_VERSION || "2022-06-28";
   const url = `${base}${path}`;
 
   const res = await fetch(url, {
@@ -32,15 +33,50 @@ export async function notionLiveGet(path: string) {
   });
 
   const raw = await res.json();
-  const redactKeys = new Set(
-    (process.env.NOTION_REDACT_KEYS || "")
+  const redactKeys = new Set<string>(
+    (env.NOTION_REDACT_KEYS || "")
       .split(",")
-      .map((s) => s.trim().toLowerCase())
+      .map((s: string) => s.trim().toLowerCase())
       .filter(Boolean)
   );
 
   return {
     http_status: res.status,
     redacted: redact(raw, redactKeys),
+  };
+}
+
+export async function notionLiveWhoAmI() {
+  const env = process.env as Record<string, string | undefined>;
+  const base = env.NOTION_API_BASE || "https://api.notion.com";
+  const token = env.NOTION_TOKEN;
+  if (!token) throw new Error("NOTION_TOKEN missing");
+
+  const version = env.NOTION_API_VERSION || "2022-06-28";
+  const url = `${base}/v1/users/me`;
+
+  const res = await fetch(url, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Notion-Version": version,
+      Accept: "application/json",
+    },
+  });
+
+  const raw = await res.json().catch(() => null);
+  const redactKeys = new Set<string>(
+    (env.NOTION_REDACT_KEYS || "")
+      .split(",")
+      .map((s: string) => s.trim().toLowerCase())
+      .filter(Boolean)
+  );
+
+  const redacted = redact(raw, redactKeys);
+
+  return {
+    http_status: res.status,
+    ok: res.status >= 200 && res.status < 300,
+    me: redacted,
   };
 }

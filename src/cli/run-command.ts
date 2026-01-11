@@ -48,6 +48,7 @@ import { emitSpeechBundle } from "../speech/emitSpeechBundle.js";
 import { speak, speakText } from "../speech/speak.js";
 import { exportAuditCourtPacket } from "../audit/exportAuditCourtPacket.js";
 import { exportAuditExecutionBundle } from "../audit/exportAuditExecutionBundle.js";
+import { applySecretsToProcessEnv, loadSecretsEnv } from "../clean/config.js";
 import {
   applyRequalificationCooldownWatcher,
   effectiveAutonomyModeForState,
@@ -277,6 +278,22 @@ function parseTemplateCommand(command: string):
     if (!argsText) throw new Error("Usage: /template run <name> <json_args>");
     return { kind: "TemplateRun", name, argsText };
   }
+
+  return null;
+}
+
+function parseNotionLiveDbCommand(command: string): { database_id: string } | null {
+  const trimmed = command.trim();
+  if (!/^\/notion\s+live\s+db\b/i.test(trimmed)) return null;
+
+  // Form 1: /notion live db <DATABASE_ID>
+  const m = trimmed.match(/^\/notion\s+live\s+db\s+(\S+)\s*$/i);
+  if (m?.[1]) return { database_id: String(m[1]) };
+
+  // Form 2: /notion live db {"database_id":"..."}
+  const payload = tryParseJsonArgTail(trimmed);
+  const database_id = typeof payload?.database_id === "string" ? payload.database_id.trim() : "";
+  if (database_id) return { database_id };
 
   return null;
 }
@@ -566,6 +583,15 @@ async function retryPlannerOnce(params: {
 }
 
 async function run() {
+  // Optional: load local secrets file (DO NOT COMMIT) to align with operator docs.
+  // Only fills missing/empty env vars; never overwrites existing values.
+  try {
+    const secrets = loadSecretsEnv(process.cwd());
+    applySecretsToProcessEnv(secrets);
+  } catch {
+    // ignore
+  }
+
   const threadId = process.env.THREAD_ID ?? "exec_live_001";
   const rawCommand = getArgCommand();
   const rawTrimmed = rawCommand.trim();
@@ -2016,13 +2042,23 @@ async function run() {
           }
           if (s?.action === "notion.live.read" && s.status === "success") {
             const notion_path = new URL(String(s.url)).pathname;
-            writeNotionLiveReadArtifact({
+            const file = writeNotionLiveReadArtifact({
               execution_id: overall.execution_id,
               step_id: s.step_id,
               notion_path,
               http_status: typeof s.http_status === "number" ? s.http_status : 0,
               response: s.response,
             });
+
+            // Surface emitted artifact paths inside phase artifacts for easy auditing.
+            // Step ids are phase-scoped as: "<phase_id>:<step_id>".
+            const phaseId = typeof s.step_id === "string" && s.step_id.includes(":")
+              ? s.step_id.split(":")[0]
+              : null;
+            if (phaseId && artifacts[phaseId]) {
+              if (!Array.isArray(artifacts[phaseId].files)) artifacts[phaseId].files = [];
+              artifacts[phaseId].files!.push(file);
+            }
           }
           if (typeof s?.action === "string" && s.action.startsWith("notion.write.") && s.status === "success") {
             writeNotionWriteArtifact({
@@ -2104,13 +2140,26 @@ async function run() {
         }
         if (s?.action === "notion.live.read" && s.status === "success") {
           const notion_path = new URL(String(s.url)).pathname;
-          writeNotionLiveReadArtifact({
+          const file = writeNotionLiveReadArtifact({
             execution_id: runLog.execution_id,
             step_id: s.step_id,
             notion_path,
             http_status: typeof s.http_status === "number" ? s.http_status : 0,
             response: s.response,
           });
+
+          const phaseId = typeof s.step_id === "string" && s.step_id.includes(":")
+            ? s.step_id.split(":")[0]
+            : null;
+          if (phaseId) {
+            const anyLog = runLog as any;
+            if (!anyLog.artifacts) anyLog.artifacts = {};
+            if (!anyLog.artifacts[phaseId]) {
+              anyLog.artifacts[phaseId] = { outputs: {}, files: [], metadata: { started_at: runLog.started_at, finished_at: runLog.finished_at ?? runLog.started_at } };
+            }
+            if (!Array.isArray(anyLog.artifacts[phaseId].files)) anyLog.artifacts[phaseId].files = [];
+            anyLog.artifacts[phaseId].files.push(file);
+          }
         }
         if (typeof s?.action === "string" && s.action.startsWith("notion.write.") && s.status === "success") {
           const planStep = Array.isArray((plan as any)?.steps)
@@ -2235,6 +2284,50 @@ async function run() {
     const materialized = substituteTemplateVars(entry.plan, vars);
     plannerOut = PlannerOutputSchema.parse(materialized);
     forwardedCommand = command;
+  }
+
+  // Local read-only fast-path: avoid requiring validator/planner webhooks for live Notion DB reads.
+  // Matches docs/operator-readonly-guide.md usage.
+  if (!plannerOut) {
+    const notionLiveDb = parseNotionLiveDbCommand(command);
+    if (notionLiveDb) {
+      const execution_id = `tier6_notion_live_db_${sanitizeExecutionIdPart(notionLiveDb.database_id)}_${Date.now()}`;
+      const plan = {
+        kind: "ExecutionPlan",
+        execution_id,
+        threadId,
+        dry_run: false,
+        goal: `Notion live read (database): ${notionLiveDb.database_id}`,
+        agent_versions: { validator: "1.2.0", planner: "1.1.3" },
+        assumptions: ["Generated by local CLI fast-path"],
+        required_secrets: [
+          { name: "NOTION_TOKEN", source: "env", notes: "Notion API token for live reads" },
+        ],
+        phases: [
+          {
+            phase_id: "read",
+            required_capabilities: ["notion.read.database"],
+            steps: [
+              {
+                step_id: "read-db",
+                action: "notion.live.read",
+                adapter: "NotionAdapter",
+                method: "GET",
+                read_only: true,
+                url: `https://api.notion.com/v1/databases/${notionLiveDb.database_id}`,
+                notion_path: `/v1/databases/${notionLiveDb.database_id}`,
+                headers: { "Cache-Control": "no-store" },
+                expects: { http_status: [200], json_paths_present: ["id", "properties"] },
+                idempotency_key: null,
+              },
+            ],
+          },
+        ],
+      };
+
+      plannerOut = PlannerOutputSchema.parse(plan);
+      forwardedCommand = command;
+    }
   }
 
   if (!plannerOut) {

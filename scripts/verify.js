@@ -35,6 +35,19 @@ function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, "utf8"));
 }
 
+function stableJsonStringify(value) {
+  const stable = (v) => {
+    if (v === null || v === undefined) return v;
+    if (Array.isArray(v)) return v.map(stable);
+    if (typeof v !== "object") return v;
+    const keys = Object.keys(v).sort();
+    const out = {};
+    for (const k of keys) out[k] = stable(v[k]);
+    return out;
+  };
+  return JSON.stringify(stable(value), null, 2) + "\n";
+}
+
 function toPosixRel(p) {
   return String(p).replace(/\\/g, "/");
 }
@@ -153,6 +166,7 @@ function verifyBundleDir(bundleDirAbs, opts) {
   const root = path.resolve(bundleDirAbs);
   const manifestPath = path.join(root, "manifest.json");
   const hashesPath = path.join(root, "hashes.json");
+  const roothashPath = path.join(root, "roothash.txt");
 
   const result = {
     kind: "AuditBundleVerification",
@@ -161,6 +175,9 @@ function verifyBundleDir(bundleDirAbs, opts) {
     bundle_root: toPosixRel(root),
     schema_version: null,
     manifest: null,
+    roothash_file: null,
+    roothash_computed: null,
+    roothash_ok: null,
     files_expected: 0,
     files_checked: 0,
     missing: [],
@@ -231,11 +248,28 @@ function verifyBundleDir(bundleDirAbs, opts) {
   if (opts?.strict) {
     const present = new Set(listFilesRecursive(root));
     // hashes.json is intentionally excluded from hashes
-    const allowExtra = new Set(["hashes.json"]);
+    const allowExtra = new Set(["hashes.json", "roothash.txt"]);
     for (const rel of expectedFiles) present.delete(rel);
     for (const rel of allowExtra) present.delete(rel);
     const extra = Array.from(present).sort((a, b) => a.localeCompare(b));
     if (extra.length) result.extra = extra;
+  }
+
+  // roothash.txt is an optional single-line anchor; if present, verify it matches
+  // sha256(stableJsonStringify({ manifest, hashes })).
+  if (fs.existsSync(roothashPath) && fs.statSync(roothashPath).isFile()) {
+    try {
+      const file = String(fs.readFileSync(roothashPath, "utf8") || "").trim();
+      result.roothash_file = file || null;
+      const computed = sha256Bytes(Buffer.from(stableJsonStringify({ manifest, hashes }), "utf8"));
+      result.roothash_computed = computed;
+      result.roothash_ok = file ? file.toLowerCase() === computed.toLowerCase() : false;
+      if (file && result.roothash_ok === false) {
+        result.errors.push("roothash.txt mismatch");
+      }
+    } catch (e) {
+      result.errors.push(`Failed to verify roothash.txt: ${String(e)}`);
+    }
   }
 
   result.ok =
@@ -297,10 +331,13 @@ async function main() {
 
   try {
     const st = fs.existsSync(inputAbs) ? fs.statSync(inputAbs) : null;
+    const lower = String(inputAbs).toLowerCase();
+    // Support collision-suffixed zips like ".../audit_exec_001.zip_2" (still treated as zip inputs).
+    const isZipLike = lower.endsWith(".zip") || /\.zip[_-]\d+$/.test(lower);
     if (st && st.isDirectory()) {
       inputKind = "dir";
       bundleDirAbs = inputAbs;
-    } else if (st && st.isFile() && inputAbs.toLowerCase().endsWith(".zip")) {
+    } else if (st && st.isFile() && isZipLike) {
       inputKind = "zip";
       tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "audit-verify-"));
       await extractZipToDir(inputAbs, tmpDir);

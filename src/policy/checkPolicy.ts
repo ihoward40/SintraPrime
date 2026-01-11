@@ -502,6 +502,36 @@ export function checkPolicyWithMeta(
       }
     }
 
+    // Tier-XX: Vendor docs capture is a separate evidence lane.
+    // It is deny-by-default and requires an explicit host allowlist.
+    const isDocsCaptureAction = action === "docs.capture" || action.startsWith("docs.capture.");
+    if (isDocsCaptureAction) {
+      const method = String(step.method || "GET").toUpperCase();
+      const readOnlyFlag = (step as any).read_only;
+
+      if (readOnlyFlag !== true) {
+        return withMeta(deny("DOCS_CAPTURE_REQUIRES_READ_ONLY", "docs.capture requires read_only=true"));
+      }
+
+      if (method !== "GET" && method !== "HEAD") {
+        return withMeta(deny("DOCS_CAPTURE_METHOD_NOT_ALLOWED", "docs.capture only allows GET/HEAD"));
+      }
+
+      const allowedHosts = parseCsv(env.DOCS_CAPTURE_ALLOWED_HOSTS);
+      if (!allowedHosts.length) {
+        return withMeta(
+          deny(
+            "DOCS_CAPTURE_HOST_NOT_ALLOWED",
+            "DOCS_CAPTURE_ALLOWED_HOSTS is not set (deny-by-default for docs capture)"
+          )
+        );
+      }
+
+      if (!allowedHosts.includes(url.hostname)) {
+        return withMeta(deny("DOCS_CAPTURE_HOST_NOT_ALLOWED", `host ${url.hostname} not allowlisted for docs capture`));
+      }
+    }
+
     // Tier 6.x: Notion has explicit read vs write lanes.
     // - Read is deny-only (Tier 6.0 contract)
     // - Write is approval-scoped (Tier 6.1), never auto-exec

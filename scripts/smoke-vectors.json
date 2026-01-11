@@ -74,6 +74,24 @@
     }
   },
   {
+    "name": "docs-capture-artifact-written",
+    "stage": "cli",
+    "command": "/docs capture http://localhost:8787/vendor/docs",
+    "env": {
+      "DOCS_CAPTURE_ALLOWED_HOSTS": "localhost",
+      "ALLOWED_DOMAINS": null,
+      "ALLOWED_METHODS": null,
+      "ENVIRONMENT": null,
+      "NODE_ENV": null,
+      "CONFIRM_PROD": null
+    },
+    "expect": { "status": "success" },
+    "post_assert": {
+      "artifact_dir": "runs/docs",
+      "contains_keys": ["url", "sha256_hex", "body_file", "byte_length"]
+    }
+  },
+  {
     "name": "phases-happy-path",
     "stage": "cli",
     "command": "/intake ./docs",

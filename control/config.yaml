@@ -1,0 +1,45 @@
+# SintraPrime Control Plane (local, auditable)
+# - OBSERVE reads inventories.
+# - PLAN proposes actions.
+# - APPLY executes only approved plans.
+
+run:
+  apply_mode: manual # manual|auto
+  protected:
+    slack_channels:
+      - "general"
+      - "random"
+
+notion:
+  enabled: true
+  archive:
+    stale_after_days: 180
+
+make:
+  enabled: false
+  taxonomy:
+    folders:
+      - "INTAKE"
+      - "PROCESS"
+      - "ACTION"
+      - "MONITOR"
+      - "ARCHIVE"
+
+slack:
+  enabled: true
+  # Additional protection beyond run.protected.slack_channels (both are honored).
+  protected_channel_names:
+    - "general"
+    - "random"
+  protected_channel_ids: []
+  naming:
+    allowed_prefixes:
+      - "ops-"
+      - "case-"
+      - "alerts-"
+      - "logs-"
+  archive:
+    # For MVP, Slack archival proposals trigger only for channels whose name starts with this prefix.
+    # Example: "archive-" or "old-".
+    name_prefix: "archive-"
+    stale_after_days: 180

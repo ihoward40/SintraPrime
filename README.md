@@ -10,6 +10,10 @@ Validator → Planner → Executor pipeline and receipt logging: [docs/agent-mod
 
 - Governance documents: [docs/governance/index.md](docs/governance/index.md)
 
+> **v1.0 is frozen for evidentiary use. No semantic changes permitted.**
+>
+> Freeze/fork procedure: [docs/governance/freeze-v1-fork-v2.md](docs/governance/freeze-v1-fork-v2.md)
+
 - **Current Governance Checkpoint:**  
   Phase X Lock v1.4 — Read-Only Analysis Integration  
   [phaseX-lock-v1.4](https://github.com/ihoward40/SintraPrime/releases/tag/phaseX-lock-v1.4)
