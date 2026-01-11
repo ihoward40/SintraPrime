@@ -1,8 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
-import { persistRun } from "../persist/persistRun.js";
-import type { ExecutionRunLog } from "../executor/executePlan.js";
 import {
   SCHEMA_VERSION,
   assertValid,
@@ -315,7 +313,7 @@ async function markRunRejected(execution_id: string, reason: string) {
   const threadId = isRecord(state.plan) && typeof (state.plan as any).threadId === "string" ? (state.plan as any).threadId : "exec_live_001";
   const plan_hash = typeof state.plan_hash === "string" ? state.plan_hash : null;
 
-  const runLog: ExecutionRunLog = {
+  const runLog = {
     execution_id,
     threadId,
     goal,
@@ -331,7 +329,9 @@ async function markRunRejected(execution_id: string, reason: string) {
     steps: [],
   };
 
-  await persistRun(runLog);
+  // Lazy import so read-only operator views do not require executor/planner modules.
+  const { persistRun } = await import("../persist/persistRun.js");
+  await persistRun(runLog as any);
 
   const out = { kind: "RunRejected" as const, execution_id, reason };
   return assertValid(RunRejectedSchema, out);

@@ -890,6 +890,44 @@
     }
   },
   {
+    "name": "tier13-5-scheduler-explain-at-smoke",
+    "stage": "cli",
+    "command": "/scheduler explain notion_tax_cases_daily_scan --at 2024-01-10T09:15:30Z",
+    "expect": {
+      "kind": "SchedulerExplain",
+      "job_id": "notion_tax_cases_daily_scan",
+      "would_run": true,
+      "decision": "ELIGIBLE",
+      "primary_reason": "ELIGIBLE"
+    },
+    "post_assert": {
+      "scheduler_explain": {
+        "job_id": "notion_tax_cases_daily_scan",
+        "at": "2024-01-10T09:15:30Z",
+        "reset_history": true,
+        "seed_budget_days": [{ "day": "2024-01-09", "count": 3 }],
+        "primary_reason": "ELIGIBLE",
+        "would_run": true
+      }
+    }
+  },
+  {
+    "name": "tier13-history-lists",
+    "stage": "cli",
+    "command": "/scheduler history notion_tax_cases_daily_scan",
+    "expect": {
+      "kind": "SchedulerHistory"
+    }
+  },
+  {
+    "name": "tier13-history-limit",
+    "stage": "cli",
+    "command": "/scheduler history notion_tax_cases_daily_scan --limit 1",
+    "expect": {
+      "count": 1
+    }
+  },
+  {
     "name": "tier14-policy-simulate-require-approval",
     "stage": "cli",
     "command": "/policy simulate /notion set pg_001 Status=Done",
@@ -951,6 +989,32 @@
     }
   },
   {
+    "name": "tier14-web-ui-selftest-operator-stats",
+    "stage": "cli",
+    "command": "/operator-ui web selftest --command /operator stats",
+    "expect_exit_code": 0,
+    "expect": {
+      "kind": "OperatorUiWebSelftest",
+      "ok": true,
+      "checks": {
+        "command_json_kind": "OperatorStats"
+      }
+    }
+  },
+  {
+    "name": "tier14-web-ui-selftest-operator-ui-stats",
+    "stage": "cli",
+    "command": "/operator-ui web selftest --command /operator-ui stats",
+    "expect_exit_code": 0,
+    "expect": {
+      "kind": "OperatorUiWebSelftest",
+      "ok": true,
+      "checks": {
+        "command_json_kind": "OperatorUiStats"
+      }
+    }
+  },
+  {
     "name": "tier15-policy-explain-known",
     "stage": "cli",
     "command": "/policy explain NOTION_LIVE_REQUIRES_READ_ONLY",
@@ -991,6 +1055,88 @@
           "runs/scheduler",
           "runs/scheduler-history"
         ]
+      }
+    }
+  },
+  {
+    "name": "tier15-audit-export-creates-bundle",
+    "stage": "cli",
+    "command": "/audit export {\"since_iso\":\"2025-01-01T00:00:00.000Z\",\"redact\":true,\"include_artifacts\":false}",
+    "expect_exit_code": 0,
+    "expect": {
+      "kind": "AuditExportResult"
+    },
+    "post_assert": {
+      "audit_export": {
+        "must_contain_files": [
+          "COVER.md",
+          "INDEX.md",
+          "EXHIBITS/A_receipts.jsonl",
+          "EXHIBITS/B_artifacts_list.json",
+          "EXHIBITS/C_approvals.json",
+          "EXHIBITS/D_policy_snapshot.json",
+          "EXHIBITS/E_constitution.md",
+          "HASHES/manifest.json",
+          "HASHES/manifest.sha256",
+          "VERIFY/verify.cjs",
+          "VERIFY/VERIFY_INSTRUCTIONS.md",
+          "REDACTION/redaction_rules.json"
+        ]
+      }
+    }
+  },
+  {
+    "name": "tier15-audit-export-verifier-ok",
+    "stage": "cli",
+    "command": "/audit export {\"since_iso\":\"2025-01-01T00:00:00.000Z\",\"redact\":true,\"include_artifacts\":false}",
+    "expect_exit_code": 0,
+    "expect": {
+      "kind": "AuditExportResult"
+    },
+    "post_assert": {
+      "audit_verify": true
+    }
+  },
+  {
+    "name": "tier15-1-audit-execution-export-happy",
+    "stage": "cli",
+    "command": "/audit export tier10_2-live-write-pauses_001",
+    "expect_exit_code": 0,
+    "expect": {
+      "kind": "AuditExecutionExportResult",
+      "schema_version": "15.1",
+      "execution_id": "tier10_2-live-write-pauses_001"
+    },
+    "post_assert": {
+      "audit_execution_export": {
+        "must_contain_files": [
+          "manifest.json",
+          "receipt.json",
+          "approvals.json",
+          "plan.json",
+          "policy.json",
+          "hashes.json",
+          "verify.js"
+        ],
+        "must_have_zip": true,
+        "verify_ok": true
+      }
+    }
+  },
+  {
+    "name": "tier15-1-audit-execution-export-tamper-detects",
+    "stage": "cli",
+    "command": "/audit export tier10_2-live-write-pauses_001",
+    "expect_exit_code": 0,
+    "expect": {
+      "kind": "AuditExecutionExportResult",
+      "schema_version": "15.1",
+      "execution_id": "tier10_2-live-write-pauses_001"
+    },
+    "post_assert": {
+      "audit_execution_tamper": {
+        "tamper_path": "receipt.json",
+        "verify_should_fail": true
       }
     }
   },
@@ -1633,7 +1779,16 @@
         "cause": "seeded",
         "since": "2024-12-01T00:00:00.000Z",
         "cooldown_until": null
-      }
+      },
+      "receipts_append": [
+        {
+          "execution_id": "tier23_seed_intake_scan_success_001",
+          "fingerprint": "intake.scan",
+          "kind": "success",
+          "status": "success",
+          "finished_at": "2024-12-31T23:00:00.000Z"
+        }
+      ]
     },
     "expect": {
       "status": "success"

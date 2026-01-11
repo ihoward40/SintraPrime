@@ -1,5 +1,9 @@
 # Agent Mode Engine
 
+## Agent Mode (API-only)
+
+Validator → Planner → Executor pipeline and receipt logging: [docs/agent-mode-executor-v1.md](docs/agent-mode-executor-v1.md)
+
 ## Governance
 
 ### Governance (Authoritative)
@@ -42,3 +46,11 @@ Speech is also artifact-backed for auditability:
 Example:
 
 - `set SPEECH_TIERS=S3,S5,S6` (Windows `cmd`)
+
+## Operator Fast UI (Tier-14)
+
+Local-only “thin skin” UI that reads `runs/` and forwards existing `/<command>` calls.
+
+- Start: `npx tsx src/cli/run-operator-ui.ts "/operator-ui web serve --port 3000"`
+- Open: <http://127.0.0.1:3000>
+- Selftest: `npx tsx src/cli/run-operator-ui.ts "/operator-ui web selftest"`

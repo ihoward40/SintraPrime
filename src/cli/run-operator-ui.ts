@@ -1,6 +1,7 @@
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { parseDomainPrefix } from "../domains/parseDomainPrefix.js";
+import { startOperatorUiServer } from "../operator-ui/server.js";
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return !!v && typeof v === "object" && !Array.isArray(v);
@@ -129,6 +130,8 @@ function parseOperatorUiCommand(command: string):
   | { kind: "Stats" }
   | { kind: "Job"; job_id: string }
   | { kind: "Simulate"; inner: string; flags: string[] }
+  | { kind: "WebServe"; port: number | null }
+  | { kind: "WebSelftest"; command: string }
   | null {
   const trimmed = String(command ?? "").trim();
   if (!/^\/operator-ui\b/i.test(trimmed)) return null;
@@ -168,6 +171,29 @@ function parseOperatorUiCommand(command: string):
       innerTokens.push(t);
     }
     return { kind: "Simulate", inner: innerTokens.join(" "), flags };
+  }
+
+  if (op === "web") {
+    const restTokens = tail.split(/\s+/).filter(Boolean);
+    const sub = (restTokens[0] || "serve").toLowerCase();
+
+    if (sub === "serve") {
+      const portMatch = tail.match(/--port\s+(\d+)/i);
+      const port = portMatch?.[1] ? Number(portMatch[1]) : null;
+      if (port !== null && (!Number.isFinite(port) || port <= 0 || port >= 65536)) {
+        throw new Error("Usage: /operator-ui web serve [--port <1-65535>]");
+      }
+      return { kind: "WebServe", port };
+    }
+
+    if (sub === "selftest") {
+      const cmdMatch = tail.match(/--command\s+([\s\S]+)$/i);
+      const cmd = String(cmdMatch?.[1] || "/operator stats").trim();
+      if (!cmd.startsWith("/")) throw new Error("Usage: /operator-ui web selftest [--command /...]");
+      return { kind: "WebSelftest", command: cmd };
+    }
+
+    throw new Error("Usage: /operator-ui web serve [--port <1-65535>] | /operator-ui web selftest [--command /...]");
   }
 
   return null;
@@ -216,6 +242,88 @@ function asOperatorQueue(json: unknown): any {
         )
       );
       process.exitCode = 0;
+      return;
+    }
+
+    if (parsed.kind === "WebServe") {
+      const handle = await startOperatorUiServer({ port: parsed.port ?? undefined });
+      console.log(
+        JSON.stringify(
+          {
+            kind: "OperatorUiWebServer",
+            generated_at: nowIso(),
+            port: handle.port,
+            url: `http://127.0.0.1:${handle.port}/`,
+          },
+          null,
+          2
+        )
+      );
+
+      // Keep process alive until terminated.
+      await new Promise(() => {
+        // intentionally never resolves
+      });
+      await handle.close();
+      process.exitCode = 0;
+      return;
+    }
+
+    if (parsed.kind === "WebSelftest") {
+      const handle = await startOperatorUiServer({ port: 0 });
+      const baseUrl = `http://127.0.0.1:${handle.port}`;
+
+      const checks: Record<string, any> = {};
+      try {
+        const html = await (await fetch(`${baseUrl}/`)).text();
+        checks.static_ok = html.includes("Operator Console");
+
+        const approvals = (await (await fetch(`${baseUrl}/api/approvals`)).json()) as any;
+        checks.approvals_kind = approvals?.kind;
+
+        const receipts = (await (await fetch(`${baseUrl}/api/receipts?limit=1`)).json()) as any;
+        checks.receipts_kind = receipts?.kind;
+
+        const artifacts = (await (await fetch(`${baseUrl}/api/artifacts?prefix=runs&limit=1`)).json()) as any;
+        checks.artifacts_kind = artifacts?.kind;
+
+        const cmdRes = (await (
+          await fetch(`${baseUrl}/api/command`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Accept": "application/json" },
+            body: JSON.stringify({ message: parsed.command }),
+          })
+        ).json()) as any;
+        checks.command_kind = cmdRes?.kind;
+        checks.command_exit = cmdRes?.exitCode;
+        checks.command_json_kind = cmdRes?.json?.kind ?? null;
+
+        const ok =
+          checks.static_ok === true &&
+          checks.approvals_kind === "ApprovalsList" &&
+          checks.receipts_kind === "ReceiptsTail" &&
+          checks.artifacts_kind === "ArtifactsList" &&
+          checks.command_kind === "OperatorUiCommandResult" &&
+          checks.command_exit === 0;
+
+        console.log(
+          JSON.stringify(
+            {
+              kind: "OperatorUiWebSelftest",
+              generated_at: nowIso(),
+              ok,
+              baseUrl,
+              command: parsed.command,
+              checks,
+            },
+            null,
+            2
+          )
+        );
+        process.exitCode = ok ? 0 : 1;
+      } finally {
+        await handle.close();
+      }
       return;
     }
 

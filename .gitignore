@@ -5,6 +5,16 @@ dist/
 runs/
 tmp/
 
+# Local editor settings
+.vscode/
+
+# Generated audit exports (non-authoritative)
+exports/
+
+# Smoke runner logs
+.smoke*.log
+.smoke*.txt
+
 # Local CI outputs (non-authoritative)
 logs/
 artifacts/

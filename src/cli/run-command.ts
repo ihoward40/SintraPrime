@@ -46,6 +46,8 @@ import { recommendPromotions } from "../autonomy/promotionRecommend.js";
 import { writePromotionCandidatesArtifact } from "../artifacts/writePromotionCandidatesArtifact.js";
 import { emitSpeechBundle } from "../speech/emitSpeechBundle.js";
 import { speak, speakText } from "../speech/speak.js";
+import { exportAuditCourtPacket } from "../audit/exportAuditCourtPacket.js";
+import { exportAuditExecutionBundle } from "../audit/exportAuditExecutionBundle.js";
 import {
   applyRequalificationCooldownWatcher,
   effectiveAutonomyModeForState,
@@ -670,6 +672,140 @@ async function run() {
         0
       )
     );
+    return;
+  }
+
+  // Tier-15: deterministic audit export (court packet)
+  // Usage: /audit export {"since_iso":"2025-01-01T00:00:00.000Z","redact":true,"include_artifacts":false}
+  if (/^\/audit\s+export\b/i.test(command.trim())) {
+    // Back-compat: if the tail is JSON, keep the Tier-15 court packet.
+    // New: if the tail is a single token, treat it as an execution_id for Tier-15.1.
+
+    const trimmed = command.trim();
+    const hasBrace = trimmed.includes("{");
+    if (!hasBrace) {
+      const m = trimmed.match(/^\/audit\s+export\s+(\S+)\s*$/i);
+      const execution_id = m?.[1] ? String(m[1]) : "";
+
+      if (!execution_id) {
+        process.stdout.write(
+          JSON.stringify(
+            {
+              kind: "NeedInput",
+              schema_version: "15.1",
+              reason: "Missing required execution_id",
+              expected: {
+                execution_id: "string (e.g. exec_123)",
+              },
+            },
+            null,
+            0
+          )
+        );
+        return;
+      }
+
+      try {
+        const out = await exportAuditExecutionBundle({ execution_id, redact: true });
+        process.stdout.write(JSON.stringify(out, null, 0));
+      } catch (err: any) {
+        process.exitCode = 1;
+        process.stdout.write(
+          JSON.stringify(
+            {
+              kind: "AuditExportError",
+              message: String(err?.message ?? err),
+            },
+            null,
+            0
+          )
+        );
+      }
+      return;
+    }
+
+    const payload = tryParseJsonArgTail(command);
+    if (hasBrace && !payload) {
+      process.stdout.write(
+        JSON.stringify(
+          {
+            kind: "NeedInput",
+            schema_version: "15.0",
+            reason: "Invalid JSON payload for /audit export",
+            expected: {
+              since_iso: "ISO timestamp string (required)",
+              redact: "boolean (default true)",
+              include_artifacts: "boolean (default true)",
+            },
+          },
+          null,
+          0
+        )
+      );
+      return;
+    }
+
+    const since_iso =
+      typeof payload?.since_iso === "string"
+        ? payload.since_iso
+        : typeof payload?.since === "string"
+          ? payload.since
+          : null;
+
+    if (!since_iso) {
+      process.stdout.write(
+        JSON.stringify(
+          {
+            kind: "NeedInput",
+            schema_version: "15.0",
+            reason: "Missing required field since_iso",
+            expected: {
+              since_iso: "ISO timestamp string",
+              redact: "boolean (default true)",
+              include_artifacts: "boolean (default true)",
+            },
+          },
+          null,
+          0
+        )
+      );
+      return;
+    }
+
+    const redact = payload?.redact === false ? false : true;
+    const include_artifacts = payload?.include_artifacts === false ? false : true;
+    if (!redact && process.env.ALLOW_UNREDACTED_AUDIT_EXPORT !== "1") {
+      process.exitCode = 3;
+      process.stdout.write(
+        JSON.stringify(
+          {
+            kind: "PolicyDenied",
+            code: "AUDIT_EXPORT_REDACTION_REQUIRED",
+            reason: "Unredacted audit exports are disabled by default. Set ALLOW_UNREDACTED_AUDIT_EXPORT=1 to override.",
+          },
+          null,
+          0
+        )
+      );
+      return;
+    }
+
+    try {
+      const out = exportAuditCourtPacket({ since_iso, redact, include_artifacts });
+      process.stdout.write(JSON.stringify(out, null, 0));
+    } catch (err: any) {
+      process.exitCode = 1;
+      process.stdout.write(
+        JSON.stringify(
+          {
+            kind: "AuditExportError",
+            message: String(err?.message ?? err),
+          },
+          null,
+          0
+        )
+      );
+    }
     return;
   }
 

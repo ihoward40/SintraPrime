@@ -12,6 +12,7 @@
     "dev": "tsx src/cli/run-command.ts",
     "start": "node dist/cli/run-command.js",
     "smoke": "node ./scripts/smoke.js",
+    "smoke:local": "node ./scripts/smoke-local.js",
     "smoke:trim": "node ./scripts/smoke.js | node ./scripts/trim-output.js",
     "smoke:vectors": "node ./scripts/smoke-vectors.js",
     "smoke:vectors:trim": "node ./scripts/smoke-vectors.js | node ./scripts/trim-output.js",
@@ -19,9 +20,16 @@
     "autonomy": "node --loader tsx ./src/cli/run-autonomy.ts",
     "demo:visual-browser": "node ./scripts/visual-browser-demo/demo.mjs",
     "pdf:render": "node ./scripts/pdf/render-court-pdf.mjs",
-    "pdf:append": "node ./scripts/pdf/append-pdf.mjs"
+    "pdf:append": "node ./scripts/pdf/append-pdf.mjs",
+    "ui:server": "node ./ui/server.js",
+    "ui:client": "npm --prefix ui/client run dev",
+    "ui:build": "npm --prefix ui/client run build",
+    "verify:audit": "node ./scripts/verify.js"
   },
   "dependencies": {
+    "express": "^4.21.2",
+    "yazl": "^3.2.0",
+    "yauzl": "^2.10.0",
     "rrule": "^2.8.1",
     "zod": "^3.25.0"
   },

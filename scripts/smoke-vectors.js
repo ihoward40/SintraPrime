@@ -708,6 +708,63 @@ function seedConfidenceFixturesIfNeeded(vector, command) {
   );
 }
 
+function seedReceiptFixturesIfNeeded(vector) {
+  const pre = vector?.precondition;
+  if (!pre || typeof pre !== "object") return;
+
+  const items = pre.receipts_append;
+  if (!Array.isArray(items) || items.length === 0) return;
+
+  const receiptsPath = path.join(process.cwd(), "runs", "receipts.jsonl");
+  fs.mkdirSync(path.dirname(receiptsPath), { recursive: true });
+  const existing = fs.existsSync(receiptsPath) ? fs.readFileSync(receiptsPath, "utf8") : "";
+  const existingLines = existing.split(/\r?\n/).filter(Boolean);
+
+  const hasExecId = (execId) => {
+    if (!execId) return false;
+    return existingLines.some((l) => {
+      try {
+        return JSON.parse(l)?.execution_id === execId;
+      } catch {
+        return false;
+      }
+    });
+  };
+
+  for (const item of items) {
+    if (!item || typeof item !== "object") continue;
+    const fingerprint = String(item.fingerprint ?? "").trim();
+    if (!fingerprint) continue;
+
+    const execution_id = String(item.execution_id ?? "").trim() || `seed_${fingerprint}_${Date.now()}`;
+    if (hasExecId(execution_id)) continue;
+
+    const status = String(item.status ?? "success").trim() || "success";
+    const kind = typeof item.kind === "string" && item.kind.trim() ? item.kind.trim() : "success";
+    const started_at = typeof item.started_at === "string" && item.started_at.trim() ? item.started_at.trim() : null;
+    const finished_at = typeof item.finished_at === "string" && item.finished_at.trim() ? item.finished_at.trim() : null;
+    const created_at = typeof item.created_at === "string" && item.created_at.trim() ? item.created_at.trim() : null;
+
+    const line = JSON.stringify(
+      {
+        execution_id,
+        threadId,
+        fingerprint,
+        kind,
+        status,
+        ...(created_at ? { created_at } : null),
+        ...(started_at ? { started_at } : null),
+        ...(finished_at ? { finished_at } : null),
+      },
+      null,
+      0
+    );
+
+    fs.appendFileSync(receiptsPath, line + "\n", { encoding: "utf8" });
+    existingLines.push(line);
+  }
+}
+
 function seedExec123FixtureIfNeeded(command) {
   const trimmed = String(command ?? "").trim();
   const isReject = /^\/queue\s+reject\s+exec_123\b/i.test(trimmed);
@@ -1321,6 +1378,31 @@ function readLastReceiptLine() {
   return JSON.parse(lines[lines.length - 1]);
 }
 
+function readReceiptLinesRaw() {
+  const file = path.join(process.cwd(), "runs", "receipts.jsonl");
+  const text = fs.existsSync(file) ? fs.readFileSync(file, "utf8") : "";
+  return text.split(/\r?\n/).filter(Boolean);
+}
+
+function getReceiptLineCount() {
+  return readReceiptLinesRaw().length;
+}
+
+function readReceiptsSinceLineCount(startLineCount) {
+  const start = Math.max(0, Number(startLineCount) || 0);
+  const lines = readReceiptLinesRaw();
+  const slice = lines.slice(start);
+  const out = [];
+  for (const line of slice) {
+    try {
+      out.push(JSON.parse(line));
+    } catch {
+      // ignore malformed
+    }
+  }
+  return out;
+}
+
 function readLastReceiptForExecutionId(executionId) {
   const id = String(executionId ?? "").trim();
   if (!id) return null;
@@ -1416,6 +1498,26 @@ if (process.env.STRICT_AGENT_OUTPUT === "1") {
 }
 
 const mockServerProc = await startLocalMockServerIfNeeded();
+const localMockBaseUrl = getLocalMockBaseUrl();
+
+// Ensure the smoke suite is repeatable across runs by clearing cross-run state.
+// (Per-vector cleanup below intentionally does NOT remove approvals/receipts,
+// because some vectors depend on the previous vector within the same run.)
+try {
+  fs.rmSync(path.join(process.cwd(), "runs", "approvals"), { recursive: true, force: true });
+} catch {
+  // ignore
+}
+try {
+  fs.rmSync(path.join(process.cwd(), "runs", "prestate"), { recursive: true, force: true });
+} catch {
+  // ignore
+}
+try {
+  fs.rmSync(path.join(process.cwd(), "runs", "receipts.jsonl"), { force: true });
+} catch {
+  // ignore
+}
 
 function getWebhookUrlForStage(stage) {
   if (stage === "validation") return process.env.VALIDATION_WEBHOOK_URL || process.env.WEBHOOK_URL;
@@ -1439,7 +1541,7 @@ try {
 
 for (const v of vectors) {
   const name = v?.name;
-  const command = v?.command;
+  let command = v?.command;
   const expect = v?.expect;
   const stage = v?.stage;
   const repeat = Number.isFinite(Number(v?.repeat)) ? Math.max(1, Number(v.repeat)) : 1;
@@ -1468,7 +1570,10 @@ for (const v of vectors) {
       // Ensure per-vector env isolation for test-only planner override injection.
       // Without this, ambient env vars can cause the CLI to attempt planner override
       // when the vector did not request it.
-      const baseEnv = vectorEnv && typeof vectorEnv === "object" ? { ...vectorEnv } : {};
+      const baseEnvRaw = vectorEnv && typeof vectorEnv === "object" ? { ...vectorEnv } : {};
+      // If the local mock server did not bind to 8787 (e.g. port busy), rewrite
+      // any hardcoded localhost:8787 URLs in env/command to the actual base URL.
+      const baseEnv = localMockBaseUrl ? rewriteLocalhost8787Urls(baseEnvRaw, localMockBaseUrl) : baseEnvRaw;
       let effectiveVectorEnv = baseEnv;
 
       // Ensure ambient shell env doesn't change smoke expectations.
@@ -1483,13 +1588,15 @@ for (const v of vectors) {
         baseEnv.AUTONOMY_MODE = null;
       }
 
+      // Apply the same URL rewriting to the command string.
+      command = localMockBaseUrl ? rewriteLocalhost8787Urls(command, localMockBaseUrl) : command;
+
       if (plannerOverride !== undefined) {
         baseEnv.ALLOW_PLANNER_OVERRIDE = "1";
-        const baseUrl = getLocalMockBaseUrl();
         const rewritten = rewriteLocalhost8787Urls(
           // clone to avoid mutating the vector object
           JSON.parse(JSON.stringify(plannerOverride)),
-          baseUrl
+          localMockBaseUrl
         );
         baseEnv.PLANNER_OVERRIDE_JSON = JSON.stringify(rewritten);
       } else {
@@ -1540,6 +1647,7 @@ for (const v of vectors) {
           // ignore
         }
 
+        seedReceiptFixturesIfNeeded(v);
         seedConfidenceFixturesIfNeeded(v, command);
 
         resetSchedulerHistoryForVectorIfNeeded(v);
@@ -1556,11 +1664,15 @@ for (const v of vectors) {
         const noWritesPaths = postAssert?.no_writes?.paths;
         const beforeWrites = Array.isArray(noWritesPaths) ? snapshotPaths(noWritesPaths) : null;
 
+        const receiptsBefore = getReceiptLineCount();
+
         let out = null;
         for (let i = 0; i < repeat; i += 1) {
           out = runCli(command);
         }
         if (!out) throw new Error("repeat produced no output");
+
+        const getNewReceipts = () => readReceiptsSinceLineCount(receiptsBefore);
 
         const afterWrites = Array.isArray(noWritesPaths) ? snapshotPaths(noWritesPaths) : null;
         const gotJson = out.json;
@@ -1627,19 +1739,82 @@ for (const v of vectors) {
         }
 
         if (postAssert?.receipt_subset) {
-          const expectedExecutionId =
-            postAssert.receipt_subset && typeof postAssert.receipt_subset === "object"
-              ? postAssert.receipt_subset.execution_id
+          const expectedSubset = postAssert.receipt_subset;
+
+          const explicitExecutionId =
+            expectedSubset && typeof expectedSubset === "object"
+              ? expectedSubset.execution_id
               : null;
 
-          const receipt = typeof expectedExecutionId === "string" && expectedExecutionId.trim()
-            ? readLastReceiptForExecutionId(expectedExecutionId)
-            : readLastReceiptLine();
+          const inferredExecutionId =
+            typeof explicitExecutionId === "string" && explicitExecutionId.trim()
+              ? explicitExecutionId
+              : typeof v?.planner_override?.execution_id === "string" && v.planner_override.execution_id.trim()
+                ? v.planner_override.execution_id
+                : typeof v?.expect?.execution_id === "string" && v.expect.execution_id.trim()
+                  ? v.expect.execution_id
+                  : typeof gotJson?.execution_id === "string" && gotJson.execution_id.trim()
+                    ? gotJson.execution_id
+                    : null;
+
+          const expectedKind =
+            expectedSubset && typeof expectedSubset === "object" && typeof expectedSubset.kind === "string"
+              ? expectedSubset.kind.trim()
+              : null;
+          const effectiveExecutionId =
+            // If the expected receipt kind is NOT the main RunReceipt, the receipt we're
+            // asserting about may have a different execution_id than the CLI response.
+            // Only anchor on execution_id when it is explicitly requested, or when we're
+            // asserting against the main run receipt.
+            typeof explicitExecutionId === "string" && explicitExecutionId.trim()
+              ? explicitExecutionId
+              : expectedKind && expectedKind !== "RunReceipt"
+                ? null
+                : inferredExecutionId;
+
+          const waitForMatchingNewReceipt = async () => {
+            const deadline = Date.now() + 8000;
+            while (Date.now() < deadline) {
+              const newReceipts = getNewReceipts();
+
+              if (typeof effectiveExecutionId === "string" && effectiveExecutionId.trim()) {
+                const id = effectiveExecutionId.trim();
+                for (let i = newReceipts.length - 1; i >= 0; i -= 1) {
+                  const r = newReceipts[i];
+                  if (r?.execution_id !== id) continue;
+                  if (deepSubsetMatch(r, expectedSubset)) return { receipt: r, newReceipts };
+                  return { receipt: r, newReceipts };
+                }
+              } else {
+                // No execution_id available: require the expected subset to match a receipt
+                // emitted during *this* vector run.
+                for (let i = newReceipts.length - 1; i >= 0; i -= 1) {
+                  const r = newReceipts[i];
+                  if (deepSubsetMatch(r, expectedSubset)) return { receipt: r, newReceipts };
+                }
+              }
+
+              await sleep(75);
+            }
+            return { receipt: null, newReceipts: getNewReceipts() };
+          };
+
+          const waited = await waitForMatchingNewReceipt();
+          const receipt = waited.receipt
+            ? waited.receipt
+            : typeof effectiveExecutionId === "string" && effectiveExecutionId.trim()
+              ? readLastReceiptForExecutionId(effectiveExecutionId)
+              : readLastReceiptLine();
           if (!receipt) {
             throw new Error("[POST_ASSERT] No receipt found");
           }
-          if (!deepSubsetMatch(receipt, postAssert.receipt_subset)) {
-            throw new Error("[POST_ASSERT] Receipt did not match expected subset");
+          if (!deepSubsetMatch(receipt, expectedSubset)) {
+            const preview = JSON.stringify(
+              { expected: expectedSubset, got: receipt },
+              null,
+              2
+            ).slice(0, 1200);
+            throw new Error(`[POST_ASSERT] Receipt did not match expected subset. Preview: ${preview}`);
           }
         }
 
@@ -1774,6 +1949,132 @@ for (const v of vectors) {
               if (!fs.existsSync(p)) {
                 throw new Error(`[POST_ASSERT] scheduler_explain: evidence path missing: ${evidence}`);
               }
+            }
+          }
+        }
+
+        if (postAssert?.audit_export && typeof postAssert.audit_export === "object") {
+          const cfg = postAssert.audit_export;
+          if (!isObject(gotJson) || gotJson.kind !== "AuditExportResult") {
+            throw new Error("[POST_ASSERT] audit_export: response kind is not AuditExportResult");
+          }
+          const exportDir = typeof gotJson.export_dir === "string" ? gotJson.export_dir : null;
+          if (!exportDir) throw new Error("[POST_ASSERT] audit_export: missing export_dir");
+          const absExport = path.resolve(process.cwd(), exportDir);
+          if (!fs.existsSync(absExport)) {
+            throw new Error(`[POST_ASSERT] audit_export: export_dir not found: ${exportDir}`);
+          }
+          if (Array.isArray(cfg.must_contain_files)) {
+            for (const rel of cfg.must_contain_files) {
+              const p = path.join(absExport, String(rel).replace(/\\/g, "/"));
+              if (!fs.existsSync(p)) {
+                throw new Error(`[POST_ASSERT] audit_export: missing file in bundle: ${rel}`);
+              }
+            }
+          }
+        }
+
+        if (postAssert?.audit_verify) {
+          if (!isObject(gotJson) || gotJson.kind !== "AuditExportResult") {
+            throw new Error("[POST_ASSERT] audit_verify: requires AuditExportResult response");
+          }
+          const exportDir = typeof gotJson.export_dir === "string" ? gotJson.export_dir : null;
+          if (!exportDir) throw new Error("[POST_ASSERT] audit_verify: missing export_dir");
+          const absExport = path.resolve(process.cwd(), exportDir);
+
+          const proc = spawnSync(process.execPath, ["VERIFY/verify.cjs", "."], {
+            cwd: absExport,
+            encoding: "utf8",
+          });
+          if (proc.status !== 0) {
+            throw new Error(
+              `[POST_ASSERT] audit_verify: verifier failed (exit=${proc.status}) stderr=${String(proc.stderr || "").slice(0, 500)}`
+            );
+          }
+        }
+
+        if (postAssert?.audit_execution_export && typeof postAssert.audit_execution_export === "object") {
+          const cfg = postAssert.audit_execution_export;
+          if (!isObject(gotJson) || gotJson.kind !== "AuditExecutionExportResult") {
+            throw new Error("[POST_ASSERT] audit_execution_export: response kind is not AuditExecutionExportResult");
+          }
+
+          const exportDir = typeof gotJson.export_dir === "string" ? gotJson.export_dir : null;
+          if (!exportDir) throw new Error("[POST_ASSERT] audit_execution_export: missing export_dir");
+          const absExport = path.resolve(process.cwd(), exportDir);
+          if (!fs.existsSync(absExport)) {
+            throw new Error(`[POST_ASSERT] audit_execution_export: export_dir not found: ${exportDir}`);
+          }
+
+          if (Array.isArray(cfg.must_contain_files)) {
+            for (const rel of cfg.must_contain_files) {
+              const p = path.join(absExport, String(rel).replace(/\\/g, "/"));
+              if (!fs.existsSync(p)) {
+                throw new Error(`[POST_ASSERT] audit_execution_export: missing file in bundle: ${rel}`);
+              }
+            }
+          }
+
+          if (cfg.must_have_zip === true) {
+            const zipPath = typeof gotJson.zip_path === "string" ? gotJson.zip_path : null;
+            if (!zipPath) throw new Error("[POST_ASSERT] audit_execution_export: missing zip_path");
+            const absZip = path.resolve(process.cwd(), zipPath);
+            if (!fs.existsSync(absZip)) {
+              throw new Error(`[POST_ASSERT] audit_execution_export: zip not found: ${zipPath}`);
+            }
+          }
+
+          if (cfg.verify_ok === true) {
+            const proc = spawnSync(process.execPath, ["verify.js"], {
+              cwd: absExport,
+              encoding: "utf8",
+            });
+            if (proc.status !== 0) {
+              throw new Error(
+                `[POST_ASSERT] audit_execution_export: verify.js failed (exit=${proc.status}) stderr=${String(proc.stderr || "").slice(0, 500)}`
+              );
+            }
+          }
+        }
+
+        if (postAssert?.audit_execution_tamper && typeof postAssert.audit_execution_tamper === "object") {
+          const cfg = postAssert.audit_execution_tamper;
+          if (!isObject(gotJson) || gotJson.kind !== "AuditExecutionExportResult") {
+            throw new Error("[POST_ASSERT] audit_execution_tamper: requires AuditExecutionExportResult response");
+          }
+
+          const exportDir = typeof gotJson.export_dir === "string" ? gotJson.export_dir : null;
+          if (!exportDir) throw new Error("[POST_ASSERT] audit_execution_tamper: missing export_dir");
+          const absExport = path.resolve(process.cwd(), exportDir);
+          if (!fs.existsSync(absExport)) {
+            throw new Error(`[POST_ASSERT] audit_execution_tamper: export_dir not found: ${exportDir}`);
+          }
+
+          const tamperRel = typeof cfg.tamper_path === "string" ? cfg.tamper_path : null;
+          if (!tamperRel) throw new Error("[POST_ASSERT] audit_execution_tamper: missing tamper_path");
+          const tamperAbs = path.join(absExport, tamperRel.replace(/\\/g, "/"));
+          if (!fs.existsSync(tamperAbs)) {
+            throw new Error(`[POST_ASSERT] audit_execution_tamper: tamper_path not found: ${tamperRel}`);
+          }
+
+          // Mutate the file deterministically so hashes.json no longer matches.
+          const original = fs.readFileSync(tamperAbs);
+          fs.writeFileSync(tamperAbs, Buffer.concat([original, Buffer.from("\n ", "utf8")]));
+
+          const proc = spawnSync(process.execPath, ["verify.js"], {
+            cwd: absExport,
+            encoding: "utf8",
+          });
+
+          if (cfg.verify_should_fail === true) {
+            if (proc.status === 0) {
+              throw new Error("[POST_ASSERT] audit_execution_tamper: expected verify.js to fail, but it succeeded");
+            }
+          } else {
+            if (proc.status !== 0) {
+              throw new Error(
+                `[POST_ASSERT] audit_execution_tamper: verify.js failed unexpectedly (exit=${proc.status}) stderr=${String(proc.stderr || "").slice(0, 500)}`
+              );
             }
           }
         }
