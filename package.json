@@ -17,6 +17,7 @@
     "smoke:vectors:trim": "node ./scripts/smoke-vectors.js | node ./scripts/trim-output.js",
     "mock:server": "node ./scripts/mock-server.js",
     "autonomy": "node --loader tsx ./src/cli/run-autonomy.ts",
+    "demo:visual-browser": "node ./scripts/visual-browser-demo/demo.mjs",
     "pdf:render": "node ./scripts/pdf/render-court-pdf.mjs",
     "pdf:append": "node ./scripts/pdf/append-pdf.mjs"
   },
@@ -28,6 +29,7 @@
     "@types/node": "^22.10.0",
     "markdown-it": "^14.1.0",
     "pdf-lib": "^1.17.1",
+    "playwright": "^1.57.0",
     "puppeteer": "^23.11.1",
     "rimraf": "^6.0.1",
     "tsx": "^4.19.2",

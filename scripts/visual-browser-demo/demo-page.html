@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SintraPrime Visual Browser Demo (Offline)</title>
+  <style>
+    :root { color-scheme: light; }
+    body {
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      margin: 0;
+      padding: 32px;
+      background: #fafafa;
+      color: #111;
+    }
+    .card {
+      max-width: 900px;
+      margin: 0 auto;
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+    }
+    h1 { margin: 0 0 8px 0; font-size: 20px; }
+    p { margin: 0 0 16px 0; color: #333; }
+    .row { display: flex; gap: 10px; }
+    input {
+      flex: 1;
+      font-size: 16px;
+      padding: 10px 12px;
+      border: 1px solid #aaa;
+      border-radius: 8px;
+    }
+    button {
+      font-size: 16px;
+      padding: 10px 14px;
+      border: 1px solid #222;
+      border-radius: 8px;
+      background: #111;
+      color: #fff;
+      cursor: pointer;
+    }
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
+    .meta {
+      margin-top: 14px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Courier New", monospace;
+      font-size: 12px;
+      color: #444;
+    }
+    ul { margin: 14px 0 0 20px; padding: 0; }
+    li { margin: 6px 0; }
+    .badge {
+      display: inline-block;
+      border: 1px solid #999;
+      border-radius: 999px;
+      padding: 2px 10px;
+      font-size: 12px;
+      margin-left: 8px;
+      color: #333;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Visual Browser Demo (Offline)</h1>
+    <p>
+      This page exists only to demonstrate a headed browser session with deliberate, human-paced actions.
+      <span class="badge">no network</span>
+    </p>
+
+    <div class="row">
+      <input id="q" name="q" type="text" placeholder="Type a query…" autocomplete="off" />
+      <button id="go" type="button">Search</button>
+    </div>
+
+    <div class="meta" id="meta"></div>
+    <ul id="results"></ul>
+  </div>
+
+  <script>
+    const q = document.getElementById('q');
+    const go = document.getElementById('go');
+    const results = document.getElementById('results');
+    const meta = document.getElementById('meta');
+
+    function nowIso() {
+      return new Date().toISOString();
+    }
+
+    function render(query) {
+      results.innerHTML = '';
+      const items = [
+        `Result: "${query}" (example)`,
+        `Evidence: you saw real typing/clicking`,
+        `Artifact: optional video/HAR output`,
+      ];
+      for (const item of items) {
+        const li = document.createElement('li');
+        li.textContent = item;
+        results.appendChild(li);
+      }
+      meta.textContent = `rendered_at=${nowIso()} query=${JSON.stringify(query)}`;
+    }
+
+    function run() {
+      const query = String(q.value || '').trim();
+      if (!query) return;
+      render(query);
+    }
+
+    go.addEventListener('click', run);
+    q.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') run();
+    });
+
+    q.focus();
+  </script>
+</body>
+</html>
