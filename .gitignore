@@ -28,3 +28,14 @@ governance/slack-workflows/workflows-report.json
 
 # Phase X runtime output
 governance/freeze/phaseX.roothash.txt
+
+# Drafts & scratch (non-authoritative)
+docs/governance/drafts/
+
+# Local/non-release policy appendix renders (keep audit surface tight)
+releases/policy-appendix/watch-mode/v1.0.1/
+releases/policy-appendix/watch-mode/v1.0.0/SintraPrime_Policy_Appendix_Watch_Mode_with_Diagram.pdf
+releases/policy-appendix/watch-mode/v1.0.0/SintraPrime_Policy_Appendix_Watch_Mode_with_Diagram.pdf.sha256
+
+# OS / tooling noise
+Thumbs.db
