@@ -6,9 +6,24 @@ Validator → Planner → Executor pipeline and receipt logging: [docs/agent-mod
 
 ## Governance
 
+GOVERNANCE_RELEASE: SintraPrime_Mode_Governance_v1.1
+SUPERSEDES: SintraPrime_Mode_Governance_v1.0
+
+GOVERNANCE_RELEASES (CITEABLE)
+
+- SintraPrime_Mode_Governance_v1.0 (baseline; frozen)
+- SintraPrime_Mode_Governance_v1.1 (delta; active)
+
+
+Change Control:
+All governance changes are tracked via explicit release deltas.
+See governance-history.v1.md for a chronological index.
+
 ### Governance (Authoritative)
 
 - Governance documents: [docs/governance/index.md](docs/governance/index.md)
+  - Governance release record: [docs/governance/releases/SintraPrime_Mode_Governance_v1.0.md](docs/governance/releases/SintraPrime_Mode_Governance_v1.0.md)
+  - Governance release record: [docs/governance/releases/SintraPrime_Mode_Governance_v1.1.md](docs/governance/releases/SintraPrime_Mode_Governance_v1.1.md)
 
 > **v1.0 is frozen for evidentiary use. No semantic changes permitted.**
 >
