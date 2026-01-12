@@ -34,7 +34,7 @@ It is intentionally non-marketing and non-anthropomorphic.
 
 ### System layers (overview diagram)
 
-```
+```plaintext
 GOVERNANCE
 • Versioned rules & limits
 • Validation authority
@@ -68,7 +68,7 @@ VERIFICATION
 - Watch Mode is observational only and does not initiate actions.
 - Execution is approval-gated; Watch Mode does not approve, modify, or expand scope.
 
-### Scraping / data access
+### Scraping and data access
 
 - Watch Mode does not crawl, scrape, or bulk-extract.
 - It records human-equivalent visual context within authenticated sessions.
@@ -78,3 +78,75 @@ VERIFICATION
 - Artifacts are run-scoped evidence outputs.
 - Integrity can be checked via append-only hashing and offline verification.
 - Verification is deterministic and non-governing.
+
+## Pinned clause-family mapping (by platform)
+
+This section anchors Watch Mode posture to publicly verifiable policy texts.
+
+- It includes stable URLs and small verbatim excerpts.
+- It avoids “clause numbers” where policies are not numbered or may be renumbered.
+- Accessed: 2026-01-12
+
+### Pinned mapping — TikTok
+
+- Source: TikTok Developer Terms of Service (Last modified: Dec 26, 2025)
+  - <https://www.tiktok.com/legal/page/global/tik-tok-developer-terms-of-service/en>
+- Verbatim anchors (selected):
+  - “use automated means in your Application to collect information from or otherwise interact with the TikTok Developer Services”
+  - “exceeds reasonable request volume, constitutes excessive or abusive usage”
+  - “bypass, circumvent or attempt to bypass or circumvent any measures we may use to prevent or restrict access”
+  - “build, help build, or supplement any profiles, databases, or similar records”
+- Watch Mode posture mapping:
+  - Automation & platform integrity: Watch Mode does not post, message, or engage; it is observational only.
+  - Scraping / data access: Watch Mode does not crawl or bulk-extract; it captures human-equivalent visual context.
+  - Circumvention / evasion: Watch Mode does not bypass access controls or technical limitations.
+
+### Pinned mapping — Google
+
+- Source: Google APIs Terms of Service (Last modified: Nov 9, 2021)
+  - <https://developers.google.com/terms>
+- Verbatim anchors (selected):
+  - “You will only access (or attempt to access) an API by the means described in the documentation of that API.”
+  - “You agree to, and will not attempt to circumvent, such limitations documented with each API.”
+  - “Scrape, build databases, or otherwise create permanent copies of such content”
+- Watch Mode posture mapping:
+  - Permitted access: Watch Mode does not create alternate access paths; it records visual context only.
+  - API limitations / circumvention: Watch Mode does not circumvent limits.
+  - Content handling: Watch Mode is not a scraping or database-building mechanism.
+
+### Pinned mapping — Meta
+
+- Source: Meta Platform Terms
+  - <https://developers.facebook.com/terms/>
+- Verbatim anchors (selected):
+  - “You must also comply with the applicable requirements in our Developer Policies and those made available on our Developer Site, including in our Documentation”
+  - “Attempting to decode, circumvent, re-identify, de-anonymize, unscramble, unencrypt, or reverse hash”
+  - “Processing Platform Data for purposes other than the applicable permitted purposes set forth in Meta’s Developer Docs.”
+- Watch Mode posture mapping:
+  - Integrity & anti-circumvention: Watch Mode does not decode/circumvent protections.
+  - Purpose limitation: Watch Mode is observational and does not expand data processing scope.
+
+### Pinned mapping — Stripe
+
+- Source: Stripe Services Agreement—General Terms (Last modified: Nov 18, 2025)
+  - <https://stripe.com/legal/ssa>
+- Verbatim anchors (selected):
+  - “User must use the Services solely for User’s Business Purposes and in compliance with the Documentation.”
+  - “circumvent any technical limitations of the Services”
+  - “access or attempt to access non-public Stripe systems or data”
+- Watch Mode posture mapping:
+  - Controls: Watch Mode does not initiate or alter transactions; it records contextual screenshots only.
+  - Anti-circumvention: Watch Mode does not bypass technical limitations or access non-public systems.
+
+### Pinned mapping — GitHub
+
+- Source: GitHub Acceptable Use Policies
+  - <https://docs.github.com/en/site-policy/acceptable-use-policies/github-acceptable-use-policies>
+- Verbatim anchors (selected):
+  - “automated excessive bulk activity and coordinated inauthentic activity”
+  - “Scraping refers to extracting information from our Service via an automated process”
+  - “You may not use information from the Service (whether scraped, collected through our API, or obtained otherwise) for spamming purposes”
+- Watch Mode posture mapping:
+  - Automation / scraping: Watch Mode is not a scraper and does not perform bulk automated activity.
+  - Writes & execution: Watch Mode does not modify repos; it records contextual artifacts only.
+  - Integrity: offline verification checks artifact integrity; it does not confer authorization.
