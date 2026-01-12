@@ -25,6 +25,9 @@ See governance-history.v1.md for a chronological index.
   - Governance release record: [docs/governance/releases/SintraPrime_Mode_Governance_v1.0.md](docs/governance/releases/SintraPrime_Mode_Governance_v1.0.md)
   - Governance release record: [docs/governance/releases/SintraPrime_Mode_Governance_v1.1.md](docs/governance/releases/SintraPrime_Mode_Governance_v1.1.md)
 
+For Watch Mode auditability, see the **Watch Mode v1 Spec → Implementation Map**, which documents implemented features and intentional non-implementations:  
+[docs/watch-mode-spec-implementation-map.v1.md](docs/watch-mode-spec-implementation-map.v1.md)
+
 > **v1.0 is frozen for evidentiary use. No semantic changes permitted.**
 >
 > Freeze/fork procedure: [docs/governance/freeze-v1-fork-v2.md](docs/governance/freeze-v1-fork-v2.md)
