@@ -25,6 +25,9 @@ jobs:
       - name: DeepThink gates
         run: npm run -s ci:deepthink-gates
 
+      - name: Verify signatures (Tier 1 if present)
+        run: npm run -s ci:verify-signatures
+
       - name: Detect derived tiers
         run: npm run -s ci:detect-tiers
 

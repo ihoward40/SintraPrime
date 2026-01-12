@@ -41,12 +41,12 @@ function parseArgs(argv) {
 }
 
 function detectTierForFiles(fileNames) {
-  const hasSig = fileNames.some((f) => f.endsWith(".sig"));
-  const hasTpm = fileNames.includes("tpm_attestation.json");
+  const hasManifestSig = fileNames.includes("manifest.json.sig");
+  const hasTpm = fileNames.includes("tpm_attestation.json") && fileNames.includes("tpm_attestation.json.sig");
   const hasHashes = fileNames.some((f) => f.endsWith(".sha256"));
 
   if (hasTpm) return "Tier 2";
-  if (hasSig) return "Tier 1";
+  if (hasManifestSig) return "Tier 1";
   if (hasHashes) return "Tier 0";
   return "Unclassified";
 }

@@ -29,7 +29,10 @@
     "deepthink": "node ./deepthink/src/deepthink.mjs",
     "ci:deepthink-gates": "node ./scripts/ci/deepthink-gates.mjs",
     "detect:tiers": "node ./scripts/detect-tiers.mjs --out tier_declaration.json",
-    "ci:detect-tiers": "node ./scripts/detect-tiers.mjs"
+    "ci:detect-tiers": "node ./scripts/detect-tiers.mjs",
+    "sign:manifest": "node ./scripts/signing/sign-manifest.mjs",
+    "sign:run": "node ./scripts/signing/sign-run.mjs",
+    "ci:verify-signatures": "node ./scripts/ci/verify-signatures.mjs"
   },
   "dependencies": {
     "express": "^4.21.2",
@@ -49,6 +52,7 @@
     "qrcode": "^1.5.4",
     "rimraf": "^6.0.1",
     "tsx": "^4.19.2",
+    "tweetnacl": "^1.0.3",
     "typescript": "^5.7.2"
   }
 }
