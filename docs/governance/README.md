@@ -17,6 +17,14 @@ It is **not** enforcement, **not** wiring, and **not** runtime behavior.
 - [docs/governance/scope-hash-index.md](scope-hash-index.md) — Auditor-diffable index of declared wiring intent over time.
 - [docs/governance/governance-attestation.documentation-only.onepage.md](governance-attestation.documentation-only.onepage.md) — One-page documentation-only governance attestation (for filing packets).
 
+## Operational posture docs (docs-only)
+
+- [docs/governance/boot-posture.md](boot-posture.md)
+- [docs/governance/authority-ladder.md](authority-ladder.md)
+- [docs/governance/single-run-toggle-procedure.md](single-run-toggle-procedure.md)
+- [docs/governance/affidavit-language.md](affidavit-language.md)
+- [docs/governance/authority-ladder.svg](authority-ladder.svg)
+
 ## Specs and templates added (stubs-only)
 
 - [docs/governance/external-evidence-addons.md](external-evidence-addons.md) — Docs-only add-ons (mailing records, FOIA packet variants, public verifier concept).
