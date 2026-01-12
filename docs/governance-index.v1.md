@@ -6,6 +6,36 @@ documents relevant to Watch Mode and related public artifacts.
 
 This index is descriptive only.
 
+## Governance Flow (Overview)
+
+```
+  ┌────────────────────────────┐
+  │  Documentation Baseline    │
+  │  (v1 + v1.1 Addendum)      │
+  └─────────────┬──────────────┘
+            │ declared by
+            ▼
+  ┌────────────────────────────┐
+  │        Run Header           │
+  │  (declared baseline +      │
+  │   optional anchors)        │
+  └─────────────┬──────────────┘
+            │ summarized into
+            ▼
+  ┌────────────────────────────┐
+  │   Public Verifier Bundle   │
+  │  (docs, hashes, headers)  │
+  └─────────────┬──────────────┘
+            │ integrity + time
+            ▼
+  ┌────────────────────────────┐
+  │    External Anchors        │
+  │  (GitHub, Log, TSA)        │
+  └────────────────────────────┘
+```
+
+This flow is declarative and integrity-focused; it does not imply execution authority or legal effect.
+
 ---
 
 ## Core Specifications
