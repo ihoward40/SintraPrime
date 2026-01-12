@@ -25,6 +25,9 @@ jobs:
       - name: DeepThink gates
         run: npm run -s ci:deepthink-gates
 
+      - name: Detect derived tiers
+        run: npm run -s ci:detect-tiers
+
       - name: Start mock server
         env:
           WEBHOOK_SECRET: test-secret

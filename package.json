@@ -27,7 +27,9 @@
     "ui:build": "npm --prefix ui/client run build",
     "verify:audit": "node ./scripts/verify.js",
     "deepthink": "node ./deepthink/src/deepthink.mjs",
-    "ci:deepthink-gates": "node ./scripts/ci/deepthink-gates.mjs"
+    "ci:deepthink-gates": "node ./scripts/ci/deepthink-gates.mjs",
+    "detect:tiers": "node ./scripts/detect-tiers.mjs --out tier_declaration.json",
+    "ci:detect-tiers": "node ./scripts/detect-tiers.mjs"
   },
   "dependencies": {
     "express": "^4.21.2",
