@@ -1,0 +1,49 @@
+name: Require Two Approvals on Authority Expansion
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+permissions:
+  pull-requests: read
+
+jobs:
+  enforce-approvals:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check for authority expansion
+        id: check
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const labels = pr.labels.map(l => l.name);
+
+            if (!labels.includes('authority-expansion')) {
+              core.setOutput('requires', 'false');
+              return;
+            }
+            core.setOutput('requires', 'true');
+
+      - name: Enforce two distinct approvals
+        if: steps.check.outputs.requires == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const reviews = await github.rest.pulls.listReviews({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number
+            });
+
+            const approvals = new Set(
+              reviews.data
+                .filter(r => r.state === 'APPROVED')
+                .map(r => r.user.login)
+            );
+
+            if (approvals.size < 2) {
+              core.setFailed(
+                `Authority expansion requires at least two distinct human approvals. Found: ${approvals.size}.`
+              );
+            }

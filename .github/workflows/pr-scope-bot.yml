@@ -1,0 +1,58 @@
+name: PR Scope Echo Bot
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  comment-scope:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Extract scope hash and diff summary
+        id: extract
+        run: |
+          set -e
+          SCOPE_FILE="docs/governance/wiring-scope.md"
+
+          if [ -f "$SCOPE_FILE" ]; then
+            SCOPE_HASH=$(grep -E "Scope Hash \\(SHA-256\\):" "$SCOPE_FILE" | sed 's/.*: *//')
+          else
+            SCOPE_HASH="(missing)"
+          fi
+
+          git fetch origin ${{ github.base_ref }} --depth=1
+          DIFF=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | sed 's/^/- /')
+
+          echo "scope_hash=$SCOPE_HASH" >> $GITHUB_OUTPUT
+          echo "diff<<EOF" >> $GITHUB_OUTPUT
+          echo "$DIFF" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Post PR comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = `
+### Governance Wiring Scope Summary
+
+**Scope Hash:** \`${{ steps.extract.outputs.scope_hash }}\`
+
+**Files changed in this PR:**
+${{ steps.extract.outputs.diff || '- (no file changes detected)' }}
+
+> This comment is generated automatically to bind declared wiring intent
+> to the concrete changes under review.
+`;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body
+            });

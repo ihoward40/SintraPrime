@@ -3,6 +3,7 @@
 **Status:** Draft (Required for any wiring change)
 **Change Type:** ☐ New wiring ☐ Modification ☐ Removal
 **Branch:** feature/governance-specs-to-runtime
+**Scope Hash (SHA-256):** ____________________
 **Prepared By:** ____________________
 **Date (UTC):** ____________________
 
