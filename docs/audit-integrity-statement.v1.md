@@ -1,0 +1,4 @@
+# Audit Integrity Statement (Regulator-Facing)
+
+> **Audit Integrity Statement.**
+> The system maintains a layered audit architecture that exceeds standard audit trails by explicitly separating governance, execution, observation, and verification. Execution produces run-scoped artifacts only after validation approval. Optional observation artifacts (e.g., UI recordings) are strictly non-authoritative and opt-in. Integrity is ensured via append-only SHA-256 hash chains recorded at artifact finalization and verified offline using a deterministic verifier that has no execution capability. Governance semantics are versioned, citeable, and immutable absent an explicit release. This design prevents silent authority expansion, eliminates retroactive modification, and allows third parties to independently verify artifact integrity without relying on internal system trust.

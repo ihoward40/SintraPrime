@@ -93,6 +93,11 @@ node verify-run.js runs --json > verify.json
 The JSON output is informational and may be archived or parsed for reporting.
 Verification is non-governing and does not initiate or block execution.
 
+Additional one-page artifacts (for outsiders / regulators):
+
+- System layers diagram: docs/system-layers-diagram.v1.md
+- Audit integrity statement: docs/audit-integrity-statement.v1.md
+
 ## Operator Fast UI (Tier-14)
 
 Local-only “thin skin” UI that reads `runs/` and forwards existing `/<command>` calls.
