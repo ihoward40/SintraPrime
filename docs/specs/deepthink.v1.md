@@ -40,6 +40,7 @@ DeepThink is considered “in SintraPrime” only if the following are continuou
 - Forbidden imports are blocked in the DeepThink module (network and process-spawn primitives).
 - DeepThink writes only under `runs/`.
 - Output artifacts exist, have `.sha256` sidecars, and sidecars match computed SHA-256.
+- `request.json` is validated in CI against the DeepThink JSON Schema.
 - Gates are **static + artifact checks only** and must not create or mutate run artifacts in CI.
 
 ## Tier mapping (Derived, not asserted)
