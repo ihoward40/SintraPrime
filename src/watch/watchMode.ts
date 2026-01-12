@@ -6,7 +6,6 @@ import crypto from "node:crypto";
 
 import type { ControlConfig } from "../clean/config.js";
 import { appendRunLedgerLine, ensureRunDirs, runRoot } from "./runArtifacts.js";
-import { maybeAppendHashChainArtifact } from "./hashChain.js";
 
 type Settings = {
   enabled: boolean;
@@ -145,6 +144,8 @@ export async function runWatchModeTour(params: {
   const executionId = String(params.execution_id);
   const { screenDir, screenshotsDir, tourDir } = ensureRunDirs(executionId);
 
+  const createdArtifacts: string[] = [];
+
   appendRunLedgerLine(executionId, {
     ts: new Date().toISOString(),
     kind: "watch_mode",
@@ -203,15 +204,7 @@ export async function runWatchModeTour(params: {
           .screenshot({ path: tourBefore, fullPage: true })
           .catch(() => void 0);
 
-        try {
-          maybeAppendHashChainArtifact({
-            execution_id: executionId,
-            artifact_relpath: path.relative(runRoot(executionId), tourBefore).replace(/\\/g, "/"),
-            artifact_abspath: tourBefore,
-          });
-        } catch {
-          // ignore
-        }
+        createdArtifacts.push(path.relative(runRoot(executionId), tourBefore).replace(/\\/g, "/"));
 
         // Back-compat: keep the older stable filename too.
         await page
@@ -231,15 +224,7 @@ export async function runWatchModeTour(params: {
           .screenshot({ path: tourAfter, fullPage: true })
           .catch(() => void 0);
 
-        try {
-          maybeAppendHashChainArtifact({
-            execution_id: executionId,
-            artifact_relpath: path.relative(runRoot(executionId), tourAfter).replace(/\\/g, "/"),
-            artifact_abspath: tourAfter,
-          });
-        } catch {
-          // ignore
-        }
+        createdArtifacts.push(path.relative(runRoot(executionId), tourAfter).replace(/\\/g, "/"));
 
         // Back-compat: keep the older stable filename too.
         await page
@@ -260,30 +245,12 @@ export async function runWatchModeTour(params: {
           // ignore
         }
 
-        try {
-          maybeAppendHashChainArtifact({
-            execution_id: executionId,
-            artifact_relpath: path.relative(runRoot(executionId), webmOut).replace(/\\/g, "/"),
-            artifact_abspath: webmOut,
-          });
-        } catch {
-          // ignore
-        }
+        createdArtifacts.push(path.relative(runRoot(executionId), webmOut).replace(/\\/g, "/"));
 
         const mp4Out = path.join(screenDir, `${system}.mp4`);
         const converted = tryConvertWebmToMp4(webmOut, mp4Out);
 
-        if (converted) {
-          try {
-            maybeAppendHashChainArtifact({
-              execution_id: executionId,
-              artifact_relpath: path.relative(runRoot(executionId), mp4Out).replace(/\\/g, "/"),
-              artifact_abspath: mp4Out,
-            });
-          } catch {
-            // ignore
-          }
-        }
+        if (converted) createdArtifacts.push(path.relative(runRoot(executionId), mp4Out).replace(/\\/g, "/"));
 
         appendRunLedgerLine(executionId, {
           ts: new Date().toISOString(),
@@ -303,6 +270,8 @@ export async function runWatchModeTour(params: {
     kind: "watch_mode",
     stage: "finish",
   });
+
+  return createdArtifacts;
 }
 
 export async function captureWatchStepScreenshots(params: {
@@ -357,16 +326,6 @@ export async function captureWatchStepScreenshots(params: {
       const rel = path.relative(root, absPath).replace(/\\/g, "/");
       const sha256 = sha256FileHex(absPath);
       out.push({ system, path: rel, sha256, captured_at: capturedAtIso });
-
-      try {
-        maybeAppendHashChainArtifact({
-          execution_id: executionId,
-          artifact_relpath: rel,
-          artifact_abspath: absPath,
-        });
-      } catch {
-        // ignore
-      }
     } catch {
       // best-effort
     } finally {

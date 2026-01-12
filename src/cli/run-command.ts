@@ -55,6 +55,7 @@ import {
 } from "../operator/governance/modeTransitionLedger.js";
 import { captureWatchStepScreenshots, runWatchModeTour } from "../watch/watchMode.js";
 import { appendRunLedgerLine, writeApplyJson, writePlanSummary } from "../watch/runArtifacts.js";
+import { appendHashChainGroup, isRunHashChainEnabled, maybeAppendHashChainArtifact } from "../watch/hashChain.js";
 import {
   applyRequalificationCooldownWatcher,
   effectiveAutonomyModeForState,
@@ -628,6 +629,18 @@ async function run() {
   const maybeWatchTour = async (phase: string, execution_id: string, note: string) => {
     if (!shouldWatchPhase(phase)) return;
     await runWatchModeTour({ execution_id, config: controlConfig, note });
+  };
+
+  let hashCountApply = 0;
+  let hashCountPostapply = 0;
+  let hashHead: string | null = null;
+  const hashEnabled = () => isRunHashChainEnabled(process.env);
+  const hashArtifact = (execution_id: string, relpath: string, scope: "apply" | "postapply") => {
+    const r = maybeAppendHashChainArtifact({ execution_id, artifact_relpath: relpath });
+    if (!r) return;
+    hashHead = r.head;
+    if (scope === "apply") hashCountApply++;
+    if (scope === "postapply") hashCountPostapply++;
   };
   try {
     const secrets = loadSecretsEnv(process.cwd());
@@ -2720,6 +2733,7 @@ async function run() {
     const resolvedCapsAll: Record<string, string> = {};
     const allStepLogs: any[] = [];
     let applyStepOrdinal = 0;
+    let planFinalized = false;
 
     const overallStarted = nowIso();
 
@@ -3084,12 +3098,64 @@ async function run() {
         return;
       }
 
+      // Approval boundary: once we begin executing steps, the run is proceeding.
+      // Hashes MUST NOT be written before this point.
+
+      // PLAN_FINALIZED: write plan summary exactly once (post-approval only) and optionally hash it.
+      if (!planFinalized) {
+        planFinalized = true;
+        try {
+          writePlanSummary(
+            plannerOut.execution_id,
+            [
+              `# Run Summary`,
+              ``,
+              `execution_id: ${plannerOut.execution_id}`,
+              `goal: ${plannerOut.goal}`,
+              `dry_run: ${String(plannerOut.dry_run)}`,
+              `phases_planned: ${Array.isArray(phasesPlanned) ? phasesPlanned.length : 0}`,
+              ``,
+              `This file is a human-readable plan summary. It does not grant or imply execution authority.`,
+            ].join("\n")
+          );
+
+          appendRunLedgerLine(plannerOut.execution_id, {
+            ts: new Date().toISOString(),
+            kind: "plan_finalized",
+            artifact: "plan/summary.md",
+          });
+
+          if (!plannerOut.dry_run && hashEnabled()) {
+            hashArtifact(plannerOut.execution_id, "plan/summary.md", "apply");
+          }
+        } catch {
+          // ignore
+        }
+      }
+
       const phaseRun = await executePlan(phasePlan, {
         onStepFinished: async ({ stepLog }) => {
           if (process.env.WATCH_MODE !== "1") return;
           if (process.env.WATCH_STEP_SCREENSHOTS !== "1") return;
           applyStepOrdinal++;
           const fullStepId = `${phaseId}:${stepLog.step_id}`;
+
+          // STEP_EXECUTED event (ledger): the chain must trail this.
+          try {
+            appendRunLedgerLine(plannerOut.execution_id, {
+              ts: new Date().toISOString(),
+              kind: "step_executed",
+              phase_id: phaseId,
+              step_ordinal: applyStepOrdinal,
+              step_id: fullStepId,
+              action: stepLog.action,
+              status: stepLog.status,
+              finished_at: stepLog.finished_at,
+            });
+          } catch {
+            // ignore
+          }
+
           const screenshots = await captureWatchStepScreenshots({
             execution_id: plannerOut.execution_id,
             phase_id: phaseId,
@@ -3103,6 +3169,15 @@ async function run() {
               phases: ["apply"],
               screenshots,
             };
+
+            // HASH_CHAIN(step artifacts): only finalized apply step screenshots.
+            if (!plannerOut.dry_run && hashEnabled()) {
+              for (const s of screenshots) {
+                if (s && typeof (s as any).path === "string") {
+                  hashArtifact(plannerOut.execution_id, String((s as any).path), "apply");
+                }
+              }
+            }
           }
         },
       });
@@ -3231,38 +3306,39 @@ async function run() {
 
     await persistRun(overall as any);
 
-    // Run-scoped artifacts (human summary + structured outputs).
+    // APPLY_COMPLETE (hash steps.executed.json after it is final).
     try {
-      writePlanSummary(
-        overall.execution_id,
-        [
-          `# Run Summary`,
-          ``,
-          `execution_id: ${overall.execution_id}`,
-          `status: ${overall.status}`,
-          `dry_run: ${String(overall.dry_run)}`,
-          `started_at: ${overall.started_at}`,
-          `finished_at: ${overall.finished_at}`,
-          `phases_planned: ${Array.isArray(phasesPlanned) ? phasesPlanned.length : 0}`,
-          `phases_executed: ${Array.isArray(phasesExecuted) ? phasesExecuted.length : 0}`,
-          `steps_executed: ${Array.isArray(allStepLogs) ? allStepLogs.length : 0}`,
-        ].join("\n")
-      );
-
-      writeApplyJson(overall.execution_id, "steps.executed.json", allStepLogs);
       appendRunLedgerLine(overall.execution_id, {
         ts: new Date().toISOString(),
-        kind: "run",
-        stage: "executed",
+        kind: "apply_complete",
         status: overall.status,
       });
+
+      writeApplyJson(overall.execution_id, "steps.executed.json", allStepLogs);
+
+      if (!overall.dry_run && hashEnabled()) {
+        hashArtifact(overall.execution_id, "apply/steps.executed.json", "apply");
+        appendHashChainGroup({ execution_id: overall.execution_id, scope: "apply", count: hashCountApply, head: hashHead });
+      }
     } catch {
       // ignore
     }
 
     // Optional UI tour after successful apply.
     try {
-      await maybeWatchTour("postapply", overall.execution_id, "post_apply");
+      if (shouldWatchPhase("postapply")) {
+        const created = await runWatchModeTour({ execution_id: overall.execution_id, config: controlConfig, note: "post_apply" });
+
+        // HASH_CHAIN(postapply artifacts): hash only postapply watch artifacts.
+        if (!overall.dry_run && hashEnabled() && Array.isArray(created) && created.length) {
+          for (const rel of created) {
+            if (typeof rel === "string" && rel.startsWith("screen/")) {
+              hashArtifact(overall.execution_id, rel, "postapply");
+            }
+          }
+          appendHashChainGroup({ execution_id: overall.execution_id, scope: "postapply", count: hashCountPostapply, head: hashHead });
+        }
+      }
     } catch {
       // ignore
     }

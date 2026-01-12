@@ -46,13 +46,28 @@ export function maybeAppendHashChainArtifact(params: {
   prevByExecutionId.set(executionId, chainHash);
 
   appendRunLedgerLine(executionId, {
-    ts: new Date().toISOString(),
+    at: new Date().toISOString(),
     kind: "hash_chain",
     artifact: rel,
     sha256: artifactSha256,
     prev,
-    chain: chainHash,
+    head: chainHash,
   });
 
-  return { sha256: artifactSha256, prev, chain: chainHash, artifact: rel };
+  return { sha256: artifactSha256, prev, head: chainHash, artifact: rel };
+}
+
+export function appendHashChainGroup(params: {
+  execution_id: string;
+  scope: "apply" | "postapply";
+  count: number;
+  head: string | null;
+}) {
+  appendRunLedgerLine(String(params.execution_id), {
+    at: new Date().toISOString(),
+    kind: "hash_chain_group",
+    scope: params.scope,
+    count: params.count,
+    head: params.head,
+  });
 }
