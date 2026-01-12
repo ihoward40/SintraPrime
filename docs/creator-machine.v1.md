@@ -20,6 +20,13 @@ Loop: **Voice → System → Output → Asset**
 
 ---
 
+## Governance Decisions
+
+> Decision: Reaffirm v1.1
+> Rationale: Signal consistent; no demonstrated revenue-intent divergence
+> Version: v1.1 (unchanged)
+> Next Review: Day 29
+
 ---
 
 ## STEP 1 — Build the 5 Notion Databases (Exact Specs)
