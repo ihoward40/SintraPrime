@@ -4,13 +4,16 @@ This register records the status and intended citation scope of governance-relat
 Tags are immutable historical anchors and do not, by themselves, grant authority,
 trigger execution, or alter system behavior.
 
+Dates in this register reflect external citation or filing usage, not internal
+development activity.
+
 ---
 
 ## governance-docs-baseline-2026-01
 
 Status: Active (Baseline)
 
-Effective date: 2026-01-XX  
+Effective date: TBD (first external citation)  
 Scope: Governance documentation baseline
 
 Description:
@@ -28,7 +31,7 @@ effective date.
 
 Status: Active (Current)
 
-Effective date: 2026-01-XX  
+Effective date: TBD (first external citation)  
 Scope: Read-only governance index
 
 Description:
