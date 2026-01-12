@@ -48,11 +48,13 @@ import { emitSpeechBundle } from "../speech/emitSpeechBundle.js";
 import { speak, speakText } from "../speech/speak.js";
 import { exportAuditCourtPacket } from "../audit/exportAuditCourtPacket.js";
 import { exportAuditExecutionBundle } from "../audit/exportAuditExecutionBundle.js";
-import { applySecretsToProcessEnv, loadSecretsEnv } from "../clean/config.js";
+import { applySecretsToProcessEnv, loadControlConfig, loadSecretsEnv } from "../clean/config.js";
 import {
   appendSilentHaltLedgerLine,
   maybeAppendModeTransitionLedger,
 } from "../operator/governance/modeTransitionLedger.js";
+import { captureWatchStepScreenshots, runWatchModeTour } from "../watch/watchMode.js";
+import { appendRunLedgerLine, writeApplyJson, writePlanSummary } from "../watch/runArtifacts.js";
 import {
   applyRequalificationCooldownWatcher,
   effectiveAutonomyModeForState,
@@ -589,6 +591,44 @@ async function retryPlannerOnce(params: {
 async function run() {
   // Optional: load local secrets file (DO NOT COMMIT) to align with operator docs.
   // Only fills missing/empty env vars; never overwrites existing values.
+  const controlConfig = loadControlConfig(process.cwd());
+
+  const watchPhases: Set<string> | null = (() => {
+    const raw = typeof process.env.WATCH_PHASES === "string" ? process.env.WATCH_PHASES : "";
+    const trimmed = raw.trim();
+    if (!trimmed) return null;
+    return new Set(
+      trimmed
+        .split(",")
+        .map((s) => s.trim().toLowerCase())
+        .filter(Boolean)
+    );
+  })();
+
+  const canonicalWatchPhaseOrder = ["preplan", "approval", "preapply", "apply", "postapply"] as const;
+
+  const normalizedWatchPhases = () => {
+    if (watchPhases === null) return ["approval", "postapply"] as const;
+    const picked: string[] = [];
+    for (const p of canonicalWatchPhaseOrder) {
+      if (watchPhases.has(p)) picked.push(p);
+    }
+    return picked;
+  };
+
+  const shouldWatchPhase = (phase: string) => {
+    const p = String(phase).trim().toLowerCase();
+    if (watchPhases === null) {
+      // Default remains unchanged.
+      return p === "approval" || p === "postapply";
+    }
+    return watchPhases.has(p);
+  };
+
+  const maybeWatchTour = async (phase: string, execution_id: string, note: string) => {
+    if (!shouldWatchPhase(phase)) return;
+    await runWatchModeTour({ execution_id, config: controlConfig, note });
+  };
   try {
     const secrets = loadSecretsEnv(process.cwd());
     applySecretsToProcessEnv(secrets);
@@ -2466,6 +2506,33 @@ async function run() {
     return;
   }
 
+  // Watch Mode manifest (informational; not authoritative): make the run self-describing.
+  try {
+    if (process.env.WATCH_MODE === "1") {
+      appendRunLedgerLine(plannerOut.execution_id, {
+        ts: new Date().toISOString(),
+        kind: "watch_mode",
+        stage: "manifest",
+        enabled: true,
+        phases: normalizedWatchPhases(),
+        step_screenshots: process.env.WATCH_STEP_SCREENSHOTS === "1",
+        systems: typeof process.env.WATCH_SYSTEMS === "string" ? process.env.WATCH_SYSTEMS : null,
+        browser: typeof process.env.PLAYWRIGHT_BROWSER === "string" ? process.env.PLAYWRIGHT_BROWSER : null,
+        headless: typeof process.env.PLAYWRIGHT_HEADLESS === "string" ? process.env.PLAYWRIGHT_HEADLESS : null,
+        slow_mo: typeof process.env.PLAYWRIGHT_SLOW_MO === "string" ? process.env.PLAYWRIGHT_SLOW_MO : null,
+      });
+    }
+  } catch {
+    // ignore
+  }
+
+  // Optional UI tour after plan is produced (still before any execution).
+  try {
+    await maybeWatchTour("preplan", plannerOut.execution_id, "preplan");
+  } catch {
+    // ignore
+  }
+
   // Tier 8.0: plan-wide policy budgets (deny before execution).
   {
     const denied = checkPlanPolicy(plannerOut);
@@ -2652,8 +2719,23 @@ async function run() {
     const phasesExecuted: string[] = [];
     const resolvedCapsAll: Record<string, string> = {};
     const allStepLogs: any[] = [];
+    let applyStepOrdinal = 0;
 
     const overallStarted = nowIso();
+
+    // Optional UI tour immediately before any apply steps run.
+    // Runs only if explicitly listed in WATCH_PHASES (preapply/apply).
+    try {
+      if (shouldWatchPhase("preapply") || shouldWatchPhase("apply")) {
+        await runWatchModeTour({
+          execution_id: plannerOut.execution_id,
+          config: controlConfig,
+          note: shouldWatchPhase("apply") ? "apply" : "pre_apply",
+        });
+      }
+    } catch {
+      // ignore
+    }
 
     for (const phase of phases) {
       const phaseId = String(phase.phase_id);
@@ -2962,6 +3044,13 @@ async function run() {
           )
         );
         process.exitCode = 4;
+
+        // Optional UI tour while awaiting approval (inventory/proof pass).
+        try {
+          await maybeWatchTour("approval", plannerOut.execution_id, "awaiting_approval");
+        } catch {
+          // ignore
+        }
         return;
       }
 
@@ -2995,7 +3084,28 @@ async function run() {
         return;
       }
 
-      const phaseRun = await executePlan(phasePlan);
+      const phaseRun = await executePlan(phasePlan, {
+        onStepFinished: async ({ stepLog }) => {
+          if (process.env.WATCH_MODE !== "1") return;
+          if (process.env.WATCH_STEP_SCREENSHOTS !== "1") return;
+          applyStepOrdinal++;
+          const fullStepId = `${phaseId}:${stepLog.step_id}`;
+          const screenshots = await captureWatchStepScreenshots({
+            execution_id: plannerOut.execution_id,
+            phase_id: phaseId,
+            step_ordinal: applyStepOrdinal,
+            step_id: fullStepId,
+            config: controlConfig,
+          });
+          if (Array.isArray(screenshots) && screenshots.length) {
+            stepLog.watch = {
+              enabled: true,
+              phases: ["apply"],
+              screenshots,
+            };
+          }
+        },
+      });
       // Prefix step IDs for uniqueness across phases.
       const prefixedSteps = phaseRun.steps.map((s: any) => ({ ...s, step_id: `${phaseId}:${s.step_id}` }));
       allStepLogs.push(...prefixedSteps);
@@ -3120,6 +3230,42 @@ async function run() {
     }
 
     await persistRun(overall as any);
+
+    // Run-scoped artifacts (human summary + structured outputs).
+    try {
+      writePlanSummary(
+        overall.execution_id,
+        [
+          `# Run Summary`,
+          ``,
+          `execution_id: ${overall.execution_id}`,
+          `status: ${overall.status}`,
+          `dry_run: ${String(overall.dry_run)}`,
+          `started_at: ${overall.started_at}`,
+          `finished_at: ${overall.finished_at}`,
+          `phases_planned: ${Array.isArray(phasesPlanned) ? phasesPlanned.length : 0}`,
+          `phases_executed: ${Array.isArray(phasesExecuted) ? phasesExecuted.length : 0}`,
+          `steps_executed: ${Array.isArray(allStepLogs) ? allStepLogs.length : 0}`,
+        ].join("\n")
+      );
+
+      writeApplyJson(overall.execution_id, "steps.executed.json", allStepLogs);
+      appendRunLedgerLine(overall.execution_id, {
+        ts: new Date().toISOString(),
+        kind: "run",
+        stage: "executed",
+        status: overall.status,
+      });
+    } catch {
+      // ignore
+    }
+
+    // Optional UI tour after successful apply.
+    try {
+      await maybeWatchTour("postapply", overall.execution_id, "post_apply");
+    } catch {
+      // ignore
+    }
 
     // Tier-22.2: count successful runs while in PROBATION and recommend ELIGIBLE when threshold met.
     if (overall.status === "success") {

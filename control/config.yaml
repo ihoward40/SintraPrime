@@ -10,6 +10,17 @@ run:
       - "general"
       - "random"
 
+# Watch Mode (UI proof; optional)
+# - Records browser video/screenshots to provide "I watched it do it" receipts.
+# - UI capture is best-effort and requires you to be logged-in in the browser profile.
+watch_mode:
+  enabled: false
+  record_video: true
+  record_screenshots: true
+  slow_mo_ms: 80
+  headless: false
+  redact_secrets: true
+
 notion:
   enabled: true
   archive:

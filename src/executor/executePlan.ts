@@ -39,6 +39,24 @@ export type StepRunLog = {
     json_paths_ok?: boolean;
   };
   error?: string;
+  watch?: {
+    enabled?: boolean;
+    phases?: string[];
+    screenshots?: Array<{
+      system: string;
+      path: string;
+      sha256: string;
+      captured_at: string;
+    }>;
+  };
+};
+
+export type ExecutePlanOptions = {
+  onStepFinished?: (args: {
+    plan: ExecutionPlan;
+    step: ExecutionStep;
+    stepLog: StepRunLog;
+  }) => Promise<void> | void;
 };
 
 export type ExecutionRunLog = {
@@ -261,7 +279,7 @@ async function executeDocsCaptureStep(step: ExecutionStep, timeoutMs: number, ex
   }
 }
 
-export async function executePlan(rawPlan: unknown): Promise<ExecutionRunLog> {
+export async function executePlan(rawPlan: unknown, opts: ExecutePlanOptions = {}): Promise<ExecutionRunLog> {
   const plan = ExecutionPlanSchema.parse(rawPlan);
   const nowIso = () => new Date().toISOString();
 
@@ -506,6 +524,14 @@ export async function executePlan(rawPlan: unknown): Promise<ExecutionRunLog> {
       } finally {
         stepLog.duration_ms = Date.now() - start;
         stepLog.finished_at = nowIso();
+
+        if (!plan.dry_run && stepLog.status === "success" && typeof opts.onStepFinished === "function") {
+          try {
+            await opts.onStepFinished({ plan, step, stepLog });
+          } catch {
+            // best-effort only
+          }
+        }
         runLog.steps.push(stepLog);
       }
 
