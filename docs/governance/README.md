@@ -15,6 +15,7 @@ It is **not** enforcement, **not** wiring, and **not** runtime behavior.
 - [docs/README.md](../README.md) — Documentation scope statement (specifications only).
 - [docs/governance/wiring-scope.md](wiring-scope.md) — Required scope declaration template for any future wiring.
 - [docs/governance/scope-hash-index.md](scope-hash-index.md) — Auditor-diffable index of declared wiring intent over time.
+- [docs/governance/governance-attestation.documentation-only.onepage.md](governance-attestation.documentation-only.onepage.md) — One-page documentation-only governance attestation (for filing packets).
 
 ## Specs and templates added (stubs-only)
 
