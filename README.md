@@ -97,6 +97,7 @@ Additional one-page artifacts (for outsiders / regulators):
 
 - System layers diagram: docs/system-layers-diagram.v1.md
 - Audit integrity statement: docs/audit-integrity-statement.v1.md
+- Audit integrity statements (by audience): docs/audit-integrity-statements.by-audience.v1.md
 
 ## Operator Fast UI (Tier-14)
 
