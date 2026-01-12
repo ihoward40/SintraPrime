@@ -133,6 +133,52 @@ It has **no execution authority** and performs **no network** operations.
 - Outputs: `runs/DEEPTHINK_<analysis_id>/` with `request.json`, `output.json`, `manifest.json` and `*.sha256` sidecars
 - Verify hashes: recompute SHA-256 and compare to the `*.sha256` sidecars (see `scripts/verify.js` patterns)
 
+## Operator Signing (Tier-1 / Tier-2)
+
+SintraPrime separates **analysis**, **evidence**, and **authority** by design.
+
+DeepThink analysis never signs artifacts.
+Signing is an explicit **operator action**, performed after a run completes.
+
+### Tier-1 (Ed25519 signature)
+
+Tier-1 is derived when a run directory contains:
+
+- `manifest.json`
+- `manifest.json.sig`
+
+To sign a completed DeepThink run:
+
+```bash
+SINTRAPRIME_SIGNING_KEY=/secure/path/secret.ed25519.key \
+npm run sign:run -- --run runs/DEEPTHINK_<id> --backend software
+```
+
+This:
+
+- signs only `manifest.json`
+- emits `manifest.json.sig`
+- does not modify inputs, outputs, or hashes
+
+CI verifies signatures only if a `.sig` file is present.
+
+### Tier-2 (TPM attestation, optional)
+
+Tier-2 is derived only when attestation artifacts exist (e.g. `tpm_attestation.json` + `tpm_attestation.json.sig`).
+
+TPM signing/attestation backends are intentionally not implemented in-repo.
+CI never assumes TPM use; it only verifies artifacts if present.
+
+### Dry-run mode
+
+To validate a run without writing any files:
+
+```bash
+npm run sign:run -- --run runs/DEEPTHINK_<id> --backend software --dry-run
+```
+
+Governance note: tiers are derived from artifact presence, never asserted by configuration or flags.
+
 ## Operator Fast UI (Tier-14)
 
 Local-only “thin skin” UI that reads `runs/` and forwards existing `/<command>` calls.

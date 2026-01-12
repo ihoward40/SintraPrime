@@ -15,14 +15,18 @@ function die(msg) {
 
 function usage() {
   die(
-    "Usage: node scripts/signing/sign-run.mjs --run <runs/DEEPTHINK_x> --backend <software|software-ed25519|tpm|tpm-windows> [--secret <secret.ed25519.key>] [--key <secret.ed25519.key>]",
+    "Usage: node scripts/signing/sign-run.mjs --run <runs/DEEPTHINK_x> --backend <software|software-ed25519|tpm|tpm-windows> [--secret <secret.ed25519.key>] [--key <secret.ed25519.key>] [--dry-run]",
   );
 }
 
 function parseArgs(argv) {
-  const out = { runDir: null, backend: null, secretKeyPath: null };
+  const out = { runDir: null, backend: null, secretKeyPath: null, dryRun: false };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
+    if (a === "--dry-run") {
+      out.dryRun = true;
+      continue;
+    }
     if (a === "--run" && argv[i + 1]) {
       out.runDir = argv[++i];
       continue;
@@ -50,7 +54,7 @@ function main() {
     die("Refusing to run sign-run in CI");
   }
 
-  const { runDir, backend, secretKeyPath } = parseArgs(process.argv.slice(2));
+  const { runDir, backend, secretKeyPath, dryRun } = parseArgs(process.argv.slice(2));
 
   const backendNorm =
     backend === "software" ? "software-ed25519" : backend === "tpm" ? "tpm-windows" : backend;
@@ -74,7 +78,14 @@ function main() {
   const msg = fs.readFileSync(manifestPath);
   const { sigB64 } = signer.sign(msg);
 
-  fs.writeFileSync(manifestPath + ".sig", sigB64 + "\n", "utf8");
+  const sigPath = manifestPath + ".sig";
+  if (dryRun) {
+    process.stdout.write(`Dry-run: would write ${path.relative(repoRoot, sigPath)}\n`);
+    process.stdout.write("Dry-run complete\n");
+    return;
+  }
+
+  fs.writeFileSync(sigPath, sigB64 + "\n", "utf8");
   process.stdout.write(`Signed: ${path.relative(repoRoot, manifestPath)}\n`);
 }
 
