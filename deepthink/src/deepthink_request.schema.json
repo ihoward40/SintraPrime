@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "sintraprime://schemas/deepthink_request.schema.json",
+  "title": "DeepThink Request",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["analysis_id", "purpose", "inputs"],
+  "properties": {
+    "analysis_id": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 80,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,79}$",
+      "description": "Deterministic identifier used for run folder naming."
+    },
+    "purpose": {
+      "type": "string",
+      "minLength": 5,
+      "maxLength": 240,
+      "description": "Plain-language reason for the analysis (non-executing)."
+    },
+    "created_utc": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Optional metadata timestamp. Must be explicitly provided; never auto-injected."
+    },
+    "inputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["claims", "artifacts"],
+      "properties": {
+        "claims": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 200,
+          "items": { "type": "string", "minLength": 1, "maxLength": 8000 },
+          "description": "Natural-language claims to analyze (e.g., repo-vs-spec assertions)."
+        },
+        "artifacts": {
+          "type": "array",
+          "minItems": 0,
+          "maxItems": 400,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path", "role"],
+            "properties": {
+              "path": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 512,
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._\\-/\\\\ ]{0,511}$",
+                "description": "Repo-relative path (or label) to an artifact referenced in analysis."
+              },
+              "role": {
+                "type": "string",
+                "enum": ["evidence", "governance", "policy", "note", "output"],
+                "description": "How this artifact is used in the analysis."
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[a-fA-F0-9]{64}$",
+                "description": "Optional expected SHA-256 hex of the artifact."
+              },
+              "notes": {
+                "type": "string",
+                "maxLength": 4000
+              }
+            }
+          }
+        },
+        "questions": {
+          "type": "array",
+          "minItems": 0,
+          "maxItems": 50,
+          "items": { "type": "string", "minLength": 1, "maxLength": 2000 },
+          "description": "Optional specific questions the analysis should answer."
+        }
+      }
+    },
+    "options": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "determinism": {
+          "type": "string",
+          "enum": ["strict"],
+          "default": "strict",
+          "description": "Only strict is allowed in v1 to avoid drift."
+        },
+        "max_findings": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 500,
+          "default": 80
+        },
+        "include_debug": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    }
+  }
+}

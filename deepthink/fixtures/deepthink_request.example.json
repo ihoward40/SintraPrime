@@ -1,0 +1,30 @@
+{
+  "analysis_id": "DEMO_0001",
+  "purpose": "Demo deterministic analysis stub (no execution authority).",
+  "inputs": {
+    "claims": [
+      "The shared chat describes DeepThink/TPM signing, but the repo must not overclaim.",
+      "DeepThink outputs should be deterministic and verifiable via sha256 sidecars."
+    ],
+    "artifacts": [
+      {
+        "path": "docs/external-notes/chatgpt-share-69629d4b-840c-8011-bc18-c5a0a5d80618.v1.md",
+        "role": "note",
+        "notes": "Non-authoritative external chat gap map."
+      },
+      {
+        "path": "docs/governance-index.v1.md",
+        "role": "governance"
+      }
+    ],
+    "questions": [
+      "Which items are implemented vs not implemented?",
+      "What are the hard boundaries that prevent authority escalation?"
+    ]
+  },
+  "options": {
+    "determinism": "strict",
+    "max_findings": 5,
+    "include_debug": false
+  }
+}

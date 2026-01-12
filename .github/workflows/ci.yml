@@ -22,6 +22,9 @@ jobs:
       - name: Install
         run: npm ci
 
+      - name: DeepThink gates
+        run: npm run -s ci:deepthink-gates
+
       - name: Start mock server
         env:
           WEBHOOK_SECRET: test-secret

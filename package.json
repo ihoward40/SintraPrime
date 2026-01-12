@@ -25,7 +25,9 @@
     "ui:server": "node ./ui/server.js",
     "ui:client": "npm --prefix ui/client run dev",
     "ui:build": "npm --prefix ui/client run build",
-    "verify:audit": "node ./scripts/verify.js"
+    "verify:audit": "node ./scripts/verify.js",
+    "deepthink": "node ./deepthink/src/deepthink.mjs",
+    "ci:deepthink-gates": "node ./scripts/ci/deepthink-gates.mjs"
   },
   "dependencies": {
     "express": "^4.21.2",
