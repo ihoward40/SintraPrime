@@ -124,6 +124,15 @@ Watch Mode (outsider-facing):
 - Watch Mode policy appendix (PDF): releases/policy-appendix/watch-mode/v1.0.2/SintraPrime_Policy_Appendix_Watch_Mode.pdf (SHA-256: releases/policy-appendix/watch-mode/v1.0.2/SintraPrime_Policy_Appendix_Watch_Mode.pdf.sha256)
 - Watch Mode policy appendix (PDF, with diagram): releases/policy-appendix/watch-mode/v1.0.2/SintraPrime_Policy_Appendix_Watch_Mode_with_Diagram.pdf (SHA-256: releases/policy-appendix/watch-mode/v1.0.2/SintraPrime_Policy_Appendix_Watch_Mode_with_Diagram.pdf.sha256)
 
+## DeepThink (Analysis Runner)
+
+DeepThink is a deterministic, local-only **analysis runner** that produces auditable artifacts under `runs/`.
+It has **no execution authority** and performs **no network** operations.
+
+- Run: `npm run deepthink -- deepthink/fixtures/deepthink_request.example.json`
+- Outputs: `runs/DEEPTHINK_<analysis_id>/` with `request.json`, `output.json`, `manifest.json` and `*.sha256` sidecars
+- Verify hashes: recompute SHA-256 and compare to the `*.sha256` sidecars (see `scripts/verify.js` patterns)
+
 ## Operator Fast UI (Tier-14)
 
 Local-only “thin skin” UI that reads `runs/` and forwards existing `/<command>` calls.

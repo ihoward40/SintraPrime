@@ -29,3 +29,11 @@
 
 - **Example — Merkle Leaves (Sample JSON)**  
   [`examples/merkle.leaves.sample.v1.json`](./examples/merkle.leaves.sample.v1.json)
+
+## DeepThink (Analysis Runner)
+
+- **DeepThink Spec (v1)**  
+  [`specs/deepthink.v1.md`](./specs/deepthink.v1.md)
+
+- **DeepThink — Spec → Implementation Map (v1)**  
+  [`specs/deepthink.spec-to-implementation-map.v1.md`](./specs/deepthink.spec-to-implementation-map.v1.md)
