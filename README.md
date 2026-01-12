@@ -102,6 +102,11 @@ Additional one-page artifacts (for outsiders / regulators):
 - System Layers Diagram (vector SVG): releases/diagrams/system-layers/v1.0.0/system-layers.svg (SHA-256: releases/diagrams/system-layers/v1.0.0/system-layers.svg.sha256)
 - System Layers Diagram (Court, Landscape PDF): releases/diagrams/system-layers-court-landscape/v1.0.0/system-layers.court.landscape.pdf (SHA-256: releases/diagrams/system-layers-court-landscape/v1.0.0/system-layers.court.landscape.pdf.sha256)
 
+Watch Mode (outsider-facing):
+
+- Watch Mode overview: docs/watch-mode-overview.v1.md
+- Watch Mode platform & safety framing: docs/watch-mode-platform-safety.v1.md
+
 ## Operator Fast UI (Tier-14)
 
 Local-only “thin skin” UI that reads `runs/` and forwards existing `/<command>` calls.
