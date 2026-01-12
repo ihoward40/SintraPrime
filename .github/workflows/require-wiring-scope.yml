@@ -1,0 +1,37 @@
+name: Require Governance Wiring Scope
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  wiring-scope-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Detect runtime-adjacent changes
+        id: changes
+        run: |
+          git fetch origin ${{ github.base_ref }} --depth=1
+          CHANGED=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
+          echo "$CHANGED" > changed_files.txt
+          echo "changed_files<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGED" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Enforce wiring scope
+        run: |
+          set -e
+          RUNTIME_REGEX='^(agent-mode-engine/|src/|scripts/|make/|notion/)'
+          if grep -E "$RUNTIME_REGEX" changed_files.txt >/dev/null; then
+            if [ ! -f docs/governance/wiring-scope.md ]; then
+              echo "ERROR: Runtime-adjacent changes detected but wiring-scope.md is missing."
+              echo "Add docs/governance/wiring-scope.md and declare scope explicitly."
+              exit 1
+            fi
+          fi
+
+      - name: Pass
+        run: echo "Governance wiring scope check passed."
