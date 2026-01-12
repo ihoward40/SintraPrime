@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0.0",
+  "purpose": "Public integrity-only verifier manifest (no interpretation)",
+  "governance_anchor_url": "https://github.com/ihoward40/SintraPrime/releases/tag/REPLACE_ME",
+  "published_utc": "REPLACE_ME",
+  "assets": [
+    {
+      "name": "REPLACE_ME.zip",
+      "sha256": "REPLACE_WITH_64_HEX",
+      "bytes": 0
+    },
+    {
+      "name": "REPLACE_ME.zip.sha256",
+      "sha256": "REPLACE_WITH_64_HEX",
+      "bytes": 0
+    }
+  ],
+  "notes": [
+    "Match/Mismatch/Unknown is integrity-only output.",
+    "No authority is conferred by this manifest.",
+    "Tier status is derived from artifact presence, not asserted."
+  ]
+}

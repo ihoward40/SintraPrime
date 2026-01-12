@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "sintraprime://schemas/foia_packet_manifest.schema.json",
+  "title": "FOIA Packet Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "packet_id",
+    "created_utc",
+    "packet_type",
+    "governance_anchor_url",
+    "source_zip_sha256",
+    "assets"
+  ],
+  "properties": {
+    "packet_id": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$",
+      "description": "Stable UUID for this FOIA packet variant."
+    },
+    "created_utc": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Packet generation timestamp (UTC). Must be explicitly provided; never auto-injected."
+    },
+    "packet_type": {
+      "type": "string",
+      "enum": ["FOIA-A", "FOIA-B", "FOIA-C"],
+      "description": "Project-defined FOIA variant (subset + re-index + re-caption)."
+    },
+    "governance_anchor_url": {
+      "type": "string",
+      "maxLength": 2048,
+      "pattern": "^https://",
+      "description": "Immutable public anchor (e.g., a GitHub Release tag URL) for the source governance record."
+    },
+    "source_zip_sha256": {
+      "type": "string",
+      "pattern": "^[a-fA-F0-9]{64}$",
+      "description": "SHA-256 hex of the source governance ZIP (or other canonical source bundle)."
+    },
+    "caption": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "case_style": { "type": "string", "maxLength": 600 },
+        "court": { "type": "string", "maxLength": 240 },
+        "docket": { "type": "string", "maxLength": 120 },
+        "title": { "type": "string", "maxLength": 240 }
+      },
+      "description": "Optional presentational caption fields (non-authoritative)."
+    },
+    "redaction_policy": {
+      "type": "string",
+      "maxLength": 4000,
+      "description": "Optional description of redaction standards applied to this variant."
+    },
+    "assets": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 500,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "sha256"],
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._\\-/\\\\ ]{0,511}$",
+            "description": "Packet-relative or repo-relative asset path."
+          },
+          "sha256": { "type": "string", "pattern": "^[a-fA-F0-9]{64}$" },
+          "label": { "type": "string", "maxLength": 240 },
+          "page_count": { "type": "integer", "minimum": 1, "maximum": 20000 },
+          "notes": { "type": "string", "maxLength": 2000 }
+        }
+      },
+      "description": "Included assets (subset/presentation only; no new content)."
+    }
+  }
+}
