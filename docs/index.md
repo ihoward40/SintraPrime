@@ -8,3 +8,6 @@
 
 - **Watch Mode v1.1 — Additive Clarifications (Addendum)**  
   [`watch-mode-spec-implementation-map.v1.1.addendum.md`](./watch-mode-spec-implementation-map.v1.1.addendum.md)
+
+- **Watch Mode — Level 1–3 Safe Escalations (Spec Text)**  
+  [`watch-mode-safe-escalations.level1-3.spec.v1.md`](./watch-mode-safe-escalations.level1-3.spec.v1.md)

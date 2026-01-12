@@ -15,6 +15,9 @@ This addendum captures clarifications and edge cases that commonly arise during 
 - Presence of Watch Mode artifacts shows that UI capture was enabled and attempted; it does not guarantee completeness.
 - Absence of Watch Mode artifacts does not invalidate a run; it only indicates Watch Mode was disabled or capture failed.
 
+Watch Mode recordings are observational artifacts.
+Deterministic replay relies on plan, apply, and ledger artifacts, not video.
+
 ## What Watch Mode does NOT visually prove
 
 - It does not prove that a third-party UI accurately reflects backend state at all times.

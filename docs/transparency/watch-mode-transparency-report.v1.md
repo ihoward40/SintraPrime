@@ -29,3 +29,14 @@ This report anchors Watch Mode documentation claims to immutable Git tags.
 
 This report asserts documentation integrity only.
 It does not assert runtime correctness, execution guarantees, platform compliance, or authorization.
+
+### Claims Boundary
+
+Watch Mode provides visual corroboration of system actions.
+It does not independently guarantee authorization, correctness, legal sufficiency, or outcome.
+
+### Documentation Compatibility
+
+| Run Date | Docs Baseline | Addendum | Compatible |
+|--------|--------------|----------|------------|
+| 2026-01-11 | v1 | v1.1 | Yes |
