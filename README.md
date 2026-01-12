@@ -66,6 +66,21 @@ Example:
 
 - `set SPEECH_TIERS=S3,S5,S6` (Windows `cmd`)
 
+## Run Integrity Verification (CI)
+
+To verify run artifact integrity in CI, use the built-in verifier.
+Gate on the exit code only.
+
+```bash
+node verify-run.js runs --json > verify.json
+```
+
+- Exit code 0: all verified
+- Exit code 1: verification failed or no verifiable runs present
+
+The JSON output is informational and may be archived or parsed for reporting.
+Verification is non-governing and does not initiate or block execution.
+
 ## Operator Fast UI (Tier-14)
 
 Local-only “thin skin” UI that reads `runs/` and forwards existing `/<command>` calls.
