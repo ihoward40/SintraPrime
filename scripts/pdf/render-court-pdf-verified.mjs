@@ -87,6 +87,13 @@ const md = new MarkdownIt({
 
 const bodyHtml = md.render(inputMd);
 
+// Deterministic manual page breaks without enabling raw HTML in Markdown.
+// Usage in Markdown: a standalone line containing "\\pagebreak".
+const bodyHtmlWithBreaks = bodyHtml.replace(
+  /<p>\\pagebreak<\/p>\s*/g,
+  '<div class="page-break"></div>'
+);
+
 const title = String(args.title ?? path.basename(inPath));
 const court = args.court ? String(args.court) : "";
 const caseLine = args.case ? String(args.case) : "";
@@ -212,6 +219,7 @@ const css = `
     font-size: 10pt;
   }
   hr { border: none; border-top: 1px solid #000; }
+  .page-break { page-break-before: always; }
 `;
 
 const html = `<!doctype html>
@@ -224,7 +232,7 @@ const html = `<!doctype html>
 <body>
   ${headerHtml}
   ${footerHtml}
-  <div class="content">${bodyHtml}</div>
+  <div class="content">${bodyHtmlWithBreaks}</div>
 </body>
 </html>`;
 
