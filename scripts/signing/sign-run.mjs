@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 // Explicit signing step for a run folder (separate from DeepThink).
 //
 // Tier 1: signs manifest.json -> manifest.json.sig
@@ -14,7 +15,7 @@ function die(msg) {
 
 function usage() {
   die(
-    "Usage: node scripts/signing/sign-run.mjs --run <runs/DEEPTHINK_x> --backend <software-ed25519|tpm-windows> [--secret <secret.ed25519.key>]",
+    "Usage: node scripts/signing/sign-run.mjs --run <runs/DEEPTHINK_x> --backend <software|software-ed25519|tpm|tpm-windows> [--secret <secret.ed25519.key>] [--key <secret.ed25519.key>]",
   );
 }
 
@@ -34,6 +35,10 @@ function parseArgs(argv) {
       out.secretKeyPath = argv[++i];
       continue;
     }
+    if (a === "--key" && argv[i + 1]) {
+      out.secretKeyPath = argv[++i];
+      continue;
+    }
     usage();
   }
   if (!out.runDir || !out.backend) usage();
@@ -41,7 +46,16 @@ function parseArgs(argv) {
 }
 
 function main() {
+  if (String(process.env.CI || "") === "1") {
+    die("Refusing to run sign-run in CI");
+  }
+
   const { runDir, backend, secretKeyPath } = parseArgs(process.argv.slice(2));
+
+  const backendNorm =
+    backend === "software" ? "software-ed25519" : backend === "tpm" ? "tpm-windows" : backend;
+
+  const secretKeyPathNorm = secretKeyPath || process.env.SINTRAPRIME_SIGNING_KEY || null;
 
   const repoRoot = process.cwd();
   const runAbs = path.resolve(repoRoot, runDir);
@@ -55,7 +69,7 @@ function main() {
   const manifestPath = path.join(runAbs, "manifest.json");
   if (!fs.existsSync(manifestPath)) die(`Missing manifest.json at ${path.relative(repoRoot, manifestPath)}`);
 
-  const signer = createSigner({ backend, secretKeyPath });
+  const signer = createSigner({ backend: backendNorm, secretKeyPath: secretKeyPathNorm });
 
   const msg = fs.readFileSync(manifestPath);
   const { sigB64 } = signer.sign(msg);
