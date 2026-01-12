@@ -75,6 +75,18 @@ Gate on the exit code only.
 node verify-run.js runs --json > verify.json
 ```
 
+GitHub Actions (one line, gate on exit code):
+
+```yaml
+- run: node verify-run.js runs --json > verify.json
+```
+
+Make.com (one line, Command module):
+
+```bash
+node verify-run.js runs --json > verify.json
+```
+
 - Exit code 0: all verified
 - Exit code 1: verification failed or no verifiable runs present
 
