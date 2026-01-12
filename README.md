@@ -107,7 +107,8 @@ Watch Mode (outsider-facing):
 - Watch Mode overview: docs/watch-mode-overview.v1.md
 - Watch Mode platform & safety framing: docs/watch-mode-platform-safety.v1.md
 - Watch Mode policy appendix (MD): docs/policy/watch-mode-policy-appendix.v1.md
-- Watch Mode policy appendix (PDF): releases/policy-appendix/watch-mode/v1.0.0/SintraPrime_Policy_Appendix_Watch_Mode.pdf (SHA-256: releases/policy-appendix/watch-mode/v1.0.0/SintraPrime_Policy_Appendix_Watch_Mode.pdf.sha256)
+- Watch Mode policy appendix (PDF): releases/policy-appendix/watch-mode/v1.0.2/SintraPrime_Policy_Appendix_Watch_Mode.pdf (SHA-256: releases/policy-appendix/watch-mode/v1.0.2/SintraPrime_Policy_Appendix_Watch_Mode.pdf.sha256)
+- Watch Mode policy appendix (PDF, with diagram): releases/policy-appendix/watch-mode/v1.0.2/SintraPrime_Policy_Appendix_Watch_Mode_with_Diagram.pdf (SHA-256: releases/policy-appendix/watch-mode/v1.0.2/SintraPrime_Policy_Appendix_Watch_Mode_with_Diagram.pdf.sha256)
 
 ## Operator Fast UI (Tier-14)
 

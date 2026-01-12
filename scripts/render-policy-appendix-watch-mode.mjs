@@ -2,8 +2,12 @@
 /**
  * Render a policy-submission-ready PDF appendix for Watch Mode.
  * Output:
- *   releases/policy-appendix/watch-mode/v1.0.0/SintraPrime_Policy_Appendix_Watch_Mode.pdf
- *   releases/policy-appendix/watch-mode/v1.0.0/SintraPrime_Policy_Appendix_Watch_Mode.pdf.sha256
+ *   releases/policy-appendix/watch-mode/<version>/SintraPrime_Policy_Appendix_Watch_Mode.pdf
+ *   releases/policy-appendix/watch-mode/<version>/SintraPrime_Policy_Appendix_Watch_Mode.pdf.sha256
+ *
+ * Args:
+ *   --version <vX.Y.Z>   (default: v1.0.2)
+ *   --outDir <path>     (optional override)
  */
 
 import fs from "node:fs";
@@ -20,6 +24,14 @@ function escapeHtml(s) {
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
+}
+
+function escapeAttr(s) {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;");
 }
 
 function pickSection(md, header) {
@@ -40,9 +52,46 @@ function extractCodeBlock(md, header, codeFenceTitle) {
   return m ? m[1] : null;
 }
 
+function toSafeHtml(mdSection) {
+  if (!mdSection) return "";
+  const normalized = mdSection
+    .replace(/\r\n/g, "\n")
+    .replace(/\n\n/g, "\n")
+    .replace(/\n- /g, "\n• ")
+    .replace(/\n### /g, "\n\n");
+
+  const pattern = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)|(https?:\/\/[^\s<>")\]]+)/g;
+  let out = "";
+  let last = 0;
+  for (const m of normalized.matchAll(pattern)) {
+    const idx = m.index ?? 0;
+    out += escapeHtml(normalized.slice(last, idx));
+
+    const label = m[1];
+    const linkUrl = m[2];
+    const bareUrl = m[3];
+    const url = linkUrl ?? bareUrl;
+    const text = linkUrl ? label : url;
+    out += `<a href="${escapeAttr(url)}">${escapeHtml(text)}</a>`;
+
+    last = idx + m[0].length;
+  }
+  out += escapeHtml(normalized.slice(last));
+  return out.replace(/\n/g, "<br/>");
+}
+
+function getArg(name) {
+  const idx = process.argv.indexOf(name);
+  if (idx < 0) return null;
+  return process.argv[idx + 1] ?? null;
+}
+
 const repoRoot = process.cwd();
 const srcPath = path.join(repoRoot, "docs", "policy", "watch-mode-policy-appendix.v1.md");
-const outDir = path.join(repoRoot, "releases", "policy-appendix", "watch-mode", "v1.0.0");
+
+const version = getArg("--version") ?? "v1.0.2";
+const outDir =
+  getArg("--outDir") ?? path.join(repoRoot, "releases", "policy-appendix", "watch-mode", version);
 const outPdf = path.join(outDir, "SintraPrime_Policy_Appendix_Watch_Mode.pdf");
 const outSha = path.join(outDir, "SintraPrime_Policy_Appendix_Watch_Mode.pdf.sha256");
 
@@ -62,6 +111,7 @@ if (!diagram) {
 
 const platformSection = pickSection(md, "Platform-specific explanations (copy/paste)");
 const alignmentSection = pickSection(md, "Alignment notes (common policy clause families)");
+const pinnedSection = pickSection(md, "Pinned clause-family mapping (by platform)");
 
 const html = `<!doctype html>
 <html>
@@ -112,15 +162,21 @@ const html = `<!doctype html>
     <div>${escapeHtml("The system separates governance, execution, observation, and verification into distinct layers to prevent hidden automation or authority escalation. Execution occurs only after validation. Watch Mode, when enabled, provides phase-gated visual observation of approved actions and produces non-authoritative artifacts for transparency only. Finalized records are protected via append-only cryptographic hashing and can be verified independently using an offline tool. Governance behavior is versioned and immutable absent explicit release. This architecture enables transparency and auditability without introducing autonomous control.")}</div>
   </div>
 
+  <h2>Pinned clause families (by platform)</h2>
+  <div class="small">URLs and small excerpts are included for verifiability.</div>
+  <div class="box">
+    ${toSafeHtml(pinnedSection)}
+  </div>
+
   <h2>Alignment Notes (Common Policy Clause Families)</h2>
   <div class="small">These notes are phrased to map to common reviews of automation, scraping/data-access, and integrity/anti-circumvention.</div>
   <div class="box">
-    ${alignmentSection ? escapeHtml(alignmentSection).replace(/\n\n/g, "\n").replace(/\n- /g, "\n• ").replace(/\n### /g, "\n\n").replace(/\n/g, "<br/>") : ""}
+    ${toSafeHtml(alignmentSection)}
   </div>
 
   <h2>Platform-Specific Explanations (Copy/Paste)</h2>
   <div class="box">
-    ${platformSection ? escapeHtml(platformSection).replace(/\n\n/g, "\n").replace(/\n### /g, "\n\n").replace(/\n/g, "<br/>") : ""}
+    ${toSafeHtml(platformSection)}
   </div>
 
   <div class="small">Note: Watch Mode is observational only. Verification is deterministic and offline. This appendix does not confer authority or change system behavior.</div>
