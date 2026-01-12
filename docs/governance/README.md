@@ -1,7 +1,14 @@
 # Governance (Read-Only Index)
 
+> **Citation note:** This page is a read-only navigational index; all linked materials are documentation-only and non-executable, and do not grant authority or trigger system behavior.
+
 This page is a **read-only navigation index** for governance documentation.
 It is **not** enforcement, **not** wiring, and **not** runtime behavior.
+
+## Quick navigation
+
+- **For auditors / examiners:** Start with the scope-hash index to review declared intent over time, then follow individual pull requests as needed.
+- **For reviewers / maintainers:** Review the wiring-scope template and PR guard workflows before proposing or evaluating any wiring changes.
 
 ## Start here
 
