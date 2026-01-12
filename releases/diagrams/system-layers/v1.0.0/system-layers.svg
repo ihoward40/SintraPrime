@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="511" height="976" viewBox="0 0 511 976" role="img" aria-label="System layers diagram">
+  <rect x="0" y="0" width="511" height="976" fill="#ffffff" />
+  <g fill="#000000" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace" font-size="14">
+<text x="20" y="34">┌───────────────────────────────────────────────┐</text>
+<text x="20" y="52">│               GOVERNANCE LAYER                │</text>
+<text x="20" y="70">│                                               │</text>
+<text x="20" y="88">│  • Mode semantics (v1.0, v1.1…)                │</text>
+<text x="20" y="106">│  • Limb activation rules                      │</text>
+<text x="20" y="124">│  • Validation authority &amp; Silent Halt         │</text>
+<text x="20" y="142">│  • Transparency reports (aggregate only)      │</text>
+<text x="20" y="160">│                                               │</text>
+<text x="20" y="178">│  Immutable • Citeable • Explicitly versioned  │</text>
+<text x="20" y="196">└───────────────────────────────────────────────┘</text>
+<text x="20" y="214">                    ▲</text>
+<text x="20" y="232">                    │ (declares limits only)</text>
+<text x="20" y="250">                    │</text>
+<text x="20" y="268">┌───────────────────────────────────────────────┐</text>
+<text x="20" y="286">│               EXECUTION LAYER                 │</text>
+<text x="20" y="304">│                                               │</text>
+<text x="20" y="322">│  • Plan generation                            │</text>
+<text x="20" y="340">│  • Approved step execution                    │</text>
+<text x="20" y="358">│  • Deterministic apply logic                  │</text>
+<text x="20" y="376">│                                               │</text>
+<text x="20" y="394">│  No autonomy • No hidden authority            │</text>
+<text x="20" y="412">└───────────────────────────────────────────────┘</text>
+<text x="20" y="430">                    ▲</text>
+<text x="20" y="448">                    │ (produces artifacts)</text>
+<text x="20" y="466">                    │</text>
+<text x="20" y="484">┌───────────────────────────────────────────────┐</text>
+<text x="20" y="502">│             OBSERVATION LAYER                 │</text>
+<text x="20" y="520">│                                               │</text>
+<text x="20" y="538">│  • Watch Mode (opt-in only)                   │</text>
+<text x="20" y="556">│  • UI recordings / screenshots                │</text>
+<text x="20" y="574">│  • Phase-gated, run-scoped                    │</text>
+<text x="20" y="592">│                                               │</text>
+<text x="20" y="610">│  Observational • Non-authoritative            │</text>
+<text x="20" y="628">└───────────────────────────────────────────────┘</text>
+<text x="20" y="646">                    ▲</text>
+<text x="20" y="664">                    │ (hashes artifacts)</text>
+<text x="20" y="682">                    │</text>
+<text x="20" y="700">┌───────────────────────────────────────────────┐</text>
+<text x="20" y="718">│            VERIFICATION LAYER                 │</text>
+<text x="20" y="736">│                                               │</text>
+<text x="20" y="754">│  • Append-only hash chain                     │</text>
+<text x="20" y="772">│  • Offline verifier (verify-run.js)           │</text>
+<text x="20" y="790">│  • CI gate on exit code only                  │</text>
+<text x="20" y="808">│                                               │</text>
+<text x="20" y="826">│  Mathematical integrity • No discretion       │</text>
+<text x="20" y="844">└───────────────────────────────────────────────┘</text>
+<text x="20" y="862"></text>
+<text x="20" y="880">Key Invariants:</text>
+<text x="20" y="898">• No layer can silently expand its authority</text>
+<text x="20" y="916">• Observation does not imply approval</text>
+<text x="20" y="934">• Verification proves integrity, not intent</text>
+<text x="20" y="952">• Governance changes require explicit versioned release</text>
+  </g>
+</svg>

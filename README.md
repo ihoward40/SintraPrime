@@ -99,6 +99,8 @@ Additional one-page artifacts (for outsiders / regulators):
 - Audit integrity statement: docs/audit-integrity-statement.v1.md
 - Audit integrity statements (by audience): docs/audit-integrity-statements.by-audience.v1.md
 - System Layers Diagram (print-ready PDF): releases/diagrams/system-layers/v1.0.0/system-layers.pdf (SHA-256: releases/diagrams/system-layers/v1.0.0/system-layers.pdf.sha256)
+- System Layers Diagram (vector SVG): releases/diagrams/system-layers/v1.0.0/system-layers.svg (SHA-256: releases/diagrams/system-layers/v1.0.0/system-layers.svg.sha256)
+- System Layers Diagram (Court, Landscape PDF): releases/diagrams/system-layers-court-landscape/v1.0.0/system-layers.court.landscape.pdf (SHA-256: releases/diagrams/system-layers-court-landscape/v1.0.0/system-layers.court.landscape.pdf.sha256)
 
 ## Operator Fast UI (Tier-14)
 
