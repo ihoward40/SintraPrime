@@ -11,3 +11,21 @@
 
 - **Watch Mode — Level 1–3 Safe Escalations (Spec Text)**  
   [`watch-mode-safe-escalations.level1-3.spec.v1.md`](./watch-mode-safe-escalations.level1-3.spec.v1.md)
+
+- **Merkle Specification — Public Verifier Bundles (v1)**  
+  [`merkle-public-bundle-spec.v1.md`](./merkle-public-bundle-spec.v1.md)
+
+- **Run Header Anchor Addendum (v1)**  
+  [`run-header-anchor-addendum.v1.md`](./run-header-anchor-addendum.v1.md)
+
+- **Notarization SOP — Documentation & Public Bundles (v1)**  
+  [`notarization-sop.v1.md`](./notarization-sop.v1.md)
+
+- **Public Verifier — How To (v1)**  
+  [`public-verifier-how-to.v1.md`](./public-verifier-how-to.v1.md)
+
+- **Governance Index (v1)**  
+  [`governance-index.v1.md`](./governance-index.v1.md)
+
+- **Example — Merkle Leaves (Sample JSON)**  
+  [`examples/merkle.leaves.sample.v1.json`](./examples/merkle.leaves.sample.v1.json)
