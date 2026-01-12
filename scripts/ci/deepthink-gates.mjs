@@ -13,10 +13,12 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 import process from "node:process";
+import Ajv from "ajv";
 
 const REPO_ROOT = process.cwd();
 const DEEPTHINK_DIR = path.join(REPO_ROOT, "deepthink");
 const RUNS_DIR = path.join(REPO_ROOT, "runs");
+const SCHEMA_PATH = path.join(REPO_ROOT, "deepthink", "src", "deepthink_request.schema.json");
 
 function fail(msg) {
   process.stderr.write(`DeepThink gate failed: ${msg}\n`);
@@ -161,6 +163,41 @@ function gateRequestKeys() {
   ok("DeepThink gates: request.json top-level keys strict");
 }
 
+// Gate 5: JSON Schema validation (Ajv)
+function gateRequestSchemaAjv() {
+  const runDirs = listDeepthinkRunDirs();
+  if (runDirs.length === 0) {
+    ok("DeepThink gates: no DEEPTHINK_* runs present (Ajv schema gate skipped)");
+    return;
+  }
+
+  if (!fs.existsSync(SCHEMA_PATH)) {
+    fail(`Schema not found: ${path.relative(REPO_ROOT, SCHEMA_PATH)}`);
+  }
+
+  // CI-only: validate schema strictly, but do not enforce/require format plugins.
+  // Also do NOT apply defaults or coerce types.
+  const ajv = new Ajv({ allErrors: true, strict: true, strictFormats: false });
+  const schema = JSON.parse(readUtf8(SCHEMA_PATH));
+  const validate = ajv.compile(schema);
+
+  for (const dir of runDirs) {
+    const reqPath = path.join(dir, "request.json");
+    if (!fs.existsSync(reqPath)) continue;
+
+    const req = readJson(reqPath);
+    const valid = validate(req);
+    if (!valid) {
+      fail(
+        `Schema violation in ${path.relative(REPO_ROOT, reqPath)}:\n` +
+          ajv.errorsText(validate.errors, { separator: "\n" }),
+      );
+    }
+  }
+
+  ok("DeepThink gates: request.json passes Ajv JSON-Schema validation");
+}
+
 function main() {
   process.stdout.write("Running DeepThink CI gates…\n");
 
@@ -173,6 +210,7 @@ function main() {
   gateWriteBoundary();
   gateRunArtifacts();
   gateRequestKeys();
+  gateRequestSchemaAjv();
 
   process.stdout.write("DeepThink CI gates passed\n");
 }
