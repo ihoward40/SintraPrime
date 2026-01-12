@@ -37,6 +37,8 @@ All governance, verification, transparency, and integrity specifications are enu
 
 The index is descriptive and versioned. Absence of a document implies non-implementation by design.
 
+External reviewers can follow a read-only verification path in the **Public Verifier How-To**: [`docs/public-verifier-how-to.v1.md`](docs/public-verifier-how-to.v1.md).
+
 > **v1.0 is frozen for evidentiary use. No semantic changes permitted.**
 >
 > Freeze/fork procedure: [docs/governance/freeze-v1-fork-v2.md](docs/governance/freeze-v1-fork-v2.md)

@@ -81,6 +81,12 @@ This flow is declarative and integrity-focused; it does not imply execution auth
 
 ---
 
+## How to Challenge This System
+
+Challenges to this system must be raised against documented specifications, declared hashes, or immutable tags. Objections should identify a specific document, file hash, Merkle root, or tag and demonstrate inconsistency, tampering, or non-conformance with the published rules. Claims based on assumptions, undocumented expectations, or unstated requirements are out of scope. Where no document exists, non-implementation is intentional by design.
+
+---
+
 ## Claims Boundary
 This index organizes documentation.
 It does not assert execution, compliance, or legal effect.
