@@ -50,6 +50,10 @@ import { exportAuditCourtPacket } from "../audit/exportAuditCourtPacket.js";
 import { exportAuditExecutionBundle } from "../audit/exportAuditExecutionBundle.js";
 import { applySecretsToProcessEnv, loadSecretsEnv } from "../clean/config.js";
 import {
+  appendSilentHaltLedgerLine,
+  maybeAppendModeTransitionLedger,
+} from "../operator/governance/modeTransitionLedger.js";
+import {
   applyRequalificationCooldownWatcher,
   effectiveAutonomyModeForState,
   isRequalificationEnabled,
@@ -2378,7 +2382,24 @@ async function run() {
       const required = validated.required_inputs?.length
         ? ` Required: ${validated.required_inputs.join(", ")}`
         : "";
+
+      // Optional, append-only governance scribe.
+      // If validation denies, record a SILENT_HALT marker (no other writes).
+      try {
+        appendSilentHaltLedgerLine();
+      } catch {
+        // ignore
+      }
+
       throw new Error(`${reason}${required}`);
+    }
+
+    // Optional, append-only governance scribe.
+    // Runs after validation approval and before any planner/execution.
+    try {
+      maybeAppendModeTransitionLedger();
+    } catch {
+      // ignore
     }
 
     forwardedCommand =

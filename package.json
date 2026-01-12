@@ -20,6 +20,7 @@
     "autonomy": "node --loader tsx ./src/cli/run-autonomy.ts",
     "demo:visual-browser": "node ./scripts/visual-browser-demo/demo.mjs",
     "pdf:render": "node ./scripts/pdf/render-court-pdf.mjs",
+    "pdf:render:verified": "node ./scripts/pdf/render-court-pdf-verified.mjs",
     "pdf:append": "node ./scripts/pdf/append-pdf.mjs",
     "ui:server": "node ./ui/server.js",
     "ui:client": "npm --prefix ui/client run dev",
@@ -39,6 +40,7 @@
     "pdf-lib": "^1.17.1",
     "playwright": "^1.57.0",
     "puppeteer": "^23.11.1",
+    "qrcode": "^1.5.4",
     "rimraf": "^6.0.1",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2"

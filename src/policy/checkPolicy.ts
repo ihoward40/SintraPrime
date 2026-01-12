@@ -1,4 +1,5 @@
 import type { ExecutionPlan, ExecutionStep } from "../schemas/ExecutionPlan.schema.js";
+import fs from "node:fs";
 import { computePromotionFingerprint } from "../autonomy/promotionFingerprint.js";
 import { isDemoted, readPromotion } from "../autonomy/promotionStore.js";
 import { evaluateDelegationForPlan } from "../delegated/delegationEngine.js";
@@ -178,6 +179,81 @@ export function checkPlanPolicy(plan: any, env: NodeJS.ProcessEnv = process.env)
         kind: 'PolicyDenied',
         code: 'AUTONOMY_READ_ONLY_VIOLATION',
         reason: 'READ_ONLY_AUTONOMY forbids any step with read_only=false'
+      };
+    }
+  }
+
+  // Optional Mode/Limb governance enforcement (operator-driven).
+  // This is intentionally opt-in to avoid breaking existing deployments.
+  if (env.SINTRAPRIME_MODE_GOVERNANCE_ENFORCE === "1") {
+    const declaredMode = String(env.SINTRAPRIME_MODE ?? "").trim();
+    const declarationPath = String(env.SINTRAPRIME_MODE_DECLARATION_PATH ?? "").trim();
+    const activeLimbs = new Set(parseCsv(env.SINTRAPRIME_ACTIVE_LIMBS));
+
+    if (!declaredMode) {
+      return {
+        kind: "PolicyDenied",
+        code: "MODE_DECLARATION_MISSING",
+        reason: "SINTRAPRIME_MODE_GOVERNANCE_ENFORCE=1 requires SINTRAPRIME_MODE",
+      };
+    }
+
+    if (!declarationPath) {
+      return {
+        kind: "PolicyDenied",
+        code: "MODE_DECLARATION_MISSING",
+        reason: "SINTRAPRIME_MODE_GOVERNANCE_ENFORCE=1 requires SINTRAPRIME_MODE_DECLARATION_PATH",
+      };
+    }
+
+    try {
+      if (!fs.existsSync(declarationPath)) {
+        return {
+          kind: "PolicyDenied",
+          code: "MODE_DECLARATION_NOT_FOUND",
+          reason: `Mode declaration sheet not found at: ${declarationPath}`,
+        };
+      }
+    } catch {
+      return {
+        kind: "PolicyDenied",
+        code: "MODE_DECLARATION_NOT_FOUND",
+        reason: `Mode declaration sheet not found at: ${declarationPath}`,
+      };
+    }
+
+    if (declaredMode === "FROZEN") {
+      return {
+        kind: "PolicyDenied",
+        code: "MODE_FROZEN",
+        reason: "SINTRAPRIME_MODE=FROZEN denies execution",
+      };
+    }
+
+    const needsNotionWrite = steps.some((s: any) => typeof s?.action === "string" && s.action.startsWith("notion.write."));
+    const needsNotionLiveWrite = steps.some((s: any) => s?.action === "notion.live.write");
+
+    if ((needsNotionWrite || needsNotionLiveWrite) && declaredMode !== "SINGLE_RUN_APPROVED") {
+      return {
+        kind: "PolicyDenied",
+        code: "MODE_WRITE_REQUIRES_SINGLE_RUN_APPROVED",
+        reason: "Notion write/live-write requires SINTRAPRIME_MODE=SINGLE_RUN_APPROVED",
+      };
+    }
+
+    if (needsNotionWrite && !activeLimbs.has("notion.write")) {
+      return {
+        kind: "PolicyDenied",
+        code: "LIMB_INACTIVE",
+        reason: "Plan requires Notion write but limb 'notion.write' is not ACTIVE",
+      };
+    }
+
+    if (needsNotionLiveWrite && !activeLimbs.has("notion.live.write")) {
+      return {
+        kind: "PolicyDenied",
+        code: "LIMB_INACTIVE",
+        reason: "Plan requires Notion live write but limb 'notion.live.write' is not ACTIVE",
       };
     }
   }
