@@ -48,7 +48,7 @@ DeepThink is considered “in SintraPrime” only if the following are continuou
 DeepThink itself does not claim tiers. Tiers are derived from artifacts present in a run folder.
 
 - Tier 0: hashes (`*.sha256`) only.
-- Tier 1: signatures present (`*.sig`) with repo-published public key.
-- Tier 2: TPM attestation present (`tpm_attestation.json` + signature).
+- Tier 1: `manifest.json.sig` present and verifiable with a repo-published public key.
+- Tier 2: `tpm_attestation.json` and `tpm_attestation.json.sig` present and verifiable.
 
-DeepThink v1 targets Tier 0 only.
+DeepThink v1 targets Tier 0 only. Tier upgrades (signing/attestation) are performed by explicit, separate tooling.
