@@ -7,6 +7,14 @@ trigger execution, or alter system behavior.
 Dates in this register reflect external citation or filing usage, not internal
 development activity.
 
+> **Clerk’s Note on Dates.** Dates marked “TBD” indicate that the referenced tag or record has not yet been cited in an external filing and therefore has no operative filing date as of the time of submission.
+
+## Optional future column (Filed As Of)
+
+If this register is later expanded into a broader filing log, track these concepts separately:
+- **Effective date** → first external citation of the tag
+- **Filed As Of** → date a specific packet or exhibit was submitted
+
 ---
 
 ## governance-docs-baseline-2026-01
