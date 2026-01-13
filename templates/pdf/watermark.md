@@ -16,22 +16,22 @@
 </style>
 
 <img
-  src="sintraprime-sigil.png"
+  src="assets/sintraprime_judicial_appellate.svg"
   class="sintraprime-watermark"
   alt="SintraPrime Watermark"
 />
 ```
 Rules:
+- Watermark: sintraprime_judicial_appellate.svg
 - Opacity: 0.10–0.15
-- Centered
-- Never overlap header text
-- Behind content (z-index: 0)
+- Centered, behind content
+- Scope: All pages except cover
 
 ## Option B: ReportLab (deterministic)
 ```python
 from reportlab.lib.pagesizes import LETTER
 
-def sintraprime_watermark(c, sigil_path="sintraprime-sigil.png"):
+def sintraprime_watermark(c, sigil_path="assets/sintraprime_judicial_appellate.svg"):
     width, height = LETTER
     size = 360
     c.saveState()
