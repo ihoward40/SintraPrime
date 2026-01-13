@@ -1,6 +1,6 @@
 # VERIFICATION CERTIFICATE
 
-**Offline Integrity Verification Transcript**
+## Offline Integrity Verification Transcript
 
 ---
 
@@ -56,36 +56,55 @@ Environment:           User-provided computer
 
 ---
 
-Verification Transcript — Page 1 of 2
+Verification Transcript — Page 1 of 3
 Generated Offline — No Network Access Used
 
 \pagebreak
 
-# NOTARY ACKNOWLEDGMENT (BLANK)
+## Hash Declaration (Exhibit Page)
 
-STATE OF ______________________ )
+This page records the SHA-256 fingerprint(s) of the final PDF(s) intended for filing.
 
-COUNTY OF ____________________ )
+Case Identifier: {{CASE_ID}}
 
-On this ____ day of _______________, 20____, before me, the undersigned Notary Public, personally appeared:
+Generated (UTC): {{YYYY-MM-DD}} {{HH:MM:SS}}
 
-______________________________________
+Verifier Binary SHA-256: {{BINARY_SHA256}}
 
-who affirmed that the verification described in this document was performed as stated.
-
-
-______________________________________
-Signature of Verifier
-
-______________________________________
-Printed Name
-
-______________________________________
-Notary Public Signature
-
-My Commission Expires: _______________
+| File | SHA-256 |
+| --- | --- |
+| verification-transcript.pdf | {{TRANSCRIPT_PDF_SHA256}} |
+| (optional) ____________________________ | ____________________________ |
 
 ---
 
-Verification Transcript — Page 2 of 2
+Verification Transcript — Page 2 of 3
+Generated Offline — No Network Access Used
+
+\pagebreak
+
+## Notary Acknowledgment (New Jersey — Acknowledgment)
+
+STATE OF NEW JERSEY ) ss:
+
+COUNTY OF ESSEX: __________________
+
+On this ______ day of ______________________, 20____, before me, the undersigned Notary Public, personally appeared:
+
+Signer (personally appeared): ______________________________
+
+who I am satisfied is the person who executed the foregoing instrument and acknowledged that they executed the same for the purposes therein contained.
+
+Signature of Signer: ______________________________
+
+Printed Name: ______________________________
+
+Notary Public (State of New Jersey): ______________________________
+
+My Commission Expires: _______________
+Notary ID (if applicable): ___________
+
+---
+
+Verification Transcript — Page 3 of 3
 Generated Offline — No Network Access Used
