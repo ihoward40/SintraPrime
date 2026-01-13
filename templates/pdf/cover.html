@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    :root {
+      --bg: #ffffff;
+      --fg: #0B0E14;
+      --accent: #0B0E14;
+      --rule: #0B0E14;
+      --muted: #444;
+    }
+    body {
+      margin: 48px;
+      font-family: 'Helvetica', 'Arial', sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+    }
+    .header {
+      display: flex;
+      align-items: flex-start;
+      gap: 18px;
+      margin-bottom: 28px;
+    }
+    .sigil {
+      width: 72px;
+      height: 72px;
+      object-fit: contain;
+    }
+    .title {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 6px;
+      margin-top: 4px;
+    }
+    .title h1 {
+      margin: 0;
+      font-size: 22px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .rule {
+      margin: 12px 0 24px 0;
+      border: none;
+      border-top: 1px solid var(--rule);
+      height: 1px;
+    }
+    .declaration {
+      border: 1px solid var(--rule);
+      padding: 18px;
+      font-size: 12px;
+      line-height: 1.6;
+      text-align: center;
+      margin-bottom: 36px;
+      white-space: pre-wrap;
+    }
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      color: var(--muted);
+      margin-top: 48px;
+    }
+    .watermark {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0.12;
+      pointer-events: none;
+      z-index: -1;
+    }
+    .watermark img {
+      width: 320px;
+      height: 320px;
+      object-fit: contain;
+    }
+  </style>
+</head>
+<body>
+  <!-- Optional watermark -->
+  <div class="watermark">
+    <img src="../artifacts/sintraprime-sigil-256.png" alt="SintraPrime Watermark">
+  </div>
+
+  <div class="header">
+    <img class="sigil" src="../artifacts/sintraprime-sigil-256.png" alt="SintraPrime Sigil">
+    <div class="title">
+      <h1>SINTRAPRIME MODE — {{MODE STATUS}}</h1>
+    </div>
+  </div>
+
+  <hr class="rule">
+
+  <div class="declaration">
+GOVERNANCE DECLARATION
+
+This document was generated under SintraPrime Mode.
+
+Mode Status: {{MODE STATUS}}
+Scope: {{SCOPE}}
+Authority Basis: Documentary Evidence Only
+Execution Policy: Constrained / Deterministic
+  </div>
+
+  <div class="footer">
+    <div>Prepared under SintraPrime Governance Framework</div>
+    <div>Run ID: {{RUN ID}} · Generated: {{DATE}}</div>
+  </div>
+</body>
+</html>
