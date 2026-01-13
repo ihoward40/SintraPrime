@@ -1,5 +1,11 @@
 # SINTRAPRIME GOVERNANCE BINDER — INDEX
 
+*Operator reference (not evidence): Tab 0 On-the-Record Cue Card*
+*Operator reference (not evidence): Tab 0 Bench Orientation*
+*Operator reference (not evidence): Tab 0 Wallet Card*
+*Optional bench leave-behind (not evidence): Tab 0 Bench Memo*
+*Divider (orientation boundary): Tab 0 Divider Page*
+
 Tab 0A — Examiner Summary (Orientation Page)
 - File: SINTRAPRIME_EXAMINER_SUMMARY.md
 - Purpose: orientation; explains what the system is; no evidentiary claims or oath
