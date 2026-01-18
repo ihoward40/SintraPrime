@@ -2,50 +2,103 @@ name: ci
 
 on:
   push:
+    branches: ["**"]
   pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  MAKE_REQUIRE_MANIFEST_SCHEMA_ID: "1"
 
 jobs:
-  smoke:
+  workflow_lint:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22.x"
+      - name: Install actionlint (pinned)
+        run: |
+          go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.7
+      - name: Run actionlint
+        run: |
+          actionlint -color
 
-      - name: Setup Node
+  ci:
+    runs-on: ubuntu-latest
+    needs: workflow_lint
+    timeout-minutes: 15
+    env:
+      CI: "1"
+      NODE_OPTIONS: "--unhandled-rejections=strict"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node (pinned)
         uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: npm
+          node-version: "20.11.1"
+          cache: "npm"
+          cache-dependency-path: |
+            package-lock.json
+            socialos/api/package-lock.json
+            socialos/ui/package-lock.json
 
-      - name: Install
-        run: npm ci
+      - name: Preflight env (fail-fast)
+        run: node scripts/ci/preflight-env.mjs
 
-      - name: DeepThink gates
-        run: npm run -s ci:deepthink-gates
+      - name: Install (root)
+        run: npm ci --no-fund --no-audit
 
-      - name: Verify signatures (Tier 1 if present)
-        run: npm run -s ci:verify-signatures
+      - name: CI Guard (fast-fail truth)
+        run: npm run -s ci:guard
 
-      - name: Detect derived tiers
-        run: npm run -s ci:detect-tiers
+      - name: Install (SocialOS API)
+        run: npm --prefix socialos/api ci --no-fund --no-audit
 
-      - name: Start mock server
-        env:
-          WEBHOOK_SECRET: test-secret
-          MOCK_INCLUDE_THREADID: "1"
-          MOCK_PORT: "8787"
+      - name: Install (SocialOS UI)
+        run: npm --prefix socialos/ui ci --no-fund --no-audit
+
+      - name: Lint schemas (API)
+        run: npm --prefix socialos/api run -s lint:schemas
+
+      - name: Validate OpenAPI (pinned CLI)
+        run: npx -y @redocly/cli@1.25.5 lint socialos/api/openapi.yaml
+
+      - name: Typecheck
+        run: npm run -s typecheck
+
+      - name: Build UI
+        run: npm --prefix socialos/ui run -s build
+
+      - name: Run contract checks (status codes/runbooks)
         run: |
-          node ./scripts/mock-server.js &
-          sleep 1
-          curl -sSf http://localhost:8787/status/200 >/dev/null
+          npm --prefix socialos/api run -s test:status-codes
+          npm run -s ci:runbooks
 
-      - name: Smoke vectors (strict)
-        env:
-          WEBHOOK_SECRET: test-secret
-          STRICT_AGENT_OUTPUT: "1"
-          VALIDATION_WEBHOOK_URL: http://localhost:8787/validation
-          PLANNER_WEBHOOK_URL: http://localhost:8787/planner
-          THREAD_ID: local_test_001
-        run: npm run smoke:vectors:trim
+      - name: Write summary
+        if: always()
+        run: node scripts/ci/write-summary.mjs >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload artifacts (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-artifacts-${{ github.run_id }}
+          if-no-files-found: ignore
+          retention-days: 7
+          path: |
+            socialos/api/runs/**
+            socialos/api/*.log
+            socialos/api/**/events.jsonl
+            socialos/api/**/receipts*.json
+            socialos/ui/dist/**
+            **/*.tap
+            **/*.junit.xml
