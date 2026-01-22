@@ -4,6 +4,27 @@
 
 Validator → Planner → Executor pipeline and receipt logging: [docs/agent-mode-executor-v1.md](docs/agent-mode-executor-v1.md)
 
+## Documentation
+
+- **SintraPrime Mega-Prompt (Master Prompt / Agent Mode Rules):** [docs/SINTRAPRIME_MEGA_PROMPT.md](docs/SINTRAPRIME_MEGA_PROMPT.md)
+- **Tool Inventory (High-Leverage, Low-Sprawl):** [docs/TOOL_INVENTORY.md](docs/TOOL_INVENTORY.md)
+
+### Operator Quickstart
+
+- Standardize every execution (RunID + folder tree + hashing + bundle ZIP):
+  - Node: `node tools/run-skeleton/run-skeleton.mjs --tag CASEFILE --objective "..."`
+  - PowerShell wrapper: `tools/run-skeleton/run-skeleton.ps1`
+  - Bash wrapper: `tools/run-skeleton/run-skeleton.sh`
+
+## Notion operator shortcuts
+
+- Notion Hands-Free Router Wiring v1 → [notion/job-templates/notion-hands-free-router-wiring.v1.md](notion/job-templates/notion-hands-free-router-wiring.v1.md)
+- Master Router Prompts v1 → [notion/job-templates/notion-ai-master-router-prompts.v1.md](notion/job-templates/notion-ai-master-router-prompts.v1.md)
+
+## Testing / smoke
+
+See the “Smoke modes (don’t guess)” section in `OPERATOR_RUNBOOK.md`.
+
 ## Governance
 
 GOVERNANCE_RELEASE: SintraPrime_Mode_Governance_v1.1
@@ -46,6 +67,37 @@ External reviewers can follow a read-only verification path in the **Public Veri
 - **Current Governance Checkpoint:**  
   Phase X Lock v1.4 — Read-Only Analysis Integration  
   [phaseX-lock-v1.4](https://github.com/ihoward40/SintraPrime/releases/tag/phaseX-lock-v1.4)
+
+## TurboSparse + strict flags (operator knobs)
+
+TurboSparse is an execution policy that selects a minimal set of expert prompt modules per request,
+builds a deterministic sparse system prompt, and records the selection in run receipts.
+
+### CLI flags
+
+- `--turbosparse` / `--no-turbosparse`
+- `--strict-turbosparse` (refuse when selection is too empty for the requested mode)
+- `--strict-arch` (refuse on missing/unknown `--arch`)
+- `--strict-mode` (refuse on missing/unknown `--mode`)
+- `--strict-any` (enables strict arch + strict mode + strict turbosparse)
+
+### Opt-in memo cache + opt-in token budget
+
+Governance default is **OFF** unless explicitly enabled.
+
+- `SINTRAPRIME_CACHE=1` enables memo-cache for validator/planner webhook responses (written under `<runDir>/cache/`).
+- `SINTRAPRIME_TOKEN_BUDGET=NNNN` enables deterministic token budgeting/trimming; trims are recorded in receipts.
+
+### Refusals (audit artifacts)
+
+When strict refusals trigger, the CLI exits with **exit code 2** and writes a refusal pack:
+
+- `<runDir>/refusal/refusal.json`
+- `<runDir>/refusal/refusal.md`
+- `<runDir>/receipt.json` (updated/created)
+- `<runDir>/events.jsonl` (appended)
+
+`<runDir>` defaults to `runs/latest` unless overridden by `SINTRAPRIME_RUN_DIR` or `RUN_DIR`.
 
 ## Windows path note
 

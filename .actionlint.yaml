@@ -1,0 +1,8 @@
+# .actionlint.yaml
+self-hosted-runner:
+  labels: []
+rules:
+  shellcheck:
+    shell: bash
+  pyflakes:
+    enabled: false

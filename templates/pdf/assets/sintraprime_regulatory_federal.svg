@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Regulatory Sigil: Federal Compliance Preset -->
+  <!-- 20 ticks, medium ring (14px), medium tick length, 18px triangle stroke -->
+  <g transform="translate(256,256)">
+    <!-- Outer ring with 20 ticks -->
+    <circle cx="0" cy="0" r="220" fill="none" stroke="#1a1a1a" stroke-width="14"/>
+    <!-- 20 radial tick marks -->
+    <g id="ticks">
+      <line x1="0" y1="-220" x2="0" y2="-200" stroke="#1a1a1a" stroke-width="3"/>
+      <line x1="0" y1="-220" x2="0" y2="-200" stroke="#1a1a1a" stroke-width="3" transform="rotate(18)"/>
+      <line x1="0" y1="-220" x2="0" y2="-200" stroke="#1a1a1a" stroke-width="3" transform="rotate(36)"/>
+      <line x1="0" y1="-220" x2="0" y2="-200" stroke="#1a1a1a" stroke-width="3" transform="rotate(54)"/>
+      <line x1="0" y1="-220" x2="0" y2="-200" stroke="#1a1a1a" stroke-width="3" transform="rotate(72)"/>
+      <line x1="0" y1="-220" x2="0" y2="-200" stroke="#1a1a1a" stroke-width="3" transform="rotate(90)"/>
+      <line x1="0" y1="-220" x2="0" y2="-200" stroke="#1a1a1a" stroke-width="3" transform="rotate(108)"/>
+      <line x1="0" y1="-220" x2="0" y2="-200" stroke="#1a1a1a" stroke-width="3" transform="rotate(126)"/>
+      <line x1="0" y1="-220" x2="0" y2="-200" stroke="#1a1a1a" stroke-width="3" transform="rotate(144)"/>
+      <line x1="0" y1="-220" x2="0" y2="-200" stroke="#1a1a1a" stroke-width="3" transform="rotate(162)"/>
+      <line x1="0" y1="-220" x2="0" y2="-200" stroke="#1a1a1a" stroke-width="3" transform="rotate(180)"/>
+      <line x1="0" y1="-220" x2="0" y2="-200" stroke="#1a1a1a" stroke-width="3" transform="rotate(198)"/>
+      <line x1="0" y1="-220" x2="0" y2="-200" stroke="#1a1a1a" stroke-width="3" transform="rotate(216)"/>
+      <line x1="0" y1="-220" x2="0" y2="-200" stroke="#1a1a1a" stroke-width="3" transform="rotate(234)"/>
+      <line x1="0" y1="-220" x2="0" y2="-200" stroke="#1a1a1a" stroke-width="3" transform="rotate(252)"/>
+      <line x1="0" y1="-220" x2="0" y2="-200" stroke="#1a1a1a" stroke-width="3" transform="rotate(270)"/>
+      <line x1="0" y1="-220" x2="0" y2="-200" stroke="#1a1a1a" stroke-width="3" transform="rotate(288)"/>
+      <line x1="0" y1="-220" x2="0" y2="-200" stroke="#1a1a1a" stroke-width="3" transform="rotate(306)"/>
+      <line x1="0" y1="-220" x2="0" y2="-200" stroke="#1a1a1a" stroke-width="3" transform="rotate(324)"/>
+      <line x1="0" y1="-220" x2="0" y2="-200" stroke="#1a1a1a" stroke-width="3" transform="rotate(342)"/>
+    </g>
+    <!-- Central triangle (checkpoint/constraint) -->
+    <path d="M 0,-130 L 112.5,65 L -112.5,65 Z" fill="none" stroke="#1a1a1a" stroke-width="18" stroke-linejoin="miter"/>
+  </g>
+</svg>
