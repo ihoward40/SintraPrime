@@ -2,50 +2,152 @@ name: ci
 
 on:
   push:
+    branches: ["**"]
   pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  MAKE_REQUIRE_MANIFEST_SCHEMA_ID: "1"
 
 jobs:
-  smoke:
+  workflow_lint:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22.x"
+      - name: Install actionlint (pinned)
+        run: |
+          go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.7
+      - name: Run actionlint
+        run: |
+          actionlint -color
 
-      - name: Setup Node
+  ci:
+    runs-on: ubuntu-latest
+    needs: workflow_lint
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        node:
+          - "20.11.1"
+          - "22.11.0"
+    env:
+      CI: "1"
+      NODE_OPTIONS: "--unhandled-rejections=strict"
+      NOTION_RUNBOOK_PATH: 'notion/job-templates/notion-hands-free-router-wiring.v1.md'
+      CANONICAL_WIRING_HEADER_REGEX: '^##\\s+Pinned-Mode\\s+Make\\s+Wiring\\s+\\(Module\\s+0\\s+→\\s+90\\)\\s*$'
+      # Update these when the canonical wiring section changes.
+      CANONICAL_WIRING_SECTION_SHA256: 'f6ead7625607bba798c9aeef11148e0e0f6f26aa8923628ababaa65a88bdd67c'
+      CANONICAL_WIRING_HEADER_VERSION: 'v1'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node (pinned)
         uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: npm
+          node-version: ${{ matrix.node }}
+          cache: "npm"
+          cache-dependency-path: |
+            package-lock.json
+            socialos/api/package-lock.json
+            socialos/ui/package-lock.json
 
-      - name: Install
-        run: npm ci
+      - name: Preflight env (fail-fast)
+        run: node scripts/ci/preflight-env.mjs
 
-      - name: DeepThink gates
-        run: npm run -s ci:deepthink-gates
+      - name: Install (root)
+        run: npm ci --no-fund --no-audit
 
-      - name: Verify signatures (Tier 1 if present)
-        run: npm run -s ci:verify-signatures
-
-      - name: Detect derived tiers
-        run: npm run -s ci:detect-tiers
-
-      - name: Start mock server
+      - name: Strict arch must refuse (and emit pack)
         env:
-          WEBHOOK_SECRET: test-secret
-          MOCK_INCLUDE_THREADID: "1"
-          MOCK_PORT: "8787"
+          SINTRAPRIME_RUN_DIR: runs/_ci_strict_arch_${{ matrix.node }}
+        run: npm run -s ci:strict-arch-refusal
+
+      - name: Strict mode must refuse (and emit pack)
+        env:
+          SINTRAPRIME_RUN_DIR: runs/_ci_strict_mode_${{ matrix.node }}
+        run: npm run -s ci:strict-mode-refusal
+
+      - name: Strict-any must enforce strict-arch + strict-mode
+        env:
+          SINTRAPRIME_RUN_DIR: runs/_ci_strict_any_${{ matrix.node }}
+        run: npm run -s ci:strict-any-refusal
+
+      - name: Strict gamma must refuse (and emit pack)
+        env:
+          SINTRAPRIME_RUN_DIR: runs/_ci_strict_gamma_${{ matrix.node }}
+        run: npm run -s ci:strict-gamma-refusal
+
+      - name: Slides pipeline smoke (optimizer + render)
+        env:
+          SINTRAPRIME_RUN_DIR: runs/_ci_slides_smoke_${{ matrix.node }}
+        run: npm run -s ci:slides-smoke
+
+      - name: CI Guard (fast-fail truth)
+        run: npm run -s ci:guard
+
+      - name: Runbook mapping version bump (PR-only)
+        if: github.event_name == 'pull_request'
+        run: ENFORCE_RUNBOOK_VERSION_BUMP=1 npm run -s ci:runbooks:version
+
+      - name: Install (SocialOS API)
+        run: npm --prefix socialos/api ci --no-fund --no-audit
+
+      - name: Install (SocialOS UI)
+        run: npm --prefix socialos/ui ci --no-fund --no-audit
+
+      - name: Lint schemas (API)
+        run: npm --prefix socialos/api run -s lint:schemas
+
+      - name: Validate OpenAPI (pinned CLI)
+        run: npx -y @redocly/cli@1.25.5 lint socialos/api/openapi.yaml
+
+      - name: Typecheck
+        run: npm run -s typecheck
+
+      - name: Run skeleton + verifier smoke
+        run: npm run -s run:ci
+
+      - name: Litigation determinism guardrail (selftest x2)
+        run: npm run -s ci:litigation:determinism
+
+      - name: Verify golden fixture (run_minimal)
+        run: node verify-run.js fixtures/run_minimal --json
+
+      - name: Build UI
+        run: npm --prefix socialos/ui run -s build
+
+      - name: Run contract checks (status codes/runbooks)
         run: |
-          node ./scripts/mock-server.js &
-          sleep 1
-          curl -sSf http://localhost:8787/status/200 >/dev/null
+          npm --prefix socialos/api run -s test:status-codes
+          npm run -s ci:runbooks
 
-      - name: Smoke vectors (strict)
-        env:
-          WEBHOOK_SECRET: test-secret
-          STRICT_AGENT_OUTPUT: "1"
-          VALIDATION_WEBHOOK_URL: http://localhost:8787/validation
-          PLANNER_WEBHOOK_URL: http://localhost:8787/planner
-          THREAD_ID: local_test_001
-        run: npm run smoke:vectors:trim
+      - name: Write summary
+        if: always()
+        run: node scripts/ci/write-summary.mjs >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload artifacts (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-artifacts-node-${{ matrix.node }}-${{ github.run_id }}
+          if-no-files-found: ignore
+          retention-days: 7
+          path: |
+            socialos/api/runs/**
+            socialos/api/*.log
+            socialos/api/**/events.jsonl
+            socialos/api/**/receipts*.json
+            socialos/ui/dist/**
+            **/*.tap
+            **/*.junit.xml
