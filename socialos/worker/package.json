@@ -1,0 +1,8 @@
+{
+  "name": "@sintraprime/socialos-worker",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "node src/runner.mjs"
+  }
+}

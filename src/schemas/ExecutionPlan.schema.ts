@@ -10,6 +10,39 @@ const StepGuardSchema = z.object({
   value: z.any(),
 });
 
+const EgressGuardSchema = z.object({
+  // Case linkage (required for approval-by-hash enforcement)
+  case_id: z.string().min(1),
+  notion_page_id: z.string().min(1),
+
+  // If provided, executor will compute bundle hash for this stage/kind.
+  stage: z.string().min(1).optional(),
+  kind: z.enum(["packet", "binder"]).optional(),
+
+  // Optional override: must be accompanied by override metadata to leave evidence.
+  override_reason: z.string().min(1).optional(),
+  override_by: z.string().min(1).optional(),
+});
+
+function hasHeader(headers: Record<string, string> | undefined, headerName: string) {
+  if (!headers) return false;
+  const wanted = headerName.toLowerCase();
+  return Object.keys(headers).some((k) => k.toLowerCase() === wanted);
+}
+
+function headersIndicateAuthOrSession(headers: Record<string, string> | undefined): boolean {
+  if (!headers) return false;
+  return (
+    hasHeader(headers, "cookie") ||
+    hasHeader(headers, "authorization") ||
+    Object.keys(headers).some((k) => k.toLowerCase().startsWith("x-csrf"))
+  );
+}
+
+function looksSendish(action: string, url: string): boolean {
+  return /upload|submit|dispatch|send|portal|certified|mail|file|complaint/i.test(`${action} ${url}`);
+}
+
 export const ExecutionStepSchema = z.object({
   step_id: z.string(),
   action: z.string(),
@@ -39,6 +72,7 @@ export const ExecutionStepSchema = z.object({
     json_paths_present: z.array(z.string()).optional(),
   }),
   idempotency_key: z.string().nullable().optional(),
+  egress_guard: EgressGuardSchema.optional(),
   rollback: z.any().optional(),
 });
 
@@ -82,7 +116,50 @@ export const ExecutionPlanSchema = z
     {
       message: "ExecutionPlan cannot define both top-level steps and phases",
     }
-  );
+  )
+  .superRefine((plan, ctx) => {
+    // Pre-validation egress tightening (best-effort):
+    // - If a plan is egress-bearing (any step has egress_guard), then treat subsequent external steps as part of an egress chain.
+    // - Require egress_guard for any external non-GET/HEAD, and for GET/HEAD that carry auth/session headers, look send-ish,
+    //   or occur after the first guarded step.
+    // This is intentionally conservative and duplicates runtime checks to prevent side-door plans.
+    const steps = Array.isArray((plan as any).steps) ? ((plan as any).steps as any[]) : [];
+    const planIsEgressBearing = steps.some((s) => !!s?.egress_guard);
+    let followingGuardedStep = false;
+
+    for (const step of steps) {
+      let host = "";
+      try {
+        host = new URL(String(step.url)).hostname.toLowerCase();
+      } catch {
+        // URL shape is validated by zod already.
+      }
+      const isLocal = host === "localhost" || host === "127.0.0.1";
+      const isNotion = host === "api.notion.com";
+      const isExternal = Boolean(host) && !isLocal && !isNotion;
+
+      if (!isExternal) continue;
+
+      const method = String(step.method).toUpperCase();
+      const stepHasGuard = Boolean(step?.egress_guard?.case_id && step?.egress_guard?.notion_page_id);
+
+      const guardRequired =
+        (method !== "GET" && method !== "HEAD") ||
+        (planIsEgressBearing && (followingGuardedStep || headersIndicateAuthOrSession(step.headers) || looksSendish(String(step.action), String(step.url))));
+
+      if (guardRequired && !stepHasGuard) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `egress_guard required for external request (method=${method} host=${host})`,
+        });
+        return;
+      }
+
+      if (isExternal && stepHasGuard) {
+        followingGuardedStep = true;
+      }
+    }
+  });
 
 export const NeedInputSchema = z.object({
   kind: z.literal("NeedInput"),

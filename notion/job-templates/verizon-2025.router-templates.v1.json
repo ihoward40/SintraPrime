@@ -1,0 +1,262 @@
+[
+  {
+    "template_name": "A_silence_clock_dashboard_v1",
+    "case_id": "verizon-2025",
+    "job_type": "silence_clock_dashboard_v1",
+    "idempotency_key": "verizon-2025:silence_clock_dashboard_v1:__EVENTS_DIGEST_SHA256__",
+    "params": {
+      "case_id": "verizon-2025",
+      "forum_track": "regulator_parallel",
+      "cure_window_hours": 72,
+      "timezone": "America/New_York",
+      "clock_policy": "strict",
+      "events_path": "Cases/verizon-2025/Ledger/events.v1.json",
+      "output_silence_snapshot_path": "Cases/verizon-2025/Ledger/snapshots/silence_snapshot.__EVENTS_DIGEST_SHA256__.json",
+      "output_dashboard_pdf_path": "Cases/verizon-2025/Artifacts/silence_clock_dashboard.__EVENTS_DIGEST_SHA256__.pdf",
+      "output_manifest_path": "Cases/verizon-2025/Manifests/silence_clock_dashboard.__EVENTS_DIGEST_SHA256__.manifest.json",
+      "output_snapshot_sha256_path": "Cases/verizon-2025/Ledger/snapshots/silence_snapshot.__EVENTS_DIGEST_SHA256__.sha256.txt",
+      "output_pdf_sha256_path": "Cases/verizon-2025/Artifacts/silence_clock_dashboard.__EVENTS_DIGEST_SHA256__.pdf.sha256.txt"
+    }
+  },
+  {
+    "template_name": "B_settlement_tone_optimizer_v1",
+    "case_id": "verizon-2025",
+    "job_type": "settlement_tone_optimizer_v1",
+    "idempotency_key": "verizon-2025:settlement_tone_optimizer_v1:__EVENTS_DIGEST_SHA256__",
+    "params": {
+      "case_id": "verizon-2025",
+      "defendant_behavior_profile_path": "Cases/verizon-2025/Artifacts/defendant_behavior_profile.v1.json",
+      "leverage_matrix_path": "Cases/verizon-2025/Artifacts/leverage_matrix.v1.json",
+      "silence_snapshot_path": "Cases/verizon-2025/Ledger/snapshots/silence_snapshot.__EVENTS_DIGEST_SHA256__.json",
+      "forum_track": "regulator_parallel",
+      "cure_window_hours": 72,
+      "timezone": "America/New_York",
+      "output_letter_a_pdf_path": "Cases/verizon-2025/Submissions/Settlement/letter_A_cure_window.__EVENTS_DIGEST_SHA256__.pdf",
+      "output_letter_b_pdf_path": "Cases/verizon-2025/Submissions/Settlement/letter_B_final_cure_notice.__EVENTS_DIGEST_SHA256__.pdf",
+      "output_letter_a_docx_path": "Cases/verizon-2025/Submissions/Settlement/letter_A_cure_window.__EVENTS_DIGEST_SHA256__.docx",
+      "output_letter_b_docx_path": "Cases/verizon-2025/Submissions/Settlement/letter_B_final_cure_notice.__EVENTS_DIGEST_SHA256__.docx",
+      "output_manifest_path": "Cases/verizon-2025/Manifests/settlement_tone_optimizer.__EVENTS_DIGEST_SHA256__.manifest.json",
+      "include_verifier_citation": true,
+      "verifier_url": "https://example.org/verizon-2025/verifier",
+      "verifier_page_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    }
+  },
+  {
+    "template_name": "C_motion_to_compel_sanctions_v1",
+    "case_id": "verizon-2025",
+    "job_type": "motion_to_compel_sanctions_v1",
+    "idempotency_key": "verizon-2025:motion_to_compel_sanctions_v1:__EVENTS_DIGEST_SHA256__",
+    "params": {
+      "case_id": "verizon-2025",
+      "silence_snapshot_path": "Cases/verizon-2025/Ledger/snapshots/silence_snapshot.__EVENTS_DIGEST_SHA256__.json",
+      "doc_type_profile_id": "motion_to_compel_sanctions.profile.v1",
+      "style_registry_id": "docx_style_registry.v1",
+      "run_integrity_gates": true,
+      "parity_gate": {
+        "require_heading_order_match": true,
+        "require_cardinality_match": true,
+        "allow_pdf_preface_bookmarks": true
+      },
+      "heading_digest_pin": true,
+      "render_plan_digest_pin": true,
+      "output_docx_path": "Cases/verizon-2025/Artifacts/motion_to_compel_sanctions.__EVENTS_DIGEST_SHA256__.docx",
+      "output_pdf_path": "Cases/verizon-2025/Artifacts/motion_to_compel_sanctions.__EVENTS_DIGEST_SHA256__.pdf",
+      "output_manifest_path": "Cases/verizon-2025/Manifests/motion_to_compel_sanctions.__EVENTS_DIGEST_SHA256__.manifest.json"
+    }
+  },
+  {
+    "template_name": "D_consent_order_auto_draft_v1",
+    "case_id": "verizon-2025",
+    "job_type": "consent_order_auto_draft_v1",
+    "idempotency_key": "verizon-2025:consent_order_auto_draft_v1:__EVENTS_DIGEST_SHA256__",
+    "params": {
+      "case_id": "verizon-2025",
+      "silence_snapshot_path": "Cases/verizon-2025/Ledger/snapshots/silence_snapshot.__EVENTS_DIGEST_SHA256__.json",
+      "sanctions_motion_manifest_path": "Cases/verizon-2025/Manifests/motion_to_compel_sanctions.__EVENTS_DIGEST_SHA256__.manifest.json",
+      "outcome_mode": "ignored",
+      "doc_type_profile_id": "consent_order.profile.v1",
+      "style_registry_id": "docx_style_registry.v1",
+      "run_integrity_gates": true,
+      "parity_gate": {
+        "require_heading_order_match": true,
+        "require_cardinality_match": true,
+        "allow_pdf_preface_bookmarks": true
+      },
+      "heading_digest_pin": true,
+      "render_plan_digest_pin": true,
+      "output_docx_path": "Cases/verizon-2025/Artifacts/consent_order_draft.__EVENTS_DIGEST_SHA256__.docx",
+      "output_pdf_path": "Cases/verizon-2025/Artifacts/consent_order_draft.__EVENTS_DIGEST_SHA256__.pdf",
+      "output_manifest_path": "Cases/verizon-2025/Manifests/consent_order_draft.__EVENTS_DIGEST_SHA256__.manifest.json"
+    }
+  },
+  {
+    "template_name": "E_public_verifier_page_generate",
+    "case_id": "verizon-2025",
+    "job_type": "public_verifier_page_generate",
+    "idempotency_key": "verizon-2025:public_verifier_page_generate:__MANIFEST_SHA256__",
+    "params": {
+      "case_id": "verizon-2025",
+      "source_manifest_path": "Cases/verizon-2025/Manifests/master_binder_dual.__MANIFEST_SHA256__.manifest.json",
+      "doc_type_profile_id": "public_verifier.profile.v1",
+      "pin_heading_digest": true,
+      "pin_render_plan_digest": true,
+      "pin_merkle_root_slots": true,
+      "output_verifier_html_path": "Cases/verizon-2025/Public/verifier/public_verifier.__MANIFEST_SHA256__.html",
+      "output_verifier_manifest_path": "Cases/verizon-2025/Public/verifier/public_verifier.__MANIFEST_SHA256__.manifest.json",
+      "output_verifier_sha256_path": "Cases/verizon-2025/Public/verifier/public_verifier.__MANIFEST_SHA256__.sha256.txt"
+    }
+  },
+  {
+    "template_name": "F1_consent_order_submission_packet_v1_FCC",
+    "case_id": "verizon-2025",
+    "job_type": "consent_order_submission_packet_v1",
+    "idempotency_key": "verizon-2025:consent_order_submission_packet_v1:FCC:__MANIFEST_SHA256__",
+    "params": {
+      "case_id": "verizon-2025",
+      "forum": "FCC",
+      "consent_order_pdf_path": "Cases/verizon-2025/Artifacts/consent_order_draft.__EVENTS_DIGEST_SHA256__.pdf",
+      "consent_order_docx_path": "Cases/verizon-2025/Artifacts/consent_order_draft.__EVENTS_DIGEST_SHA256__.docx",
+      "public_binder_pdf_path": "Cases/verizon-2025/Public/binders/public_binder.__MANIFEST_SHA256__.pdf",
+      "private_binder_pdf_path": "Cases/verizon-2025/Private/binders/private_binder.__MANIFEST_SHA256__.pdf",
+      "summary_card_pdf_path": "Cases/verizon-2025/Submissions/SummaryCards/summary_card_FCC.__MANIFEST_SHA256__.pdf",
+      "public_verifier_html_path": "Cases/verizon-2025/Public/verifier/public_verifier.__MANIFEST_SHA256__.html",
+      "public_verifier_manifest_path": "Cases/verizon-2025/Public/verifier/public_verifier.__MANIFEST_SHA256__.manifest.json",
+      "output_zip_path": "Cases/verizon-2025/Submissions/FCC/consent_order_submission_packet.__MANIFEST_SHA256__.zip",
+      "output_manifest_path": "Cases/verizon-2025/Manifests/consent_order_submission_packet_FCC.__MANIFEST_SHA256__.manifest.json",
+      "include_cover_memo": true,
+      "cover_memo_template": "standard",
+      "zip_root_dir": "Regulator_Submission"
+    }
+  },
+  {
+    "template_name": "F2_consent_order_submission_packet_v1_CFPB",
+    "case_id": "verizon-2025",
+    "job_type": "consent_order_submission_packet_v1",
+    "idempotency_key": "verizon-2025:consent_order_submission_packet_v1:CFPB:__MANIFEST_SHA256__",
+    "params": {
+      "case_id": "verizon-2025",
+      "forum": "CFPB",
+      "consent_order_pdf_path": "Cases/verizon-2025/Artifacts/consent_order_draft.__EVENTS_DIGEST_SHA256__.pdf",
+      "consent_order_docx_path": "Cases/verizon-2025/Artifacts/consent_order_draft.__EVENTS_DIGEST_SHA256__.docx",
+      "public_binder_pdf_path": "Cases/verizon-2025/Public/binders/public_binder.__MANIFEST_SHA256__.pdf",
+      "private_binder_pdf_path": "Cases/verizon-2025/Private/binders/private_binder.__MANIFEST_SHA256__.pdf",
+      "summary_card_pdf_path": "Cases/verizon-2025/Submissions/SummaryCards/summary_card_CFPB.__MANIFEST_SHA256__.pdf",
+      "public_verifier_html_path": "Cases/verizon-2025/Public/verifier/public_verifier.__MANIFEST_SHA256__.html",
+      "public_verifier_manifest_path": "Cases/verizon-2025/Public/verifier/public_verifier.__MANIFEST_SHA256__.manifest.json",
+      "output_zip_path": "Cases/verizon-2025/Submissions/CFPB/consent_order_submission_packet.__MANIFEST_SHA256__.zip",
+      "output_manifest_path": "Cases/verizon-2025/Manifests/consent_order_submission_packet_CFPB.__MANIFEST_SHA256__.manifest.json",
+      "include_cover_memo": true,
+      "cover_memo_template": "standard",
+      "zip_root_dir": "Regulator_Submission"
+    }
+  },
+  {
+    "template_name": "F3_consent_order_submission_packet_v1_NJ_AG",
+    "case_id": "verizon-2025",
+    "job_type": "consent_order_submission_packet_v1",
+    "idempotency_key": "verizon-2025:consent_order_submission_packet_v1:NJ-AG:__MANIFEST_SHA256__",
+    "params": {
+      "case_id": "verizon-2025",
+      "forum": "NJ-AG",
+      "consent_order_pdf_path": "Cases/verizon-2025/Artifacts/consent_order_draft.__EVENTS_DIGEST_SHA256__.pdf",
+      "consent_order_docx_path": "Cases/verizon-2025/Artifacts/consent_order_draft.__EVENTS_DIGEST_SHA256__.docx",
+      "public_binder_pdf_path": "Cases/verizon-2025/Public/binders/public_binder.__MANIFEST_SHA256__.pdf",
+      "private_binder_pdf_path": "Cases/verizon-2025/Private/binders/private_binder.__MANIFEST_SHA256__.pdf",
+      "summary_card_pdf_path": "Cases/verizon-2025/Submissions/SummaryCards/summary_card_NJ_AG.__MANIFEST_SHA256__.pdf",
+      "public_verifier_html_path": "Cases/verizon-2025/Public/verifier/public_verifier.__MANIFEST_SHA256__.html",
+      "public_verifier_manifest_path": "Cases/verizon-2025/Public/verifier/public_verifier.__MANIFEST_SHA256__.manifest.json",
+      "output_zip_path": "Cases/verizon-2025/Submissions/NJ-AG/consent_order_submission_packet.__MANIFEST_SHA256__.zip",
+      "output_manifest_path": "Cases/verizon-2025/Manifests/consent_order_submission_packet_NJ_AG.__MANIFEST_SHA256__.manifest.json",
+      "include_cover_memo": true,
+      "cover_memo_template": "ag_variant",
+      "zip_root_dir": "Regulator_Submission"
+    }
+  },
+  {
+    "template_name": "G_multi_case_pattern_report_v1",
+    "case_id": "verizon-2025",
+    "job_type": "multi_case_pattern_report_v1",
+    "idempotency_key": "verizon-2025:multi_case_pattern_report_v1:__DATE_ISO__",
+    "params": {
+      "report_id": "carrier_pattern_report.__DATE_ISO__",
+      "case_nodes": [
+        {
+          "case_id": "verizon-2025",
+          "verifier_manifest_path": "Cases/verizon-2025/Analytics/CaseNodes/verizon-2025/public_verifier.__MANIFEST_SHA256__.manifest.json",
+          "label": "Verizon 2025 Primary"
+        },
+        {
+          "case_id": "imported-case-2",
+          "verifier_manifest_path": "Cases/verizon-2025/Analytics/CaseNodes/imported-case-2/public_verifier.__MANIFEST_SHA256__.manifest.json",
+          "label": "Imported Case Node 2"
+        }
+      ],
+      "pattern_definitions_path": "Cases/verizon-2025/Analytics/pattern_definitions.v1.json",
+      "output_public_pdf_path": "Cases/verizon-2025/Artifacts/pattern_report_public.__DATE_ISO__.pdf",
+      "output_regulator_pdf_path": "Cases/verizon-2025/Artifacts/pattern_report_regulator.__DATE_ISO__.pdf",
+      "output_graph_json_path": "Cases/verizon-2025/Artifacts/pattern_graph.__DATE_ISO__.json",
+      "output_graph_svg_path": "Cases/verizon-2025/Artifacts/pattern_graph.__DATE_ISO__.svg",
+      "output_manifest_path": "Cases/verizon-2025/Manifests/multi_case_pattern_report.__DATE_ISO__.manifest.json",
+      "redaction_mode": "public",
+      "cluster_threshold": 0.65
+    }
+  },
+  {
+    "template_name": "H1_sha256_file",
+    "case_id": "verizon-2025",
+    "job_type": "sha256_file",
+    "idempotency_key": "verizon-2025:sha256_file:__DATE_ISO__",
+    "params": {
+      "case_id": "verizon-2025",
+      "path": "Cases/verizon-2025/Evidence/Communications/",
+      "output_sha256_path": "Cases/verizon-2025/Artifacts/sha256_file.__DATE_ISO__.sha256.txt",
+      "output_manifest_path": "Cases/verizon-2025/Manifests/sha256_file.__DATE_ISO__.manifest.json"
+    }
+  },
+  {
+    "template_name": "H2_regulator_summary_card",
+    "case_id": "verizon-2025",
+    "job_type": "regulator_summary_card",
+    "idempotency_key": "verizon-2025:regulator_summary_card:__DATE_ISO__",
+    "params": {
+      "case_id": "verizon-2025",
+      "forum": "FCC",
+      "spec_path": "Cases/verizon-2025/Artifacts/summary_card_spec_FCC.v1.json",
+      "doc_type_profile_id": "regulator_summary_card.profile.v1",
+      "style_registry_id": "docx_style_registry.v1",
+      "run_integrity_gates": true,
+      "parity_gate": {
+        "require_heading_order_match": true,
+        "require_cardinality_match": true,
+        "allow_pdf_preface_bookmarks": true
+      },
+      "heading_digest_pin": true,
+      "render_plan_digest_pin": true,
+      "output_pdf_path": "Cases/verizon-2025/Submissions/SummaryCards/summary_card_FCC.__DATE_ISO__.pdf",
+      "output_manifest_path": "Cases/verizon-2025/Manifests/summary_card_FCC.__DATE_ISO__.manifest.json"
+    }
+  },
+  {
+    "template_name": "H3_clerk_cheat_sheet",
+    "case_id": "verizon-2025",
+    "job_type": "clerk_cheat_sheet",
+    "idempotency_key": "verizon-2025:clerk_cheat_sheet:__EVENTS_DIGEST_SHA256__",
+    "params": {
+      "case_id": "verizon-2025",
+      "silence_snapshot_path": "Cases/verizon-2025/Ledger/snapshots/silence_snapshot.__EVENTS_DIGEST_SHA256__.json",
+      "public_verifier_manifest_path": "Cases/verizon-2025/Public/verifier/public_verifier.__MANIFEST_SHA256__.manifest.json",
+      "doc_type_profile_id": "clerk_cheat_sheet.profile.v1",
+      "style_registry_id": "docx_style_registry.v1",
+      "run_integrity_gates": true,
+      "parity_gate": {
+        "require_heading_order_match": true,
+        "require_cardinality_match": true,
+        "allow_pdf_preface_bookmarks": true
+      },
+      "heading_digest_pin": true,
+      "render_plan_digest_pin": true,
+      "output_pdf_path": "Cases/verizon-2025/Artifacts/clerk_cheat_sheet.__EVENTS_DIGEST_SHA256__.pdf",
+      "output_manifest_path": "Cases/verizon-2025/Manifests/clerk_cheat_sheet.__EVENTS_DIGEST_SHA256__.manifest.json"
+    }
+  }
+]

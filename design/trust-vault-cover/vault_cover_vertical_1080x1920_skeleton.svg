@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Trust Vault Cover Skeleton (Vertical 1080x1920)
+  - Import into Canva/Figma/Affinity as a starting layout
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1920" viewBox="0 0 1080 1920">
+  <defs>
+    <radialGradient id="goldGlow" cx="50%" cy="42%" r="62%">
+      <stop offset="0%" stop-color="#BA9B57" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#BA9B57" stop-opacity="0"/>
+    </radialGradient>
+    <style>
+      .title { font-family: serif; font-weight: 600; letter-spacing: 0.06em; fill: #D4AF37; }
+      .subtitle { font-family: serif; font-weight: 500; letter-spacing: 0.04em; fill: #E1CC87; }
+      .subtitle2 { font-family: serif; font-weight: 500; letter-spacing: 0.14em; fill: #C6A861; }
+      .meta { font-family: serif; font-weight: 400; letter-spacing: 0.02em; fill: #CBAF72; }
+      .footer { font-family: serif; font-style: italic; font-weight: 400; letter-spacing: 0.02em; fill: #C6A861; opacity: 0.75; }
+    </style>
+  </defs>
+
+  <rect width="1080" height="1920" fill="#000000"/>
+  <circle cx="540" cy="960" r="900" fill="url(#goldGlow)"/>
+
+  <!-- Borders -->
+  <rect x="18" y="18" width="1044" height="1884" fill="none" stroke="#C6A861" stroke-opacity="0.70" stroke-width="4"/>
+  <rect x="34" y="34" width="1012" height="1852" fill="none" stroke="#C6A861" stroke-opacity="0.55" stroke-width="2"/>
+
+  <!-- Title Block -->
+  <text x="540" y="155" text-anchor="middle" font-size="54" class="title">THE HOWARD TRUST NAVIGATOR</text>
+  <text x="540" y="205" text-anchor="middle" font-size="22" fill="#C6A861" opacity="0.8">──────── ❂ ────────</text>
+  <text x="540" y="265" text-anchor="middle" font-size="36" class="subtitle">SINTRAPRIME MYTHIC SPEECH ENGINE</text>
+  <text x="540" y="315" text-anchor="middle" font-size="22" class="subtitle2">MASTER CONFIGURATION DOSSIER — VAULT EDITION</text>
+
+  <!-- Sigil Placeholder -->
+  <g transform="translate(540 820)">
+    <circle r="300" fill="none" stroke="#D4AF37" stroke-opacity="0.85" stroke-width="12"/>
+    <circle r="272" fill="none" stroke="#E1CC87" stroke-opacity="0.60" stroke-width="4"/>
+    <polygon points="0,-210 182,105 -182,105" fill="none" stroke="#C6A861" stroke-opacity="0.55" stroke-width="4"/>
+    <polygon points="0,210 182,-105 -182,-105" fill="none" stroke="#C6A861" stroke-opacity="0.40" stroke-width="4"/>
+    <text y="22" text-anchor="middle" font-size="140" class="title">ITH</text>
+    <text y="92" text-anchor="middle" font-size="24" class="meta" opacity="0.75">PROJECT ORPHION</text>
+  </g>
+
+  <!-- Lower Banner -->
+  <rect x="70" y="1470" width="940" height="260" fill="#000000" opacity="0.15"/>
+  <text x="540" y="1545" text-anchor="middle" font-size="26" class="meta">ACCESS LEVEL: Trustee Only — Tier VI Clearance</text>
+  <text x="540" y="1605" text-anchor="middle" font-size="26" class="meta">AUTHORIZED OPERATOR: Isiah-Tarik: Howard, Trustee</text>
+  <text x="540" y="1665" text-anchor="middle" font-size="26" class="meta">CODENAME: Project Orphion — The Speaking Engine of the Trust</text>
+
+  <!-- Footer -->
+  <line x1="70" y1="1775" x2="1010" y2="1775" stroke="#C6A861" stroke-opacity="0.60" stroke-width="2"/>
+  <text x="540" y="1820" text-anchor="middle" font-size="22" class="footer">OFFICIAL TRUST VAULT MARKING</text>
+  <text x="540" y="1860" text-anchor="middle" font-size="18" class="footer">Edition: Mythic Black-Gold · Volume: Speech Engine Codex, Book I</text>
+  <text x="540" y="1890" text-anchor="middle" font-size="18" class="footer">Status: ACTIVE — Embedded in SintraPrime Core</text>
+</svg>

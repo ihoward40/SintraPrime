@@ -1,0 +1,15 @@
+{
+  "$id": "https://schemas.sintraprime.io/socialos/api/approve_content_request.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["actor", "to_status"],
+  "properties": {
+    "actor": { "type": "string", "minLength": 1 },
+    "to_status": {
+      "type": "string",
+      "enum": ["draft", "review", "approved", "scheduled", "published", "measured", "refused"]
+    },
+    "reason": { "type": "string" }
+  }
+}

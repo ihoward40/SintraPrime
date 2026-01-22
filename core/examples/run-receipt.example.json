@@ -1,0 +1,15 @@
+{
+  "schema_id": "https://sintraprime.local/schemas/run-receipt.schema.json",
+  "run_id": "R-20260118-01HZXK9G9F3V7Q0E8A2N1M",
+  "case_id": "C-20260118-01HZXK9G9F3V7Q0E8A2N1M",
+  "timestamp_start": "2026-01-18T15:04:22Z",
+  "timestamp_end": "2026-01-18T15:04:24Z",
+  "run_type": "packet_notice",
+  "result": "success",
+  "idempotency_key": "sha256:demo",
+  "inputs": { "notion_page_id": "demo", "intake_key": "sha256:demo" },
+  "outputs": { "artifacts": [{ "path": "artifacts/packets/demo.md", "sha256": "sha256:demo" }] },
+  "decision": { "stage_before": "Notice", "stage_after": "Cure" },
+  "errors": [],
+  "retries": 0
+}

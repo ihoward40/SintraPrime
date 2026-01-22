@@ -1,5 +1,27 @@
 # Docs Index
 
+## Operations (Egress & Approval)
+
+- **Egress Policy (Operator) — v1**  
+  [`egress-policy.v1.md`](./egress-policy.v1.md)
+
+## Autonomous Mode
+
+- **Autonomous Mode — Overview & Env Flags**  
+  [`autonomous-mode.md`](./autonomous-mode.md)
+
+- **Autonomous Playbook Packs (APPs)**  
+  [`playbook-packs.md`](./playbook-packs.md)
+
+- **Creditor Behavior AI Prediction Engine (CBAPE)**  
+  [`behavior-prediction.md`](./behavior-prediction.md)
+
+- **Adaptive Enforcement AI**  
+  [`adaptive-enforcement.md`](./adaptive-enforcement.md)
+
+- **Dashboard API**  
+  [`dashboard-api.md`](./dashboard-api.md)
+
 ## Watch Mode (Audit & Proof)
 
 - **Watch Mode v1 — Spec → Implementation Map**  

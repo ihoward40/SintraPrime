@@ -1,0 +1,27 @@
+{
+  "$id": "https://schemas.sintraprime.io/socialos/receipt.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "receipt_id",
+    "content_id",
+    "timestamp",
+    "platform",
+    "content_hash",
+    "status",
+    "signature",
+    "receipt_hash"
+  ],
+  "properties": {
+    "receipt_id": { "type": "string", "format": "uuid" },
+    "content_id": { "type": "string", "format": "uuid" },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "platform": { "type": "string", "minLength": 1 },
+    "content_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "status": { "type": "string", "enum": ["success", "failure", "assist_required", "refused"] },
+    "result": { "type": ["object", "null"] },
+    "signature": { "type": "string", "minLength": 1 },
+    "receipt_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "verifier_link": { "type": ["string", "null"] }
+  }
+}

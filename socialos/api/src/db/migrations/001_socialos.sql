@@ -1,0 +1,3 @@
+-- SocialOS v0.1.0 (placeholder)
+-- This repo currently uses a file-backed dev store for quick iteration.
+-- Future: migrate to SQLite/Postgres with tables for content, schedules, receipts, audit_events.

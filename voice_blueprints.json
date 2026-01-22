@@ -1,0 +1,81 @@
+{
+  "pack": "Mythic Voice Pack",
+  "version": "v1",
+  "notes": [
+    "These are operator-facing design targets. Actual timbre/styling is controlled in ElevenLabs Studio when creating/editing voices.",
+    "This repo automates voice creation (upload samples -> voice_id) and routing (eventType -> persona).",
+    "Do not paste API keys into chat. Put ELEVENLABS_API_KEY in control/secrets.env locally."
+  ],
+  "voices": [
+    {
+      "persona": "shadow",
+      "display_name": "SHADOW_TRUSTEE_HYBRID_ELITE",
+      "intent": "Authority + calm menace + calculated elegance",
+      "routing": {
+        "event_types": ["paralegal.*"],
+        "fallback_priority": 1
+      },
+      "env_aliases": [
+        "ELEVEN_SHADOW_TRUSTEE_HYBRID_ELITE",
+        "ELEVEN_VOICE_SHADOW",
+        "ELEVEN_VOICE_ID_FOR_SHADOW_TRUSTEE"
+      ]
+    },
+    {
+      "persona": "oracle",
+      "display_name": "BRICK_CITY_ORACLE_V2",
+      "intent": "Faster cadence, heightened clarity, Jersey edge + strategic flavor",
+      "routing": {
+        "event_types": ["ai.*", "behavior.predicted"],
+        "fallback_priority": 2
+      },
+      "env_aliases": [
+        "ELEVEN_BRICK_CITY_ORACLE_V2",
+        "ELEVEN_VOICE_ORACLE",
+        "ELEVEN_VOICE_ID_FOR_BRICK_CITY_ORACLE"
+      ]
+    },
+    {
+      "persona": "dragon",
+      "display_name": "DRAGON_DUE_PROCESS_V2",
+      "intent": "Enforcement mode; heavier delivery for notices and escalation",
+      "routing": {
+        "event_types": ["enforcement.*"],
+        "fallback_priority": 99
+      },
+      "env_aliases": [
+        "ELEVEN_DRAGON_DUE_PROCESS_V2",
+        "ELEVEN_VOICE_DRAGON",
+        "ELEVEN_VOICE_ID_FOR_DRAGON_DUE_PROCESS"
+      ]
+    },
+    {
+      "persona": "judge",
+      "display_name": "JUDGE_INVISIBLE_V2",
+      "intent": "Neutral-cold fact delivery for legal readings and briefs",
+      "routing": {
+        "event_types": ["litigation.*", "doc.generated", "filing.*"],
+        "fallback_priority": 3
+      },
+      "env_aliases": [
+        "ELEVEN_JUDGE_INVISIBLE_V2",
+        "ELEVEN_VOICE_JUDGE",
+        "ELEVEN_VOICE_ID_FOR_JUDGE_INVISIBLE"
+      ]
+    },
+    {
+      "persona": "supreme",
+      "display_name": "SUPREME_COURT_MODE_V2",
+      "intent": "Cinematic resonance + slowed cadence for highest-tier filings",
+      "routing": {
+        "event_types": ["supreme.*", "ai.argument.ready"],
+        "fallback_priority": 99
+      },
+      "env_aliases": [
+        "ELEVEN_SUPREME_COURT_MODE_V2",
+        "ELEVEN_VOICE_SUPREME",
+        "ELEVEN_VOICE_ID_FOR_SUPREME_COURT_MODE"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,123 @@
+{
+  "schema_id": "verizon-guardian.manifest.v1",
+  "agent": {
+    "name": "VERIZON_GUARDIAN",
+    "version": "1.1.1",
+    "mission": "Turn every Verizon communication into an auditable case event: captured, classified, preserved, routed, binder-ready.",
+    "status_default": "Disabled"
+  },
+  "constants": {
+    "drive_root": "/Evidence_Vault/Verizon_Guardian",
+    "drive_root_folder_id": "DRIVE_FOLDER_ID__SET_ME",
+    "timezone": "America/New_York",
+    "subject_max_len": 30,
+    "slack_channel_watch": "#verizon-watch",
+    "slack_critical_user_id": "UXXXXXXXXXX",
+    "slack_critical_fallback_channel": "#verizon-critical"
+  },
+  "gmail": {
+    "ids": {
+      "gmail_api_id_field": "Gmail_API_ID",
+      "gmail_message_id_rfc_field": "Gmail_Message_ID_RFC2822",
+      "gmail_thread_id_field": "Gmail_Thread_ID"
+    },
+    "links": {
+      "gmail_permalink": "https://mail.google.com/mail/u/0/#inbox/{gmail_api_id}"
+    }
+  },
+  "body_hashing": {
+    "policy": "prefer_text_plain_else_html_to_text",
+    "store_format_field": "Hash_Body_Format",
+    "formats": {
+      "text_plain": "text/plain",
+      "html_to_text": "text/html->text"
+    }
+  },
+  "case_anchoring": {
+    "case_anchor_priority": ["order_id", "ticket_id", "account_last_4", "phone_last_4"],
+    "store_all_extracted_field": "Case_Anchors_All_JSON",
+    "store_primary_field": "Case_Anchor"
+  },
+  "naming": {
+    "drive_path_by_month": "{drive_root}/{YYYY}/{YYYY-MM}/",
+    "pdf": "VZN_{YYYYMMDD-HHMM}_{case_id}_{short_subject}_{gmail_api_id}.pdf",
+    "metadata": "VZN_{YYYYMMDD-HHMM}_{case_id}_{gmail_api_id}.metadata.json",
+    "eml": "VZN_{YYYYMMDD-HHMM}_{case_id}_{gmail_api_id}.eml",
+    "binder_folder": "Binder_{case_id}"
+  },
+  "dedup": {
+    "notion_idempotency_key": "Gmail_API_ID",
+    "drive_exists_check": true,
+    "drive_exists_check_files": ["pdf", "metadata"],
+    "drive_if_exists": "compare_hash_then_skip_or_reconcile",
+    "prevent_drive_versioning": true
+  },
+  "status": {
+    "status_lifecycle": [
+      "Detected",
+      "Reviewed",
+      "Disputed",
+      "Pending Response",
+      "Received",
+      "Escalate",
+      "Close"
+    ],
+    "binder_trigger_status": ["Received", "Escalate"]
+  },
+  "notion": {
+    "database": "Verizon_Case_Tracker",
+    "fields": {
+      "Email_Subject": "email_subject",
+      "Email_From": "email_from",
+      "Email_Date": "email_date",
+      "Email_Body_Text": "email_body_text",
+
+      "Gmail_API_ID": "gmail_api_id",
+      "Gmail_Message_ID_RFC2822": "gmail_message_id_rfc",
+      "Gmail_Thread_ID": "gmail_thread_id",
+      "Gmail_Link": "gmail_url",
+
+      "Case_ID": "case_id",
+      "Case_Anchor": "case_anchor_primary",
+      "Case_Anchors_All_JSON": "case_anchors_all_json",
+
+      "Status": "status",
+      "Severity": "severity",
+      "Violation_Type": "alleged_violation_types",
+      "Violation_Strength": "violation_strength",
+      "Estimated_Damages_Low": "estimated_damages_range.low",
+      "Estimated_Damages_High": "estimated_damages_range.high",
+      "Recommended_Action": "recommended_next_action",
+      "AI_Classification_JSON": "ai_json",
+
+      "Evidence_Drive_Link": "drive_evidence_url",
+      "Binder_Drive_Link": "drive_binder_url",
+
+      "SHA256_Body": "hash_body",
+      "Hash_Body_Format": "hash_body_format",
+      "SHA256_PDF": "hash_pdf",
+      "SHA256_Metadata": "hash_metadata",
+      "SHA256_EML": "hash_eml",
+
+      "Timeline": "timeline_append_only"
+    }
+  },
+  "routing": {
+    "severity": {
+      "Critical": { "slack": ["dm_critical", "channel_watch"], "notion_priority": "P0" },
+      "High": { "slack": ["channel_watch"], "notion_priority": "P1" },
+      "Medium": { "slack": ["channel_watch"], "notion_priority": "P2" },
+      "Low": { "slack": ["optional_digest"], "notion_priority": "P3" }
+    }
+  },
+  "binder": {
+    "exhibits": [
+      { "code": "A", "title": "Initial dispute / notice" },
+      { "code": "B", "title": "Verizon response(s)" },
+      { "code": "C", "title": "Billing statements / past due" },
+      { "code": "D", "title": "Disconnect threats/actions" },
+      { "code": "E", "title": "Device return/collections pressure" }
+    ],
+    "manifest_name": "Binder_{case_id}.manifest.json"
+  }
+}

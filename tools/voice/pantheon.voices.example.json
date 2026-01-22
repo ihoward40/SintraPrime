@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "version": "0.1.0",
+  "model_id": "eleven_multilingual_v2",
+  "voices": {
+    "isiah": {
+      "label": "Isiah-Tarik (Prime Voice)",
+      "voice_id": "VOICE_ID_ISIAH_PRIME",
+      "voice_settings": { "stability": 0.24, "similarity_boost": 0.85, "style": 0.28, "use_speaker_boost": true }
+    },
+    "oracle": {
+      "label": "Brick City Oracle",
+      "voice_id": "VOICE_ID_BRICK_CITY_ORACLE",
+      "voice_settings": { "stability": 0.40, "similarity_boost": 0.85, "style": 0.55, "use_speaker_boost": true }
+    },
+    "guardian": {
+      "label": "Vault Guardian",
+      "voice_id": "VOICE_ID_VAULT_GUARDIAN",
+      "voice_settings": { "stability": 0.60, "similarity_boost": 0.85, "style": 0.75, "use_speaker_boost": true }
+    },
+    "scribe": {
+      "label": "Sovereign Scribe",
+      "voice_id": "VOICE_ID_SOVEREIGN_SCRIBE",
+      "voice_settings": { "stability": 0.20, "similarity_boost": 0.90, "style": 0.18, "use_speaker_boost": true }
+    },
+    "scholar": {
+      "label": "Street Scholar",
+      "voice_id": "VOICE_ID_STREET_SCHOLAR",
+      "voice_settings": { "stability": 0.45, "similarity_boost": 0.88, "style": 0.40, "use_speaker_boost": true }
+    },
+    "judge": {
+      "label": "Judge of the Invisible Court",
+      "voice_id": "VOICE_ID_JUDGE_INVISIBLE",
+      "voice_settings": { "stability": 0.75, "similarity_boost": 0.88, "style": 0.35, "use_speaker_boost": true }
+    },
+    "trickster": {
+      "label": "Trickster Auditor",
+      "voice_id": "VOICE_ID_TRICKSTER_AUDITOR",
+      "voice_settings": { "stability": 0.30, "similarity_boost": 0.78, "style": 0.92, "use_speaker_boost": true }
+    },
+    "dragon": {
+      "label": "Dragon of Due Process",
+      "voice_id": "VOICE_ID_DRAGON_DUE_PROCESS",
+      "voice_settings": { "stability": 0.55, "similarity_boost": 0.85, "style": 0.80, "use_speaker_boost": true }
+    },
+    "angel": {
+      "label": "Angel of Remedy",
+      "voice_id": "VOICE_ID_ANGEL_REMEDY",
+      "voice_settings": { "stability": 0.48, "similarity_boost": 0.85, "style": 0.22, "use_speaker_boost": true }
+    }
+  }
+}

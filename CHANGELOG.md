@@ -10,6 +10,8 @@ Allowed without constitutional amendment (if `npm run smoke:vectors` stays green
 - UI improvements (operator console, timeline, explain)
 - Stronger redaction rules
 - Additional smoke vectors (never fewer)
+- Ops + Safety Hardening: Added durable Windows logging for the full integration gauntlet via `smoke:all:log` (Node “tee” wrapper writes `.smoke-all.log` reliably while streaming output). Documented the three smoke lanes (“don’t guess”) in `OPERATOR_RUNBOOK.md` with a small README pointer so devs run the right suite fast. Added a policy snapshot viewer (`/policy snapshot` + `policy:snapshot`) and self-debugging refusal breadcrumbs on `EGRESS_REFUSED`, making egress/approval failures explainable in one copy-paste command without spelunking.
+- Run governance tooling: Added approve-by-hash helpers (`approve:run`) and hardened ship/publish gates to require an `approval.json` bound to `05_hash/manifest_sha256.txt`.
 
 Requires a minor-version constitutional amendment process:
 - Receipt schema changes

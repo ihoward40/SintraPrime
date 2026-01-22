@@ -1,0 +1,46 @@
+{
+  "$id": "https://sintraprime.local/schemas/case-event.schema.json",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["event_id", "timestamp", "event_type", "actor", "details", "related_artifacts"],
+  "properties": {
+    "event_id": { "type": "string", "minLength": 10 },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "event_type": {
+      "type": "string",
+      "enum": [
+        "CASE_CREATED",
+        "CASE_UPDATED",
+        "LOCK_CLAIMED",
+        "LOCK_RELEASED",
+        "DEADLINE_SCAN",
+        "ESCALATED",
+        "ARTIFACT_GENERATED",
+        "EGRESS_REFUSED",
+        "NOTICE_SENT",
+        "RESPONSE_RECEIVED",
+        "RESOLVED",
+        "CLOSED",
+        "ERROR"
+      ]
+    },
+    "actor": { "type": "string" },
+    "details": { "type": "object", "additionalProperties": true },
+    "related_artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "sha256"],
+        "properties": {
+          "artifact_id": { "type": "string" },
+          "path": { "type": "string" },
+          "sha256": { "type": "string" }
+        },
+        "additionalProperties": true
+      }
+    },
+    "prev_hash": { "type": ["string", "null"] },
+    "hash": { "type": ["string", "null"] }
+  },
+  "additionalProperties": false
+}

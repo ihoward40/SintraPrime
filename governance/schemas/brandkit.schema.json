@@ -1,0 +1,55 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "sintraprime://slides/brandkit.schema.json",
+  "title": "SintraPrime BrandKit",
+  "type": "object",
+  "required": ["brand_id", "version", "colors", "typography", "layout"],
+  "properties": {
+    "brand_id": { "type": "string", "minLength": 1 },
+    "version": { "type": "string", "minLength": 1 },
+    "assets": {
+      "type": "object",
+      "properties": {
+        "logo_path": { "type": "string" },
+        "background_path": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "colors": {
+      "type": "object",
+      "required": ["background", "text", "accent"],
+      "properties": {
+        "background": { "type": "string" },
+        "text": { "type": "string" },
+        "accent": { "type": "string" },
+        "muted": { "type": "string" },
+        "card_bg": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "typography": {
+      "type": "object",
+      "required": ["font_family", "title_size", "body_size"],
+      "properties": {
+        "font_family": { "type": "string" },
+        "title_size": { "type": "number" },
+        "body_size": { "type": "number" },
+        "mono_family": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "layout": {
+      "type": "object",
+      "required": ["slide_w", "slide_h", "margin", "card_gap"],
+      "properties": {
+        "slide_w": { "type": "number" },
+        "slide_h": { "type": "number" },
+        "margin": { "type": "number" },
+        "card_gap": { "type": "number" },
+        "max_bullets": { "type": "integer" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

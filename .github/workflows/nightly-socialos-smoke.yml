@@ -1,0 +1,89 @@
+name: nightly-socialos-smoke
+
+on:
+  schedule:
+    - cron: "17 3 * * *" # daily, low-traffic
+  workflow_dispatch:
+
+concurrency:
+  group: nightly-socialos-smoke
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node (pinned)
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.11.0"
+          cache: "npm"
+          cache-dependency-path: |
+            package-lock.json
+            socialos/api/package-lock.json
+            socialos/ui/package-lock.json
+
+      - name: Install (SocialOS API)
+        run: npm --prefix socialos/api ci --no-fund --no-audit
+
+      - name: Start SocialOS (API only)
+        shell: bash
+        run: |
+          set -euo pipefail
+          SOCIALOS_UI=0 npm run -s dev:socialos > socialos-smoke.log 2>&1 &
+          echo $! > socialos.pid
+
+      - name: Wait for /health
+        shell: bash
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 45); do
+            if curl -fsS http://127.0.0.1:8787/health > /tmp/health.json; then
+              break
+            fi
+            sleep 1
+          done
+          cat /tmp/health.json
+          node -e "const j=require('fs').readFileSync('/tmp/health.json','utf8'); const o=JSON.parse(j); if(!o || o.ok!==true) process.exit(2);"
+
+      - name: Scrape /metrics
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsS http://127.0.0.1:8787/metrics | tee /tmp/metrics.txt
+          grep -q "^health_sse_clients_connected " /tmp/metrics.txt
+
+      - name: SSE handshake (/health/stream)
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 8s bash -lc "curl -N -sS http://127.0.0.1:8787/health/stream | head -n 40" | tee /tmp/sse.txt
+          grep -q "^retry: " /tmp/sse.txt
+          grep -q "^event: hello$" /tmp/sse.txt
+          grep -q "^data: {\"ok\":true}$" /tmp/sse.txt
+
+      - name: Stop SocialOS
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -f socialos.pid ]; then
+            kill "$(cat socialos.pid)" || true
+          fi
+
+      - name: Upload smoke logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-socialos-smoke-${{ github.run_id }}
+          if-no-files-found: ignore
+          retention-days: 7
+          path: |
+            socialos-smoke.log
+            /tmp/health.json
+            /tmp/metrics.txt
+            /tmp/sse.txt

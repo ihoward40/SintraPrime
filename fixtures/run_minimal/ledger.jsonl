@@ -1,0 +1,2 @@
+{"kind":"hash_chain_group","name":"fixture_run_minimal_v1","head":"d349a5b89b3bf602ad7f964cb7fe8954294b0aa1ed8f5cfe0cca58d2bc9b6bf7","at_utc":"2026-01-20T00:00:00.000Z"}
+{"kind":"hash_chain","artifact":"00_intake/objective.txt","sha256":"3310daa363c441133a2c90c136fb6a5d17840abe40ebfcfe58cbe795326e3c37","prev":null,"head":"d349a5b89b3bf602ad7f964cb7fe8954294b0aa1ed8f5cfe0cca58d2bc9b6bf7","at_utc":"2026-01-20T00:00:00.000Z"}

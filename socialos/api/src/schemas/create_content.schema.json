@@ -1,0 +1,24 @@
+{
+  "$id": "https://schemas.sintraprime.io/socialos/api/create_content_request.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["actor", "original_text"],
+  "properties": {
+    "actor": { "type": "string", "minLength": 1 },
+    "original_text": { "type": "string" },
+    "media_paths": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "governance_mode": {
+      "type": "string",
+      "enum": ["court_safe", "marketing_mode"],
+      "default": "marketing_mode"
+    },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}

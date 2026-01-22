@@ -1,0 +1,45 @@
+{
+  "defaults": {
+    "maxDepthPerCall": 12,
+    "maxCreatesPerCall": 20,
+    "denyPatterns": ["..", "//"],
+    "requireRootAllowlist": true
+  },
+  "targets": [
+    {
+      "alias": "trust_vault",
+      "auth": {
+        "type": "oauth",
+        "account": "you@example.com",
+        "clientIdSecretRef": "DRIVE_OAUTH_MAIN_CLIENT_ID",
+        "clientSecretSecretRef": "DRIVE_OAUTH_MAIN_CLIENT_SECRET",
+        "refreshTokenSecretRef": "DRIVE_OAUTH_MAIN_REFRESH_TOKEN"
+      },
+      "driveType": "myDrive",
+      "approvedRoots": ["ROOT_FOLDER_ID_HERE"],
+      "defaultRoot": "ROOT_FOLDER_ID_HERE"
+    },
+    {
+      "alias": "service_ops",
+      "auth": { "type": "serviceAccount", "secretRef": "GSA_DRIVE_JSON" },
+      "driveType": "sharedDrive",
+      "driveId": "SHARED_DRIVE_ID_HERE",
+      "approvedRoots": ["ROOT_FOLDER_ID_HERE"],
+      "defaultRoot": "ROOT_FOLDER_ID_HERE"
+    },
+    {
+      "alias": "make_proxy",
+      "auth": { "type": "make", "webhookUrlSecretRef": "MAKE_DRIVE_ENSUREPATH_URL" },
+      "driveType": "folder",
+      "approvedRoots": ["ROOT_FOLDER_ID_HERE"],
+      "defaultRoot": "ROOT_FOLDER_ID_HERE"
+    },
+    {
+      "alias": "desktop_sync",
+      "auth": { "type": "desktop", "localRootPath": "C:/Users/you/Google Drive" },
+      "driveType": "desktop",
+      "approvedRoots": ["C:/Users/you/Google Drive"],
+      "defaultRoot": "C:/Users/you/Google Drive"
+    }
+  ]
+}

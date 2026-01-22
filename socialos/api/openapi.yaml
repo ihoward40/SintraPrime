@@ -1,0 +1,461 @@
+openapi: 3.0.3
+info:
+  title: SintraPrime SocialOS API
+  version: 0.1.0
+servers:
+  - url: http://localhost:8787
+tags:
+  - name: content
+  - name: scheduling
+  - name: analytics
+  - name: receipts
+  - name: health
+
+paths:
+  /health:
+    get:
+      tags: [health]
+      summary: Aggregate health status (mode, receipts drift, worker heartbeat, schema lint)
+      responses:
+        "200":
+          description: Healthy (or unknowns treated as non-failing)
+        "500":
+          description: Unhealthy
+
+  /health/history:
+    get:
+      tags: [health]
+      summary: Return recent health snapshots (ring buffer, newest-first)
+      description: Items are returned newest-first (descending by at).
+      parameters:
+        - in: query
+          name: limit
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 50 }
+      responses:
+        "200":
+          description: Health history
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [ok, count, items]
+                properties:
+                  ok: { type: boolean }
+                  count: { type: integer }
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: true
+                      required: [at, ok, mode, receipts, worker, schemas]
+                      properties:
+                        at: { type: string, format: date-time }
+                        ok: { type: boolean }
+                        mode: { type: string }
+                        event_key: { type: string }
+                        source:
+                          type: string
+                          description: Origin of the snapshot (poll, worker, receipt, schema, store, system).
+                        event_scope:
+                          type: array
+                          items: { type: string }
+                          description: Deterministic tags describing what changed (e.g., worker, schemas, receipts, store, system).
+                        event_reason:
+                          type: array
+                          items: { type: string }
+                        receipts:
+                          type: object
+                          additionalProperties: false
+                          required: [ok, checked, mismatch]
+                          properties:
+                            ok: { type: boolean }
+                            checked: { type: integer }
+                            mismatch: { type: integer }
+                        worker:
+                          type: object
+                          additionalProperties: true
+                        schemas:
+                          type: object
+                          additionalProperties: true
+
+  /health/history/last-change:
+    get:
+      tags: [health]
+      summary: Return the most recent stored health history event and its age
+      parameters:
+        - in: query
+          name: since_seconds
+          required: false
+          schema: { type: integer, minimum: 1 }
+          description: Optional threshold; if provided, response includes changed_recently boolean.
+      responses:
+        "200":
+          description: Most recent health history event
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                required: [ok, event, age_seconds, age_human]
+                properties:
+                  ok: { type: boolean }
+                  event:
+                    nullable: true
+                  age_seconds:
+                    nullable: true
+                    type: integer
+                  age_human:
+                    nullable: true
+                    type: string
+                  changed_recently:
+                    nullable: true
+                    type: boolean
+                  since_seconds:
+                    nullable: true
+                    type: integer
+
+  /content:
+    post:
+      tags: [content]
+      summary: Create content (fingerprint + audit + optional variants)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateContentRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContentRecord"
+
+  /content/{id}/approve:
+    post:
+      tags: [content]
+      summary: Transition content state (Draft→Review→Approved→Scheduled→Published→Measured)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApproveContentRequest"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContentRecord"
+
+  /schedule:
+    post:
+      tags: [scheduling]
+      summary: Schedule approved content for a platform
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScheduleRequest"
+      responses:
+        "201":
+          description: Scheduled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScheduleRecord"
+
+  /schedule/best-time:
+    post:
+      tags: [scheduling]
+      summary: Schedule content using best-time recommendation (server decision + receipt)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScheduleOnBestTimeRequest"
+      responses:
+        "201":
+          description: Scheduled + decision receipt
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [schedule, receipt]
+                properties:
+                  schedule:
+                    $ref: "#/components/schemas/ScheduleRecord"
+                  receipt:
+                    $ref: "#/components/schemas/PublishReceipt"
+
+  /calendar:
+    get:
+      tags: [scheduling]
+      summary: Calendar view
+      parameters:
+        - in: query
+          name: from
+          schema: { type: string, format: date-time }
+        - in: query
+          name: to
+          schema: { type: string, format: date-time }
+      responses:
+        "200":
+          description: Calendar entries
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ScheduleRecord"
+
+  /analytics:
+    get:
+      tags: [analytics]
+      summary: Simple analytics summary (stub-ready)
+      parameters:
+        - in: query
+          name: content_id
+          schema: { type: string, format: uuid }
+        - in: query
+          name: platform
+          schema: { type: string }
+      responses:
+        "200":
+          description: Analytics summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalyticsSummary"
+
+  /best-time:
+    get:
+      tags: [analytics]
+      summary: Best-time-to-post recommendations
+      parameters:
+        - in: query
+          name: platform
+          schema: { type: string }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 50 }
+      responses:
+        "200":
+          description: Recommendations
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/BestTimeRecommendation"
+
+    /receipts:
+      get:
+        tags: [receipts]
+        summary: List publish/decision receipts
+        parameters:
+          - in: query
+            name: content_id
+            schema: { type: string, format: uuid }
+          - in: query
+            name: platform
+            schema: { type: string }
+          - in: query
+            name: limit
+            schema: { type: integer, default: 50 }
+        responses:
+          "200":
+            description: Receipts
+            content:
+              application/json:
+                schema:
+                  type: object
+                  additionalProperties: false
+                  required: [items]
+                  properties:
+                    items:
+                      type: array
+                      items:
+                        $ref: "#/components/schemas/PublishReceipt"
+
+      /receipts/{id}/verify:
+        get:
+          tags: [receipts]
+          summary: Authoritatively verify receipt hash (server recompute)
+          parameters:
+            - in: path
+              name: id
+              required: true
+              schema: { type: string, format: uuid }
+          responses:
+            "200":
+              description: Verification result
+              content:
+                application/json:
+                  schema:
+                    type: object
+                    additionalProperties: false
+                    required: [ok, receipt_id, receipt_hash, recomputed_hash]
+                    properties:
+                      ok: { type: boolean }
+                      receipt_id: { type: string, format: uuid }
+                      receipt_hash: { type: string }
+                      recomputed_hash: { type: string }
+            "404":
+              description: Not found
+              content:
+                application/json:
+                  schema:
+                    type: object
+                    additionalProperties: false
+                    required: [error]
+                    properties:
+                      error: { type: string }
+
+components:
+  schemas:
+    CreateContentRequest:
+      type: object
+      additionalProperties: false
+      required: [actor, original_text]
+      properties:
+        actor: { type: string, minLength: 1 }
+        original_text: { type: string }
+        media_paths:
+          type: array
+          items: { type: string }
+        governance_mode:
+          type: string
+          enum: [court_safe, marketing_mode]
+          default: marketing_mode
+        tags:
+          type: array
+          items: { type: string }
+
+    ApproveContentRequest:
+      type: object
+      additionalProperties: false
+      required: [actor, to_status]
+      properties:
+        actor: { type: string, minLength: 1 }
+        to_status:
+          type: string
+          enum: [draft, review, approved, scheduled, published, measured, refused]
+        reason: { type: string }
+
+    ScheduleRequest:
+      type: object
+      additionalProperties: false
+      required: [actor, content_id, platform, when]
+      properties:
+        actor: { type: string, minLength: 1 }
+        content_id: { type: string, format: uuid }
+        platform: { type: string, minLength: 1 }
+        when: { type: string, format: date-time }
+        queue_id: { type: string }
+        priority:
+          type: integer
+          minimum: 0
+          maximum: 10
+          default: 5
+
+    ScheduleOnBestTimeRequest:
+      type: object
+      additionalProperties: false
+      required: [actor, content_id, platform]
+      properties:
+        actor: { type: string, minLength: 1 }
+        content_id: { type: string, format: uuid }
+        platform: { type: string, minLength: 1 }
+        min_confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+          default: 0.4
+        horizon_days:
+          type: integer
+          minimum: 1
+          maximum: 30
+          default: 7
+
+    ContentRecord:
+      $ref: "https://schemas.sintraprime.io/socialos/content.schema.json"
+
+    PublishReceipt:
+      $ref: "https://schemas.sintraprime.io/socialos/receipt.schema.json"
+
+    AuditEvent:
+      $ref: "https://schemas.sintraprime.io/socialos/audit_event.schema.json"
+
+    ScheduleRecord:
+      type: object
+      additionalProperties: false
+      required: [schedule_id, content_id, platform, when, status, queue_id, priority]
+      properties:
+        schedule_id: { type: string, format: uuid }
+        content_id: { type: string, format: uuid }
+        platform: { type: string }
+        when: { type: string, format: date-time }
+        status:
+          type: string
+          enum: [scheduled, due, dispatched, failed]
+        queue_id: { type: string }
+        priority:
+          type: integer
+          minimum: 0
+          maximum: 10
+
+    AnalyticsSummary:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [content_id, platform, views, engagement_rate]
+            properties:
+              content_id: { type: string, format: uuid }
+              platform: { type: string }
+              views: { type: integer, minimum: 0 }
+              engagement_rate: { type: number, minimum: 0 }
+
+    BestTimeRecommendation:
+      type: object
+      additionalProperties: false
+      required: [platform, day_of_week, hour, score, confidence_score, sample_size]
+      properties:
+        id: { type: string, format: uuid }
+        platform: { type: string }
+        day_of_week: { type: integer, minimum: 0, maximum: 6 }
+        hour: { type: integer, minimum: 0, maximum: 23 }
+        score: { type: number }
+        confidence_score: { type: number }
+        sample_size: { type: integer, minimum: 0 }
+        window_days: { type: integer }
+        evidence: { type: object }
+        generated_at: { type: string, format: date-time }

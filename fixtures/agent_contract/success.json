@@ -1,0 +1,10 @@
+{
+  "interface": "sintraprime.agent",
+  "interface_version": "1.0.0",
+  "ok": true,
+  "run_id": "RUN-EXAMPLE-SUCCESS-001",
+  "run_dir": "runs/RUN-EXAMPLE-SUCCESS-001",
+  "manifest_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+  "bundle": "07_publish/RUN-EXAMPLE-SUCCESS-001__BUNDLE__v01.zip",
+  "runs_root": "runs"
+}

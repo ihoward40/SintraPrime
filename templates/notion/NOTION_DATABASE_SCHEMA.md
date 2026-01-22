@@ -201,6 +201,8 @@ Users can duplicate this template to create new runs instantly.
 
 ## Make.com Automation (Optional)
 
+If you're using a Notion “router” that emits strict job payloads, see the versioned bundles in [notion/job-templates/README.md](../../notion/job-templates/README.md).
+
 If you want to auto-create runs via webhook (e.g., when a GitHub action triggers):
 
 ### Step 1: Create Make Scenario

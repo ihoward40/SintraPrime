@@ -1,0 +1,34 @@
+{
+  "content_by_id": {},
+  "schedules_by_id": {},
+  "receipts_by_id": {},
+  "audit_events": [],
+  "best_time_by_key": {},
+  "analytics_events": [],
+  "worker_heartbeats": {},
+  "health_history": [
+    {
+      "at": "2026-01-17T22:18:32.842Z",
+      "ok": false,
+      "mode": "dev",
+      "receipts": {
+        "ok": true,
+        "checked": 0,
+        "mismatch": 0
+      },
+      "worker": {
+        "best_time_last_run": null,
+        "stale": true,
+        "stale_threshold_minutes": 180
+      },
+      "schemas": {
+        "last_lint_ok": null,
+        "last_lint_at": null
+      },
+      "event_key": "464c028fd83750bdde311cd16377b85a8d9544a6618d0866eb14e9dc68d9ad5f",
+      "event_reason": [
+        "first"
+      ]
+    }
+  ]
+}

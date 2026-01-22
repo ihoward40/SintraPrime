@@ -1,0 +1,11 @@
+{
+  "isiah": "VOICE_ID_ISIAH_PRIME",
+  "oracle": "VOICE_ID_BRICK_CITY_ORACLE",
+  "guardian": "VOICE_ID_VAULT_GUARDIAN",
+  "scribe": "VOICE_ID_SOVEREIGN_SCRIBE",
+  "scholar": "VOICE_ID_STREET_SCHOLAR",
+  "judge": "VOICE_ID_JUDGE_INVISIBLE",
+  "trickster": "VOICE_ID_TRICKSTER_AUDITOR",
+  "dragon": "VOICE_ID_DRAGON_DUE_PROCESS",
+  "angel": "VOICE_ID_ANGEL_REMEDY"
+}

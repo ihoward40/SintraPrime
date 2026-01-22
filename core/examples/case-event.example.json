@@ -1,0 +1,11 @@
+{
+  "schema_id": "https://sintraprime.local/schemas/case-event.schema.json",
+  "event_id": "01HZXK9G9F3V7Q0E8A2N1M",
+  "timestamp": "2026-01-18T15:04:22Z",
+  "event_type": "CASE_CREATED",
+  "actor": "system",
+  "details": { "source_module": "Evidence Binder", "intake_key": "sha256:demo" },
+  "related_artifacts": [],
+  "prev_hash": null,
+  "hash": "sha256:demo"
+}

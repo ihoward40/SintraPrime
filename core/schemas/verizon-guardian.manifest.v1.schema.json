@@ -1,0 +1,214 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "verizon-guardian.manifest.v1",
+  "title": "VERIZON_GUARDIAN Manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["agent", "constants", "naming", "notion", "status"],
+  "properties": {
+    "agent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version", "mission"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "version": { "type": "string", "minLength": 1 },
+        "mission": { "type": "string", "minLength": 1 },
+        "status_default": { "type": "string", "minLength": 1 }
+      }
+    },
+
+    "constants": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["drive_root", "timezone", "subject_max_len", "slack_channel_watch"],
+      "properties": {
+        "drive_root": { "type": "string", "minLength": 1 },
+        "drive_root_folder_id": { "type": "string", "minLength": 1 },
+        "timezone": { "type": "string", "minLength": 1 },
+        "subject_max_len": { "type": "integer", "minimum": 1, "maximum": 200 },
+
+        "slack_channel_watch": { "type": "string", "minLength": 1 },
+        "slack_critical_user_id": { "type": "string", "minLength": 1 },
+        "slack_critical_fallback_channel": { "type": "string", "minLength": 1 }
+      }
+    },
+
+    "gmail": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "ids": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["gmail_api_id_field", "gmail_message_id_rfc_field", "gmail_thread_id_field"],
+          "properties": {
+            "gmail_api_id_field": { "type": "string", "minLength": 1 },
+            "gmail_message_id_rfc_field": { "type": "string", "minLength": 1 },
+            "gmail_thread_id_field": { "type": "string", "minLength": 1 }
+          }
+        },
+        "links": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["gmail_permalink"],
+          "properties": {
+            "gmail_permalink": { "type": "string", "minLength": 1 }
+          }
+        }
+      }
+    },
+
+    "body_hashing": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "policy": { "type": "string", "minLength": 1 },
+        "store_format_field": { "type": "string", "minLength": 1 },
+        "formats": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "text_plain": { "type": "string", "minLength": 1 },
+            "html_to_text": { "type": "string", "minLength": 1 }
+          }
+        }
+      }
+    },
+
+    "case_anchoring": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "case_anchor_priority": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "minItems": 1
+        },
+        "store_all_extracted_field": { "type": "string", "minLength": 1 },
+        "store_primary_field": { "type": "string", "minLength": 1 }
+      }
+    },
+
+    "naming": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["drive_path_by_month", "pdf", "metadata", "binder_folder"],
+      "properties": {
+        "drive_path_by_month": { "type": "string", "minLength": 1 },
+        "pdf": { "type": "string", "minLength": 1 },
+        "metadata": { "type": "string", "minLength": 1 },
+        "eml": { "type": "string", "minLength": 1 },
+        "binder_folder": { "type": "string", "minLength": 1 }
+      }
+    },
+
+    "dedup": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "notion_idempotency_key": { "type": "string", "minLength": 1 },
+        "drive_exists_check": { "type": "boolean" },
+        "drive_exists_check_files": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "drive_if_exists": { "type": "string", "minLength": 1 },
+        "prevent_drive_versioning": { "type": "boolean" }
+      }
+    },
+
+    "status": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status_lifecycle", "binder_trigger_status"],
+      "properties": {
+        "status_lifecycle": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "binder_trigger_status": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+
+    "notion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["database", "fields"],
+      "properties": {
+        "database": { "type": "string", "minLength": 1 },
+        "fields": {
+          "type": "object",
+          "additionalProperties": { "type": "string", "minLength": 1 }
+        },
+        "keys": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "idempotency_key": { "type": "string", "minLength": 1 },
+            "case_id": { "type": "string", "minLength": 1 },
+            "case_anchor": { "type": "string", "minLength": 1 }
+          }
+        }
+      }
+    },
+
+    "routing": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "severity": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "Critical": { "$ref": "#/definitions/severityRoute" },
+            "High": { "$ref": "#/definitions/severityRoute" },
+            "Medium": { "$ref": "#/definitions/severityRoute" },
+            "Low": { "$ref": "#/definitions/severityRoute" }
+          }
+        }
+      }
+    },
+
+    "binder": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "exhibits": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["code", "title"],
+            "properties": {
+              "code": { "type": "string", "minLength": 1 },
+              "title": { "type": "string", "minLength": 1 }
+            }
+          }
+        },
+        "manifest_name": { "type": "string", "minLength": 1 }
+      }
+    }
+  },
+
+  "definitions": {
+    "severityRoute": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["slack", "notion_priority"],
+      "properties": {
+        "slack": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "minItems": 1
+        },
+        "notion_priority": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

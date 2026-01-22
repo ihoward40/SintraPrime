@@ -116,6 +116,16 @@ function methodIsReadOnly(method: ExecutionStep["method"]) {
   return method === "GET" || method === "HEAD";
 }
 
+function isNotionDatabaseQueryPath(p: string): boolean {
+  // Notion query API: POST /v1/databases/{db_id}/query
+  return /^\/v1\/databases\/[^/]+\/query$/.test(p);
+}
+
+function isNotionPagesCreatePath(p: string): boolean {
+  // Notion create page: POST /v1/pages
+  return p === "/v1/pages";
+}
+
 function uniqueHostsFromSteps(steps: ExecutionStep[]): string[] {
   const hosts = new Set<string>();
   for (const step of steps) {
@@ -541,13 +551,28 @@ export function checkPolicyWithMeta(
           );
         }
 
-        if (method !== "PATCH") {
+        // Approval-scoped live writes allow PATCH (update page) and POST (create page).
+        if (method !== "PATCH" && method !== "POST") {
           return withMeta(
             deny(
             "NOTION_LIVE_WRITE_METHOD_NOT_ALLOWED",
-            "Only PATCH allowed for approval-scoped live notion writes"
+            "Only PATCH/POST allowed for approval-scoped live notion writes"
             )
           );
+        }
+
+        // Tight endpoint allowlist for approval-scoped methods.
+        // - PATCH: /v1/pages/:id
+        // - POST: /v1/pages
+        if (method === "PATCH") {
+          if (!url.pathname.startsWith("/v1/pages/")) {
+            return withMeta(deny("NOTION_LIVE_WRITE_METHOD_NOT_ALLOWED", "PATCH allowed only for /v1/pages/:id"));
+          }
+        }
+        if (method === "POST") {
+          if (!isNotionPagesCreatePath(url.pathname)) {
+            return withMeta(deny("NOTION_LIVE_WRITE_METHOD_NOT_ALLOWED", "POST allowed only for /v1/pages"));
+          }
         }
 
         // Live writes must be explicitly approved (Tier 10.2) using the same approval token mechanism.
@@ -567,11 +592,17 @@ export function checkPolicyWithMeta(
 
       // 2) Read-only method constraints
       if (readOnlyFlag === true) {
-        if (method !== "GET" && method !== "HEAD") {
+        // Live Notion database query is a read-only POST.
+        const allowReadPost =
+          method === "POST" &&
+          isNotionDatabaseQueryPath(url.pathname) &&
+          (action === "notion.live.query" || action === "notion.live.read" || action === "");
+
+        if (method !== "GET" && method !== "HEAD" && !allowReadPost) {
           return withMeta(
             deny(
             "NOTION_LIVE_METHOD_NOT_ALLOWED",
-            "Only GET/HEAD allowed for notion.live.read"
+            "Only GET/HEAD allowed for notion.live.read (database queries may use POST /v1/databases/:id/query)"
             )
           );
         }

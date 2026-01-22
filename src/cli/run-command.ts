@@ -1,4 +1,30 @@
 import { sendMessage } from "../agents/sendMessage.js";
+import type { ArchSelection, ArchRefusal } from "../governance/arch.js";
+import { ArchStrictError, parseArchFlag, parseStrictArchFlag, selectArchitecture } from "../governance/arch.js";
+import type { ModeSelection } from "../governance/mode.js";
+import { ModeStrictError, parseModeFlag, parseStrictModeFlag, selectModes } from "../governance/mode.js";
+import { parseStrictAnyFlag } from "../governance/strict-any.js";
+import { assembleSystemPrompt } from "../prompt/assembleSystemPrompt.js";
+import { writeRefusalPack } from "../governance/refusal-pack.js";
+import { parseStrictTurboSparseFlag, parseTurboSparseEnabled } from "../turbosparse/flags.js";
+import { buildTurboSparseSystemPrompt } from "../turbosparse/prompt.js";
+import { selectExperts } from "../turbosparse/select.js";
+import { cacheKey, readCache, writeCache } from "../turbosparse/cache.js";
+import { applyTokenBudget, type BudgetTrim } from "../turbosparse/budget.js";
+import { GammaApiError } from "../integrations/gamma/client.js";
+import { GammaStrictError } from "../integrations/gamma/refusals.js";
+import { runGammaDeck } from "../integrations/gamma/router.js";
+import { SlidesStrictError, runSlidesPipeline, type SlidesFormat } from "../slides/pipeline/run-slides.js";
+import {
+  parseStitchBackendFlag,
+  parseStitchImportDirFlag,
+  parseStrictStitchFlag,
+  parseStitchRenderFlag,
+} from "../ui/stitch/flags.js";
+import { selectStitchBackend, isStitchAutomationEnabled } from "../ui/stitch/backend.js";
+import { ingestStitchExport, stitchInventoryToMarkdown } from "../ui/stitch/ingest.js";
+import { StitchStrictError, stitchRefusal } from "../ui/stitch/refusals.js";
+import type { StitchBackendId } from "../ui/stitch/schema.js";
 import { executePlan } from "../executor/executePlan.js";
 import { persistRun } from "../persist/persistRun.js";
 import {
@@ -49,6 +75,14 @@ import { speak, speakText } from "../speech/speak.js";
 import { exportAuditCourtPacket } from "../audit/exportAuditCourtPacket.js";
 import { exportAuditExecutionBundle } from "../audit/exportAuditExecutionBundle.js";
 import { applySecretsToProcessEnv, loadControlConfig, loadSecretsEnv } from "../clean/config.js";
+import { runCasesScanCommand } from "./casesScan.js";
+import { runCasesDriftCommand } from "./casesDrift.js";
+import { runCasesReceivedCommand } from "./casesReceived.js";
+import { runLitigationPacketCommand } from "./litigationPacket.js";
+import { runClaudeWorkerCommand } from "./claudeWorker.js";
+import { runEgressSnapshotCommand } from "./egressSnapshot.js";
+import { runDriveApplyTemplate, runDriveAuthTest, runDriveEnsurePath } from "./drive.js";
+import { driveReceiptsTail, driveStatus } from "./driveOperator.js";
 import {
   appendSilentHaltLedgerLine,
   maybeAppendModeTransitionLedger,
@@ -180,7 +214,133 @@ function getArgCommand() {
     if (looksLikeCliEntry) args.shift();
   }
 
-  const raw = args.join(" ").trim();
+  // Support optional CLI flags that should NOT become part of the command message.
+  // Example: tsx src/cli/run-command.ts --arch synergy-7 "/build ..."
+  const filtered: string[] = [];
+  for (let i = 0; i < args.length; i += 1) {
+    const a = String(args[i] ?? "");
+    if (a === "--arch") {
+      i += 1; // skip value
+      continue;
+    }
+    if (a.startsWith("--arch=")) {
+      continue;
+    }
+    if (a === "--strict-arch") {
+      // Optionally allow: --strict-arch true
+      const next = String(args[i + 1] ?? "").trim().toLowerCase();
+      if (next === "true" || next === "false" || next === "1" || next === "0" || next === "yes" || next === "no") {
+        i += 1;
+      }
+      continue;
+    }
+    if (a.startsWith("--strict-arch=")) {
+      continue;
+    }
+
+    if (a === "--mode") {
+      i += 1; // skip value
+      continue;
+    }
+    if (a.startsWith("--mode=")) {
+      continue;
+    }
+    if (a === "--strict-mode") {
+      // Optionally allow: --strict-mode true
+      const next = String(args[i + 1] ?? "").trim().toLowerCase();
+      if (next === "true" || next === "false" || next === "1" || next === "0" || next === "yes" || next === "no") {
+        i += 1;
+      }
+      continue;
+    }
+    if (a.startsWith("--strict-mode=")) {
+      continue;
+    }
+
+    if (a === "--strict-any") {
+      // Optionally allow: --strict-any true
+      const next = String(args[i + 1] ?? "").trim().toLowerCase();
+      if (next === "true" || next === "false" || next === "1" || next === "0" || next === "yes" || next === "no") {
+        i += 1;
+      }
+      continue;
+    }
+    if (a.startsWith("--strict-any=")) {
+      continue;
+    }
+
+    if (a === "--strict-stitch") {
+      // Optionally allow: --strict-stitch true
+      const next = String(args[i + 1] ?? "").trim().toLowerCase();
+      if (next === "true" || next === "false" || next === "1" || next === "0" || next === "yes" || next === "no") {
+        i += 1;
+      }
+      continue;
+    }
+    if (a.startsWith("--strict-stitch=")) {
+      continue;
+    }
+
+    if (a === "--stitch-import") {
+      i += 1; // skip value
+      continue;
+    }
+    if (a.startsWith("--stitch-import=")) {
+      continue;
+    }
+
+    if (a === "--stitch-backend") {
+      i += 1; // skip value
+      continue;
+    }
+    if (a.startsWith("--stitch-backend=")) {
+      continue;
+    }
+
+    if (a === "--stitch-render") {
+      // Optionally allow: --stitch-render true
+      const next = String(args[i + 1] ?? "").trim().toLowerCase();
+      if (next === "true" || next === "false" || next === "1" || next === "0" || next === "yes" || next === "no") {
+        i += 1;
+      }
+      continue;
+    }
+    if (a.startsWith("--stitch-render=")) {
+      continue;
+    }
+    if (a === "--no-stitch-render") {
+      continue;
+    }
+
+    if (a === "--turbosparse") {
+      // Optionally allow: --turbosparse true
+      const next = String(args[i + 1] ?? "").trim().toLowerCase();
+      if (next === "true" || next === "false" || next === "1" || next === "0" || next === "yes" || next === "no") {
+        i += 1;
+      }
+      continue;
+    }
+    if (a.startsWith("--turbosparse=")) {
+      continue;
+    }
+    if (a === "--no-turbosparse") {
+      continue;
+    }
+    if (a === "--strict-turbosparse") {
+      // Optionally allow: --strict-turbosparse true
+      const next = String(args[i + 1] ?? "").trim().toLowerCase();
+      if (next === "true" || next === "false" || next === "1" || next === "0" || next === "yes" || next === "no") {
+        i += 1;
+      }
+      continue;
+    }
+    if (a.startsWith("--strict-turbosparse=")) {
+      continue;
+    }
+    filtered.push(a);
+  }
+
+  const raw = filtered.join(" ").trim();
   if (!raw) {
     throw new Error(
       "Missing command argument. Example: npm run dev -- \"/build validation-agent {\\\"dry_run\\\":false}\""
@@ -555,12 +715,117 @@ function computeReceiptHashForLog(runLog: unknown) {
   return crypto.createHash("sha256").update(payload).digest("hex");
 }
 
+function tokenBudgetFromEnv(): number {
+  const raw = String(process.env.SINTRAPRIME_TOKEN_BUDGET ?? "0").trim();
+  if (!raw) return 0;
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+}
+
+function cacheEnabledFromEnv(): boolean {
+  const v = String(process.env.SINTRAPRIME_CACHE ?? "").trim().toLowerCase();
+  // Governance default: OFF unless explicitly enabled.
+  return v === "1" || v === "true" || v === "yes";
+}
+
+function runDirForCache(): string {
+  return process.env.SINTRAPRIME_RUN_DIR || process.env.RUN_DIR || "runs/latest";
+}
+
+function splitCommandFirstMessage(message: string): { user: string; system: string } {
+  const m = String(message ?? "");
+  const i = m.indexOf("\n");
+  if (i === -1) return { user: m.trim(), system: "" };
+  const user = m.slice(0, i).trim();
+  const system = m.slice(i + 1).replace(/^\s+/, "").trim();
+  return { user, system };
+}
+
+function joinCommandFirstMessage(parts: { user: string; system: string }): string {
+  const user = String(parts.user ?? "").trim();
+  const system = String(parts.system ?? "").trim();
+  if (!system) return user;
+  // Keep the actual command as the first bytes of the message.
+  return `${user}\n\n${system}`;
+}
+
+function pushTurboTrims(turbosparse: any, kind: string, trims: BudgetTrim[]) {
+  if (!turbosparse || !Array.isArray(trims) || trims.length === 0) return;
+  if (!Array.isArray(turbosparse.trims)) turbosparse.trims = [];
+  for (const t of trims) {
+    turbosparse.trims.push({ kind: `${kind}:${t.kind}`, detail: t.detail });
+  }
+}
+
+function pushTurboCacheEvent(turbosparse: any, ev: { hit: boolean; key?: string }) {
+  if (!turbosparse) return;
+  if (!turbosparse.cache || typeof turbosparse.cache !== "object") turbosparse.cache = {};
+  turbosparse.cache.enabled = cacheEnabledFromEnv();
+  if (typeof turbosparse.cache.hit !== "boolean") turbosparse.cache.hit = ev.hit;
+  if (ev.hit) turbosparse.cache.hit = true;
+  if (typeof ev.key === "string" && ev.key.trim()) {
+    turbosparse.cache.keyPrefix = ev.key.trim().slice(0, 12);
+  }
+}
+
+async function sendMessageTurboCached(params: {
+  webhookUrl: string;
+  threadId: string;
+  message: string;
+  kind: "validator" | "planner" | "planner_retry";
+  turbosparse?: any;
+}) {
+  const maxTokens = tokenBudgetFromEnv();
+  let msg = String(params.message ?? "");
+
+  if (maxTokens > 0) {
+    const parts = splitCommandFirstMessage(msg);
+    const b = applyTokenBudget({ system: parts.system, user: parts.user, maxTokens });
+    msg = joinCommandFirstMessage({ user: b.user, system: b.system });
+    pushTurboTrims(params.turbosparse, params.kind, b.trims);
+  }
+
+  const cacheEnabled = cacheEnabledFromEnv();
+  if (cacheEnabled) {
+    const runDir = runDirForCache();
+    const parts = splitCommandFirstMessage(msg);
+    const key = cacheKey({ system: parts.system, user: parts.user, toolSig: `${params.kind}:${params.webhookUrl}` });
+    const hit = readCache(runDir, key);
+    if (hit && typeof hit === "object" && "response" in (hit as any)) {
+      pushTurboCacheEvent(params.turbosparse, { hit: true, key });
+      return hit;
+    }
+    pushTurboCacheEvent(params.turbosparse, { hit: false, key });
+
+    const out = await sendMessage({ webhookUrl: params.webhookUrl, threadId: params.threadId, message: msg });
+    try {
+      // Cache only successful-ish webhook responses.
+      if (out && typeof out === "object" && (out as any).ok !== false && (out as any).response) {
+        writeCache(runDir, key, out);
+      }
+    } catch {
+      // ignore cache write
+    }
+    return out;
+  }
+
+  return sendMessage({ webhookUrl: params.webhookUrl, threadId: params.threadId, message: msg });
+}
+
 async function retryPlannerOnce(params: {
   plannerUrl: string;
   threadId: string;
   command: string;
   firstError: unknown;
   firstRawText: string;
+  arch?: ArchSelection;
+  modes?: ModeSelection;
+  turbosparse?: {
+    enabled: boolean;
+    experts: string[];
+    reason?: string[];
+    systemPromptText?: string;
+  };
 }) {
   if (isStrictAgentOutputEnabled()) {
     throw new Error("Planner retry is disabled in strict mode");
@@ -572,17 +837,24 @@ async function retryPlannerOnce(params: {
 
   // Still one message string, and it starts with the original command.
   const retryMsg =
-    `${params.command}\n\n` +
+    `${assembleSystemPrompt({
+      arch: params.arch,
+      modes: params.modes,
+      turbosparse: params.turbosparse,
+      command: params.command,
+    })}\n\n` +
     `__PLANNER_RETRY_CONTEXT__\n` +
     `Previous planner output was invalid for the required schema.\n` +
     `- Reason: ${errPreview}\n\n` +
     `Raw output (truncated):\n<<<\n${rawPreview}\n>>>\n\n` +
     `Return ONLY a single valid JSON object (ExecutionPlan or NeedInput).`;
 
-  const second = await sendMessage({
+  const second = await sendMessageTurboCached({
     webhookUrl: params.plannerUrl,
     threadId: params.threadId,
     message: retryMsg,
+    kind: "planner_retry",
+    turbosparse: params.turbosparse,
   });
 
   const raw2 = parseJsonFromAgentResponse(second.response);
@@ -590,6 +862,100 @@ async function retryPlannerOnce(params: {
 }
 
 async function run() {
+  const strictAny = parseStrictAnyFlag(process.argv);
+  const archId = parseArchFlag(process.argv);
+  const strictArch = parseStrictArchFlag(process.argv) || strictAny;
+
+  let arch: ArchSelection;
+  try {
+    arch = await selectArchitecture(archId, { strict: strictArch });
+  } catch (e) {
+    if (e instanceof ArchStrictError) {
+      const refusal: ArchRefusal = e.refusal;
+      // Minimal, audit-friendly behavior: emit refusal JSON and exit non-zero.
+      // Caller can pipe this into existing SSAL/refusal pack handling.
+      console.error(JSON.stringify(refusal, null, 2));
+      process.exitCode = 2;
+
+      const runDir =
+        process.env.SINTRAPRIME_RUN_DIR ||
+        process.env.RUN_DIR ||
+        "runs/latest";
+
+      try {
+        await writeRefusalPack({
+          runDir,
+          refusal,
+          exitCode: 2,
+          arch: {
+            archId: typeof archId === "string" ? archId : undefined,
+            archVersion: "0.0.0",
+          },
+          ssal: { state: "REFUSE", code: refusal.code },
+          note: "Strict architecture refusal",
+        });
+      } catch (packErr) {
+        console.error(
+          JSON.stringify(
+            {
+              level: "warn",
+              msg: "Failed to write refusal pack",
+              err: String((packErr as any)?.message ?? packErr),
+            },
+            null,
+            2
+          )
+        );
+      }
+      return;
+    }
+    throw e;
+  }
+
+  const strictMode = parseStrictModeFlag(process.argv) || strictAny;
+  const modeIds = parseModeFlag(process.argv);
+
+  let modes: ModeSelection;
+  try {
+    modes = await selectModes(modeIds, { strict: strictMode });
+  } catch (e) {
+    if (e instanceof ModeStrictError) {
+      const refusal = e.refusal;
+      console.error(JSON.stringify(refusal, null, 2));
+      process.exitCode = 2;
+
+      const runDir = process.env.SINTRAPRIME_RUN_DIR || process.env.RUN_DIR || "runs/latest";
+
+      try {
+        await writeRefusalPack({
+          runDir,
+          refusal,
+          exitCode: 2,
+          arch: {
+            archId: typeof archId === "string" ? archId : undefined,
+            archVersion: "0.0.0",
+          },
+          ssal: { state: "REFUSE", code: refusal.code },
+          note: "Strict mode refusal",
+        });
+      } catch (packErr) {
+        console.error(
+          JSON.stringify(
+            {
+              level: "warn",
+              msg: "Failed to write refusal pack",
+              err: String((packErr as any)?.message ?? packErr),
+            },
+            null,
+            2
+          )
+        );
+      }
+      return;
+    }
+    throw e;
+  }
+
   // Optional: load local secrets file (DO NOT COMMIT) to align with operator docs.
   // Only fills missing/empty env vars; never overwrites existing values.
   const controlConfig = loadControlConfig(process.cwd());
@@ -661,6 +1027,910 @@ async function run() {
   const domain_id = domainPrefix?.domain_id ?? null;
   const original_command = domainPrefix?.original_command ?? normalizedCommand;
   const command = domainPrefix?.inner_command ?? normalizedCommand;
+
+  // TurboSparse: sparse activation of prompt modules (“experts”).
+  // Policy: enabled by default; disable with --no-turbosparse.
+  const turboEnabled = parseTurboSparseEnabled(process.argv);
+  const turboStrict = parseStrictTurboSparseFlag(process.argv) || strictAny;
+
+  const turboDecision = turboEnabled
+    ? selectExperts({
+        text: command,
+        modeId: (modes.modeIds ?? []).join(","),
+        archId: arch.archId,
+        maxExperts: 4,
+      })
+    : { enabled: false, experts: ["core"] as any, reason: ["TurboSparse disabled"] };
+
+  if (turboEnabled && turboStrict && (modes.modeIds ?? []).length > 0 && (turboDecision.experts ?? []).length <= 1) {
+    const refusal = {
+      type: "REFUSE" as const,
+      code: "TURBOSPARSE_EMPTY" as const,
+      message: "TurboSparse strict mode: no suitable experts selected for the requested mode.",
+      details: {
+        archId: arch.archId,
+        modeIds: modes.modeIds ?? [],
+        experts: turboDecision.experts,
+      },
+    };
+
+    console.error(JSON.stringify(refusal, null, 2));
+    process.exitCode = 2;
+
+    const runDir = process.env.SINTRAPRIME_RUN_DIR || process.env.RUN_DIR || "runs/latest";
+    try {
+      await writeRefusalPack({
+        runDir,
+        refusal,
+        exitCode: 2,
+        arch: { archId: arch.archId, archVersion: arch.archVersion },
+        ssal: { state: "REFUSE", code: refusal.code },
+        note: "Strict TurboSparse refusal",
+      });
+    } catch {
+      // ignore
+    }
+    return;
+  }
+
+  const turboSystemPrompt = turboEnabled ? buildTurboSparseSystemPrompt(turboDecision.experts as any) : "";
+  const turbosparseMeta = {
+    enabled: !!turboEnabled,
+    experts: (turboDecision.experts ?? []).map((e: any) => String(e)),
+    reason: Array.isArray(turboDecision.reason) ? turboDecision.reason : [],
+    systemPromptText: turboSystemPrompt,
+  };
+
+  // Gamma integration: dual-path
+  // - If GAMMA_API_KEY is set: use Gamma API to create/poll generation.
+  // - If missing and strict-any is enabled: refuse with exit code 2 + refusal pack.
+  // - If missing and not strict: emit a Gamma Free import pack under runDir/gamma.
+  const gammaMatch = command.trim().match(/^\/gamma(?:\s+(.+))?\s*$/i);
+  if (gammaMatch) {
+    const runDir = process.env.SINTRAPRIME_RUN_DIR || process.env.RUN_DIR || "runs/latest";
+
+    const arg = String(gammaMatch[1] ?? "").trim();
+    const requestedBackend = /(^|\s)--backend(?:=|\s+)gamma_api(\s|$)/i.test(arg)
+      ? "gamma_api"
+      : /(^|\s)--backend(?:=|\s+)gamma_free_pack(\s|$)/i.test(arg)
+        ? "gamma_free_pack"
+        : undefined;
+
+    const cleaned = arg
+      .replace(/(^|\s)--backend=\S+/gi, " ")
+      .replace(/(^|\s)--backend\s+\S+/gi, " ")
+      .trim();
+
+    const title = cleaned || "Gamma deck";
+
+    try {
+      const result = await runGammaDeck({
+        runDir,
+        strictAny,
+        env: { GAMMA_API_KEY: process.env.GAMMA_API_KEY },
+        request: {
+          title,
+          sourceText: "",
+          requestedBackend,
+        },
+      });
+
+      process.stdout.write(
+        JSON.stringify(
+          {
+            ok: true,
+            backend: result.backend,
+            artifactsDir: result.artifactsDir,
+            ...(result.backend === "gamma_api"
+              ? { generationId: result.generationId, fileUrls: result.fileUrls }
+              : { files: result.files }),
+          },
+          null,
+          2
+        )
+      );
+      return;
+    } catch (e) {
+      if (e instanceof GammaStrictError) {
+        console.error(JSON.stringify(e.refusal, null, 2));
+        process.exitCode = 2;
+        try {
+          await writeRefusalPack({
+            runDir,
+            refusal: e.refusal,
+            exitCode: 2,
+            ssal: { state: "REFUSE", code: e.refusal.code },
+            note: "Strict gamma refusal",
+          });
+        } catch {
+          // best-effort
+        }
+        return;
+      }
+
+      const status = e instanceof GammaApiError ? e.status : undefined;
+      if (strictAny) {
+        const code =
+          status === 401
+            ? "GAMMA_API_UNAUTHORIZED"
+            : status === 403
+              ? "GAMMA_API_FORBIDDEN"
+              : "GAMMA_GENERATION_FAILED";
+
+        const refusal = {
+          type: "REFUSE" as const,
+          code,
+          message: "Gamma generation failed under strict governance.",
+          details: { status, error: String((e as any)?.message ?? e) },
+        };
+
+        console.error(JSON.stringify(refusal, null, 2));
+        process.exitCode = 2;
+        try {
+          await writeRefusalPack({
+            runDir,
+            refusal,
+            exitCode: 2,
+            ssal: { state: "REFUSE", code: refusal.code },
+            note: "Strict Gamma refusal",
+          });
+        } catch {
+          // best-effort
+        }
+        return;
+      }
+
+      console.error(String((e as any)?.message ?? e));
+      console.error("Tip: omit --backend=gamma_api (or unset GAMMA_API_KEY) to generate a Gamma Free import pack.");
+      process.exitCode = 1;
+      return;
+    }
+  }
+
+  // SintraPrime Slides: compile -> optimize -> render (pptx/html/pdf) into runDir/slides
+  // Usage:
+  //   --strict-any --arch synergy-7 --mode technical /slides --title "..." --brand vault-guardian.black-gold --format pptx,html --in path/to.md
+  const slidesMatch = command.trim().match(/^\/slides(?:\s+([\s\S]+))?\s*$/i);
+  if (slidesMatch) {
+    const runDir = process.env.SINTRAPRIME_RUN_DIR || process.env.RUN_DIR || "runs/latest";
+
+    const argStr = String(slidesMatch[1] ?? "").trim();
+    const tokens = splitArgs(argStr);
+    const parsed = parseSlidesArgs(tokens);
+
+    try {
+      const sourceText = parsed.inPath ? fs.readFileSync(parsed.inPath, "utf8") : parsed.sourceText;
+
+      const result = await runSlidesPipeline({
+        runDir,
+        strictAny,
+        title: parsed.title,
+        subtitle: parsed.subtitle,
+        sourceText,
+        brandIdOrPath: parsed.brand,
+        formats: parsed.formats,
+      });
+
+      process.stdout.write(
+        JSON.stringify(
+          {
+            ok: true,
+            runDir,
+            slides: result,
+          },
+          null,
+          2
+        )
+      );
+      return;
+    } catch (e) {
+      if (e instanceof SlidesStrictError) {
+        console.error(JSON.stringify(e.refusal, null, 2));
+        process.exitCode = 2;
+        try {
+          await writeRefusalPack({
+            runDir,
+            refusal: e.refusal,
+            exitCode: 2,
+            arch: { archId: typeof archId === "string" ? archId : undefined, archVersion: "0.0.0" },
+            ssal: { state: "REFUSE", code: e.refusal.code },
+            note: "Strict slides refusal",
+          });
+        } catch {
+          // best-effort
+        }
+        return;
+      }
+
+      console.error(String((e as any)?.message ?? e));
+      process.exitCode = 1;
+      return;
+    }
+  }
+
+  // StitchPack: governance-safe UI export ingest.
+  // Command surface:
+  //   /ui stitch ...   (preferred)
+  //   /stitch ...      (alias)
+  // Artifacts:
+  //   <runDir>/stitch/import/*
+  //   <runDir>/stitch/stitchpack.json
+  // Receipt:
+  //   <runDir>/receipt.json -> receipt.stitch
+  const stitchMatch = command.trim().match(/^\/(?:(?:ui)\s+)?stitch(?:\s+([\s\S]+))?\s*$/i);
+  if (stitchMatch) {
+    const runDir = process.env.SINTRAPRIME_RUN_DIR || process.env.RUN_DIR || "runs/latest";
+    const strictStitch = parseStrictStitchFlag(process.argv) || strictAny;
+    const stitchRender = parseStitchRenderFlag(process.argv);
+
+    const requestedBackendRaw =
+      parseStitchBackendFlag(process.argv) ||
+      (typeof process.env.SINTRAPRIME_STITCH_BACKEND === "string" ? process.env.SINTRAPRIME_STITCH_BACKEND : null);
+
+    const isBackendId = (s: string): s is StitchBackendId => {
+      return s === "stitch_web_ingest" || s === "stitch_auto_playwright";
+    };
+
+    const notes: string[] = [];
+
+    let backend: StitchBackendId = selectStitchBackend(process.env);
+    if (typeof requestedBackendRaw === "string" && requestedBackendRaw.trim()) {
+      const trimmed = requestedBackendRaw.trim();
+      if (!isBackendId(trimmed)) {
+        const refusal = stitchRefusal(
+          "STITCH_UNKNOWN_BACKEND",
+          `Unknown Stitch backend: ${trimmed}`,
+          { backend: trimmed, allowed: ["stitch_web_ingest", "stitch_auto_playwright"] }
+        );
+        if (strictStitch) throw new StitchStrictError(refusal);
+        notes.push(`Unknown stitch backend '${trimmed}', falling back to stitch_web_ingest.`);
+        backend = "stitch_web_ingest";
+      } else {
+        backend = trimmed;
+      }
+    }
+
+    if (backend === "stitch_auto_playwright" && !isStitchAutomationEnabled(process.env)) {
+      const refusal = stitchRefusal(
+        "STITCH_AUTOMATION_BLOCKED",
+        "Stitch automation is blocked by default (human-in-the-loop export ingest).",
+        { tip: "Set SINTRAPRIME_STITCH_AUTOMATE=1 to allow automation." }
+      );
+      if (strictStitch) throw new StitchStrictError(refusal);
+      notes.push("Stitch automation blocked; falling back to stitch_web_ingest.");
+      backend = "stitch_web_ingest";
+    }
+
+    if (backend === "stitch_auto_playwright") {
+      notes.push(
+        "Automation backend selected; current implementation performs ingest only (expects export files under stitch/import)."
+      );
+    }
+
+    const sourceImportDir =
+      parseStitchImportDirFlag(process.argv) ||
+      (typeof process.env.SINTRAPRIME_STITCH_IMPORT_DIR === "string" ? process.env.SINTRAPRIME_STITCH_IMPORT_DIR : null);
+
+    const canRenderPdf = async (): Promise<boolean> => {
+      try {
+        await import("playwright");
+        return true;
+      } catch {
+        return false;
+      }
+    };
+
+    const writePitchMarkdown = (pack: any): { pitchRel: string; pitchAbs: string } => {
+      const runDirAbs = path.resolve(process.cwd(), runDir);
+      const stitchDirAbs = path.join(runDirAbs, "stitch");
+      fs.mkdirSync(stitchDirAbs, { recursive: true });
+      const pitchAbs = path.join(stitchDirAbs, "pitch.md");
+      const pitchRel = path.relative(runDirAbs, pitchAbs);
+      const md = stitchInventoryToMarkdown(pack);
+      fs.writeFileSync(pitchAbs, md, "utf8");
+      return { pitchRel, pitchAbs };
+    };
+
+    const renderDeckFromMarkdownFile = async (args: {
+      markdownPathAbs: string;
+      outSubdir: string;
+      title: string;
+      subtitle?: string;
+      brandIdOrPath: string;
+      strict: boolean;
+      formats: SlidesFormat[];
+    }) => {
+      const sourceText = fs.readFileSync(args.markdownPathAbs, "utf8");
+      return await runSlidesPipeline({
+        runDir,
+        outSubdir: args.outSubdir,
+        strictAny: args.strict,
+        title: args.title,
+        subtitle: args.subtitle,
+        sourceText,
+        brandIdOrPath: args.brandIdOrPath,
+        formats: args.formats,
+      });
+    };
+
+    try {
+      const { pack } = await ingestStitchExport({
+        runDir,
+        backend,
+        promptText: command.trim(),
+        strict: strictStitch,
+        sourceImportDir,
+        notes,
+      });
+
+      const pitch = writePitchMarkdown(pack);
+
+      let deck: any = null;
+      if (stitchRender) {
+        const formats: SlidesFormat[] = ["pptx", "html"];
+        if (await canRenderPdf()) formats.push("pdf");
+
+        try {
+          deck = await renderDeckFromMarkdownFile({
+            markdownPathAbs: pitch.pitchAbs,
+            outSubdir: "stitch/deck",
+            title: `Stitch Deck (${pack.runId})`,
+            subtitle: `backend: ${pack.backend}`,
+            brandIdOrPath: "vault-guardian.black-gold",
+            strict: strictAny || strictStitch,
+            formats,
+          });
+        } catch (err) {
+          if (err instanceof SlidesStrictError) throw err;
+
+          if (strictAny || strictStitch) {
+            throw new StitchStrictError(
+              stitchRefusal(
+                "STITCH_RENDER_FAILED",
+                "Strict Stitch render failed when compiling pitch.md into deck outputs.",
+                {
+                  outDir: "stitch/deck",
+                  markdownPath: "stitch/pitch.md",
+                  error: String((err as any)?.message ?? err),
+                }
+              )
+            );
+          }
+          throw err;
+        }
+      }
+
+      // Minimal, stable receipt update
+      try {
+        const runDirAbs = path.resolve(process.cwd(), runDir);
+        const receiptPath = path.join(runDirAbs, "receipt.json");
+        const existing = fs.existsSync(receiptPath) ? JSON.parse(fs.readFileSync(receiptPath, "utf8")) : {};
+        const next = {
+          ...existing,
+          stitch: {
+            backend: pack.backend,
+            import: {
+              found: pack.import.found,
+              files: pack.import.assets.length,
+              hashesWritten: true,
+            },
+          },
+        };
+        fs.mkdirSync(runDirAbs, { recursive: true });
+        fs.writeFileSync(receiptPath, JSON.stringify(next, null, 2) + "\n", "utf8");
+      } catch {
+        // best-effort
+      }
+
+      process.stdout.write(
+        JSON.stringify(
+          {
+            ok: true,
+            runDir,
+            stitch: {
+              backend: pack.backend,
+              import: { found: pack.import.found, files: pack.import.assets.length, hashesWritten: true },
+              stitchpack: "stitch/stitchpack.json",
+              stable: {
+                json: "stitch/stitchpack.stable.json",
+                sha256: "stitch/stitchpack.stable.sha256",
+              },
+              pitch: "stitch/pitch.md",
+              deck,
+            },
+          },
+          null,
+          2
+        )
+      );
+      return;
+    } catch (e) {
+      if (e instanceof SlidesStrictError) {
+        console.error(JSON.stringify(e.refusal, null, 2));
+        process.exitCode = 2;
+        try {
+          await writeRefusalPack({
+            runDir,
+            refusal: e.refusal,
+            exitCode: 2,
+            arch: { archId: typeof archId === "string" ? archId : undefined, archVersion: "0.0.0" },
+            ssal: { state: "REFUSE", code: e.refusal.code },
+            note: "Strict stitch render refusal",
+          });
+        } catch {
+          // best-effort
+        }
+        return;
+      }
+
+      if (e instanceof StitchStrictError) {
+        console.error(JSON.stringify(e.refusal, null, 2));
+        process.exitCode = 2;
+        try {
+          await writeRefusalPack({
+            runDir,
+            refusal: e.refusal,
+            exitCode: 2,
+            arch: { archId: typeof archId === "string" ? archId : undefined, archVersion: "0.0.0" },
+            ssal: { state: "REFUSE", code: e.refusal.code },
+            note: "Strict stitch refusal",
+          });
+        } catch {
+          // best-effort
+        }
+        return;
+      }
+
+      console.error(String((e as any)?.message ?? e));
+      process.exitCode = 1;
+      return;
+    }
+  }
+
+  // Cases: deadline scanner + deterministic mirror.
+  // Usage:
+  //   NOTION_CASES_DB_ID=... NOTION_TOKEN=... node --import tsx src/cli/run-command.ts /cases scan
+  const casesScanMatch = command.trim().match(/^\/cases\s+scan(?:\s+([\s\S]+))?\s*$/i);
+  if (casesScanMatch) {
+    const argStr = String(casesScanMatch[1] ?? "").trim();
+    const m = argStr.match(/--lock-minutes\s+(\d+)/i);
+    const lockMinutes = m ? Number(m[1]) : 15;
+
+    try {
+      await runCasesScanCommand({ rootDir: process.cwd(), lockMinutes });
+      process.stdout.write(JSON.stringify({ ok: true, command: "/cases scan", lockMinutes }, null, 2) + "\n");
+      return;
+    } catch (e) {
+      console.error(String((e as any)?.message ?? e));
+      process.exitCode = 1;
+      return;
+    }
+  }
+
+  // Cases drift detector: Notion stage advanced but local artifacts missing.
+  const casesDriftMatch = command.trim().match(/^\/cases\s+drift\s*$/i);
+  if (casesDriftMatch) {
+    try {
+      await runCasesDriftCommand({ rootDir: process.cwd() });
+      return;
+    } catch (e) {
+      console.error(String((e as any)?.message ?? e));
+      process.exitCode = 1;
+      return;
+    }
+  }
+
+  // Cases received trigger: Response Received checked -> generate exhibit packet + mark Packet Ready.
+  // Usage:
+  //   NOTION_CASES_DB_ID=... NOTION_TOKEN=... node --import tsx src/cli/run-command.ts /cases received
+  const casesReceivedMatch = command.trim().match(/^\/cases\s+received(?:\s+([\s\S]+))?\s*$/i);
+  if (casesReceivedMatch) {
+    const argStr = String(casesReceivedMatch[1] ?? "").trim();
+    const m = argStr.match(/--limit\s+(\d+)/i);
+    const limit = m ? Number(m[1]) : 25;
+
+    try {
+      const result = await runCasesReceivedCommand({ rootDir: process.cwd(), limit });
+      process.stdout.write(JSON.stringify({ ok: true, command: "/cases received", limit, result }, null, 2) + "\n");
+      return;
+    } catch (e) {
+      console.error(String((e as any)?.message ?? e));
+      process.exitCode = 1;
+      return;
+    }
+  }
+
+  // Litigation packet build (local artifacts) from a JSON payload.
+  // Usage:
+  //   node --import tsx src/cli/run-command.ts /litigation packet {"op":"LITIGATION_ENGINE_V1_BUILD_PACKET",...}
+  const litPacketMatch = command.trim().match(/^\/litigation\s+packet(?:\s+([\s\S]+))?\s*$/i);
+  if (litPacketMatch) {
+    const argStr = String(litPacketMatch[1] ?? "").trim();
+    if (!argStr.startsWith("{")) {
+      process.stdout.write(
+        JSON.stringify(
+          {
+            kind: "NeedInput",
+            reason: "Expected JSON payload",
+            example: {
+              op: "LITIGATION_ENGINE_V1_BUILD_PACKET",
+              case_id: "SELFTEST-NJ-ESSEX-0001",
+              venue: "NJ-SUPERIOR",
+              matter_type: "EMERGENCY",
+              status: "Received",
+              fields: {
+                PLAINTIFF_NAME: "Isiah Tarik Howard",
+                DEFENDANT_NAME: "Example Defendant",
+                COUNTY: "Essex",
+                STATE: "New Jersey",
+                CASE_SUMMARY: "End-to-end verification payload",
+                RELIEF_REQUESTED: "Emergency injunctive relief",
+              },
+            },
+          },
+          null,
+          2,
+        ) + "\n",
+      );
+      return;
+    }
+
+    try {
+      const payload = JSON.parse(argStr);
+      const result = await runLitigationPacketCommand({ rootDir: process.cwd(), payload });
+      process.stdout.write(JSON.stringify(result, null, 2) + "\n");
+      return;
+    } catch (e) {
+      console.error(String((e as any)?.message ?? e));
+      process.exitCode = 1;
+      return;
+    }
+  }
+
+  // Operator helper: show last persisted egress policy snapshot.
+  // Usage:
+  //   /egress snapshot
+  //   /egress snapshot <execution_id>
+  //   /egress snapshot {"execution_id":"exec_123","receipts_path":"runs/receipts.jsonl"}
+  const egressSnapshotMatch = command.trim().match(/^\/egress\s+snapshot(?:\s+([\s\S]+))?\s*$/i);
+  if (egressSnapshotMatch) {
+    const argStr = String(egressSnapshotMatch[1] ?? "").trim();
+
+    let executionId: string | null = null;
+    let receiptsPath: string | null = null;
+    let runsDir: string | null = null;
+    let caseId: string | null = null;
+    let includeRefusals = false;
+
+    if (argStr.startsWith("{")) {
+      try {
+        const payload = JSON.parse(argStr);
+        if (typeof payload?.execution_id === "string") executionId = payload.execution_id;
+        if (typeof payload?.receipts_path === "string") receiptsPath = payload.receipts_path;
+        if (typeof payload?.file === "string") receiptsPath = payload.file;
+        if (typeof payload?.runs_dir === "string") runsDir = payload.runs_dir;
+        if (typeof payload?.case_id === "string") caseId = payload.case_id;
+        if (payload?.include_refusals === true) includeRefusals = true;
+      } catch {
+        process.stdout.write(
+          JSON.stringify(
+            {
+              kind: "NeedInput",
+              reason: "Invalid JSON payload for /egress snapshot",
+              expected: {
+                execution_id: "string (optional)",
+                receipts_path: "string (optional, defaults to runs/receipts.jsonl)",
+                runs_dir: "string (optional, defaults to runs)",
+                case_id: "string (optional, used with include_refusals)",
+                include_refusals: "boolean (optional)",
+              },
+            },
+            null,
+            2
+          ) + "\n"
+        );
+        return;
+      }
+    } else if (argStr) {
+      const mExec = argStr.match(/--execution\s+(\S+)/i);
+      const mFile = argStr.match(/--file\s+(\S+)/i);
+      const mRuns = argStr.match(/--runs-dir\s+(\S+)/i);
+      const mCase = argStr.match(/--case-id\s+(\S+)/i);
+      if (/--include-refusals\b/i.test(argStr)) includeRefusals = true;
+      if (mExec?.[1]) executionId = String(mExec[1]);
+      if (mFile?.[1]) receiptsPath = String(mFile[1]);
+      if (mRuns?.[1]) runsDir = String(mRuns[1]);
+      if (mCase?.[1]) caseId = String(mCase[1]);
+      if (!executionId && !receiptsPath) executionId = argStr;
+    }
+
+    try {
+      await runEgressSnapshotCommand({ rootDir: process.cwd(), executionId, caseId, receiptsPath, runsDir, includeRefusals });
+      return;
+    } catch (e) {
+      console.error(String((e as any)?.message ?? e));
+      process.exitCode = 1;
+      return;
+    }
+  }
+
+  // Alias: /policy snapshot -> /egress snapshot (same behavior)
+  const policySnapshotMatch = command.trim().match(/^\/policy\s+snapshot(?:\s+([\s\S]+))?\s*$/i);
+  if (policySnapshotMatch) {
+    const argStr = String(policySnapshotMatch[1] ?? "").trim();
+
+    let executionId: string | null = null;
+    let receiptsPath: string | null = null;
+    let runsDir: string | null = null;
+    let caseId: string | null = null;
+    let includeRefusals = false;
+
+    if (argStr.startsWith("{")) {
+      try {
+        const payload = JSON.parse(argStr);
+        if (typeof payload?.execution_id === "string") executionId = payload.execution_id;
+        if (typeof payload?.receipts_path === "string") receiptsPath = payload.receipts_path;
+        if (typeof payload?.file === "string") receiptsPath = payload.file;
+        if (typeof payload?.runs_dir === "string") runsDir = payload.runs_dir;
+        if (typeof payload?.case_id === "string") caseId = payload.case_id;
+        if (payload?.include_refusals === true) includeRefusals = true;
+      } catch {
+        process.stdout.write(
+          JSON.stringify(
+            {
+              kind: "NeedInput",
+              reason: "Invalid JSON payload for /policy snapshot",
+              expected: {
+                execution_id: "string (optional)",
+                receipts_path: "string (optional, defaults to runs/receipts.jsonl)",
+                runs_dir: "string (optional, defaults to runs)",
+                case_id: "string (optional, used with include_refusals)",
+                include_refusals: "boolean (optional)",
+              },
+            },
+            null,
+            2
+          ) + "\n"
+        );
+        return;
+      }
+    } else if (argStr) {
+      const mExec = argStr.match(/--execution\s+(\S+)/i);
+      const mFile = argStr.match(/--file\s+(\S+)/i);
+      const mRuns = argStr.match(/--runs-dir\s+(\S+)/i);
+      const mCase = argStr.match(/--case-id\s+(\S+)/i);
+      if (/--include-refusals\b/i.test(argStr)) includeRefusals = true;
+      if (mExec?.[1]) executionId = String(mExec[1]);
+      if (mFile?.[1]) receiptsPath = String(mFile[1]);
+      if (mRuns?.[1]) runsDir = String(mRuns[1]);
+      if (mCase?.[1]) caseId = String(mCase[1]);
+      if (!executionId && !receiptsPath) executionId = argStr;
+    }
+
+    try {
+      await runEgressSnapshotCommand({ rootDir: process.cwd(), executionId, caseId, receiptsPath, runsDir, includeRefusals });
+      return;
+    } catch (e) {
+      console.error(String((e as any)?.message ?? e));
+      process.exitCode = 1;
+      return;
+    }
+  }
+
+  // Drive tooling: folder ensurePath + templates.
+  // Usage:
+  //   /drive ensurePath {"target":"make_proxy","path":"TikTok/Exports/Raw","dryRun":true}
+  //   /drive applyTemplate {"target":"make_proxy","template":"TikTokEvidence_v1"}
+  //   /drive authTest {"target":"make_proxy"}
+  //   /drive authTest {"targets":["my_drive_ops","shared_drive_marketing","trust_vault","make_proxy"],"createTemp":true}
+  const driveEnsureMatch = command.trim().match(/^\/drive\s+ensurepath(?:\s+([\s\S]+))?\s*$/i);
+  if (driveEnsureMatch) {
+    const argStr = String(driveEnsureMatch[1] ?? "").trim();
+    if (!argStr.startsWith("{")) {
+      process.stdout.write(
+        JSON.stringify(
+          {
+            kind: "NeedInput",
+            reason: "Expected JSON payload for /drive ensurePath",
+            expected: {
+              target: "string",
+              path: "string",
+              root: "string (optional)",
+              dryRun: "boolean (optional)",
+            },
+          },
+          null,
+          2
+        ) + "\n"
+      );
+      return;
+    }
+
+    try {
+      const payload = JSON.parse(argStr);
+      const out = await runDriveEnsurePath(payload);
+      process.stdout.write(JSON.stringify(out, null, 2) + "\n");
+      return;
+    } catch (e) {
+      console.error(String((e as any)?.message ?? e));
+      process.exitCode = 1;
+      return;
+    }
+  }
+
+  const driveTemplateMatch = command.trim().match(/^\/drive\s+applytemplate(?:\s+([\s\S]+))?\s*$/i);
+  if (driveTemplateMatch) {
+    const argStr = String(driveTemplateMatch[1] ?? "").trim();
+    if (!argStr.startsWith("{")) {
+      process.stdout.write(
+        JSON.stringify(
+          {
+            kind: "NeedInput",
+            reason: "Expected JSON payload for /drive applyTemplate",
+            expected: {
+              target: "string",
+              template: "string (e.g., TikTokEvidence_v1)",
+              root: "string (optional)",
+              dryRun: "boolean (optional)",
+            },
+          },
+          null,
+          2
+        ) + "\n"
+      );
+      return;
+    }
+
+    try {
+      const payload = JSON.parse(argStr);
+      const out = await runDriveApplyTemplate(payload);
+      process.stdout.write(JSON.stringify(out, null, 2) + "\n");
+      return;
+    } catch (e) {
+      console.error(String((e as any)?.message ?? e));
+      process.exitCode = 1;
+      return;
+    }
+  }
+
+  const driveAuthTestMatch = command.trim().match(/^\/drive\s+authtest(?:\s+([\s\S]+))?\s*$/i);
+  if (driveAuthTestMatch) {
+    const argStr = String(driveAuthTestMatch[1] ?? "").trim();
+    if (!argStr.startsWith("{")) {
+      process.stdout.write(
+        JSON.stringify(
+          {
+            kind: "NeedInput",
+            reason: "Expected JSON payload for /drive authTest",
+            expected: {
+              target: "string (single target)",
+              targets: "string[] (multi-target sweep)",
+              createTemp: "boolean (optional; create+delete temp folder when supported)",
+            },
+          },
+          null,
+          2
+        ) + "\n"
+      );
+      return;
+    }
+
+    try {
+      const payload = JSON.parse(argStr);
+      const out = await runDriveAuthTest(payload);
+      process.stdout.write(JSON.stringify(out, null, 2) + "\n");
+      return;
+    } catch (e) {
+      console.error(String((e as any)?.message ?? e));
+      process.exitCode = 1;
+      return;
+    }
+  }
+
+  // Drive operator-tier: receipts + status.
+  // Usage:
+  //   /drive receipts tail {"n":20}
+  //   /drive status {"targets":["my_drive_ops","shared_drive_marketing"],"n":1}
+  const driveReceiptsTailMatch = command.trim().match(/^\/drive\s+receipts\s+tail(?:\s+([\s\S]+))?\s*$/i);
+  if (driveReceiptsTailMatch) {
+    const argStr = String(driveReceiptsTailMatch[1] ?? "").trim();
+    if (!argStr.startsWith("{")) {
+      process.stdout.write(
+        JSON.stringify(
+          {
+            ok: false,
+            cmd: "drive.receipts.tail",
+            atUtc: new Date().toISOString(),
+            error: { code: "PAYLOAD_REQUIRED", message: "Expected JSON payload like {\"n\":20}" },
+          },
+          null,
+          2
+        ) + "\n"
+      );
+      process.exitCode = 1;
+      return;
+    }
+
+    try {
+      const payload = JSON.parse(argStr);
+      const out = await driveReceiptsTail(payload);
+      process.stdout.write(JSON.stringify(out, null, 2) + "\n");
+      if (!out.ok) process.exitCode = 1;
+      return;
+    } catch (e) {
+      const msg = String((e as any)?.message ?? e);
+      process.stdout.write(
+        JSON.stringify(
+          { ok: false, cmd: "drive.receipts.tail", atUtc: new Date().toISOString(), error: { code: "EXCEPTION", message: msg } },
+          null,
+          2
+        ) + "\n"
+      );
+      process.exitCode = 1;
+      return;
+    }
+  }
+
+  const driveStatusMatch = command.trim().match(/^\/drive\s+status(?:\s+([\s\S]+))?\s*$/i);
+  if (driveStatusMatch) {
+    const argStr = String(driveStatusMatch[1] ?? "").trim();
+    if (!argStr.startsWith("{")) {
+      process.stdout.write(
+        JSON.stringify(
+          {
+            ok: false,
+            cmd: "drive.status",
+            atUtc: new Date().toISOString(),
+            error: { code: "PAYLOAD_REQUIRED", message: "Expected JSON payload like {\"targets\":[...],\"n\":1}" },
+          },
+          null,
+          2
+        ) + "\n"
+      );
+      process.exitCode = 1;
+      return;
+    }
+
+    try {
+      const payload = JSON.parse(argStr);
+      const out = await driveStatus(payload);
+      process.stdout.write(JSON.stringify(out, null, 2) + "\n");
+      if (!out.ok) process.exitCode = 1;
+      return;
+    } catch (e) {
+      const msg = String((e as any)?.message ?? e);
+      process.stdout.write(
+        JSON.stringify(
+          { ok: false, cmd: "drive.status", atUtc: new Date().toISOString(), error: { code: "EXCEPTION", message: msg } },
+          null,
+          2
+        ) + "\n"
+      );
+      process.exitCode = 1;
+      return;
+    }
+  }
+
+  // Claude worker (governed): drafting + optional tool execution under lane allowlists.
+  // Usage (draft lane, no tool execution):
+  //   CLAUDE_MODEL=... ANTHROPIC_API_KEY=... node --import tsx src/cli/run-command.ts /claude worker {"lane":"draft","prompt":"Summarize this case"}
+  const claudeWorkerMatch = command.trim().match(/^\/claude\s+worker\s+([\s\S]+)$/i);
+  if (claudeWorkerMatch) {
+    try {
+      const payload = JSON.parse(String(claudeWorkerMatch[1] ?? "{}"));
+      await runClaudeWorkerCommand({
+        rootDir: process.cwd(),
+        lane: (payload?.lane ?? "draft") as any,
+        prompt: String(payload?.prompt ?? ""),
+        executeTools: Boolean(payload?.executeTools ?? false),
+      });
+      return;
+    } catch (e) {
+      console.error(String((e as any)?.message ?? e));
+      process.exitCode = 1;
+      return;
+    }
+  }
 
   // Tier-S11: deterministic, local test hook for speech confidence gradient.
   // Usage: /speak confidence <0..1|0..100> <message...>
@@ -2391,11 +3661,13 @@ async function run() {
     const validationUrl = mustEnv("VALIDATION_WEBHOOK_URL");
     const plannerUrl = mustEnv("PLANNER_WEBHOOK_URL");
 
-    const validation = await sendMessage({
+    const validation = await sendMessageTurboCached({
       webhookUrl: validationUrl,
       threadId,
       // Locked transport: commands are interpreted from message text
-      message: command,
+      message: assembleSystemPrompt({ arch, modes, turbosparse: turbosparseMeta, command }),
+      kind: "validator",
+      turbosparse: turbosparseMeta,
     });
 
     const validatedRaw = parseJsonFromAgentResponse(validation.response);
@@ -2469,11 +3741,13 @@ async function run() {
         return PlannerOutputSchema.parse(raw);
       }
 
-      const planned = await sendMessage({
+      const planned = await sendMessageTurboCached({
         webhookUrl: plannerUrl,
         threadId,
         // Locked transport: commands are interpreted from message text
-        message: forwardedCommand,
+        message: assembleSystemPrompt({ arch, modes, turbosparse: turbosparseMeta, command: forwardedCommand }),
+        kind: "planner",
+        turbosparse: turbosparseMeta,
       });
 
       // Retry-once policy for planner output variability (disabled in strict mode).
@@ -2495,6 +3769,9 @@ async function run() {
           plannerUrl,
           threadId,
           command: forwardedCommand,
+          arch,
+          modes,
+          turbosparse: turbosparseMeta,
           firstError: e,
           firstRawText,
         });
@@ -3201,6 +4478,7 @@ async function run() {
           phases_executed: phasesExecuted,
           artifacts,
         };
+        (failed as any).turbosparse = { ...turbosparseMeta, systemPromptText: undefined };
         (failed as any).receipt_hash = computeReceiptHashForLog(failed);
 
         await persistRun(failed as any);
@@ -3235,6 +4513,7 @@ async function run() {
       phases_executed: phasesExecuted,
       artifacts,
     };
+    (overall as any).turbosparse = { ...turbosparseMeta, systemPromptText: undefined };
     (overall as any).fingerprint = fingerprint;
     (overall as any).autonomy_mode = autonomy_mode;
     (overall as any).autonomy_mode_effective = autonomy_mode;
@@ -3992,6 +5271,141 @@ async function run() {
   if (runLog.status !== "success") {
     process.exitCode = 1;
   }
+}
+
+function splitArgs(s: string): string[] {
+  const out: string[] = [];
+  let current = "";
+  let quote: '"' | "'" | null = null;
+
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (!ch) continue;
+
+    if (quote) {
+      if (ch === quote) {
+        quote = null;
+        continue;
+      }
+      if (ch === "\\" && i + 1 < s.length) {
+        const next = s[i + 1];
+        current += next;
+        i++;
+        continue;
+      }
+      current += ch;
+      continue;
+    }
+
+    if (ch === '"' || ch === "'") {
+      quote = ch;
+      continue;
+    }
+
+    if (/\s/.test(ch)) {
+      if (current) out.push(current);
+      current = "";
+      continue;
+    }
+
+    current += ch;
+  }
+
+  if (current) out.push(current);
+  return out;
+}
+
+function parseSlidesArgs(tokens: string[]): {
+  title: string;
+  subtitle?: string;
+  brand: string;
+  formats: SlidesFormat[];
+  inPath?: string;
+  sourceText: string;
+} {
+  let title = "Slides deck";
+  let subtitle: string | undefined;
+  let brand = "vault-guardian.black-gold";
+  let formatStr = "pptx,html";
+  let inPath: string | undefined;
+
+  const rest: string[] = [];
+
+  for (let i = 0; i < tokens.length; i++) {
+    const t = tokens[i] ?? "";
+
+    const take = (name: string): string | null => {
+      const next = tokens[i + 1];
+      if (typeof next === "string" && next.length) {
+        i++;
+        return next;
+      }
+      return null;
+    };
+
+    if (t === "--title") {
+      const v = take("--title");
+      if (v) title = v;
+      continue;
+    }
+    if (t.startsWith("--title=")) {
+      title = t.slice("--title=".length);
+      continue;
+    }
+
+    if (t === "--subtitle") {
+      subtitle = take("--subtitle") ?? subtitle;
+      continue;
+    }
+    if (t.startsWith("--subtitle=")) {
+      subtitle = t.slice("--subtitle=".length);
+      continue;
+    }
+
+    if (t === "--brand") {
+      brand = take("--brand") ?? brand;
+      continue;
+    }
+    if (t.startsWith("--brand=")) {
+      brand = t.slice("--brand=".length);
+      continue;
+    }
+
+    if (t === "--format") {
+      formatStr = take("--format") ?? formatStr;
+      continue;
+    }
+    if (t.startsWith("--format=")) {
+      formatStr = t.slice("--format=".length);
+      continue;
+    }
+
+    if (t === "--in") {
+      inPath = take("--in") ?? inPath;
+      continue;
+    }
+    if (t.startsWith("--in=")) {
+      inPath = t.slice("--in=".length);
+      continue;
+    }
+
+    rest.push(t);
+  }
+
+  const formats = formatStr
+    .split(",")
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean)
+    .map((s) => s as SlidesFormat);
+
+  return {
+    title,
+    subtitle,
+    brand,
+    formats,
+    inPath: inPath ? path.resolve(process.cwd(), inPath) : undefined,
+    sourceText: rest.join(" ").trim(),
+  };
 }
 
 run().catch((e) => {

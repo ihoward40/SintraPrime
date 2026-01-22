@@ -1,0 +1,6 @@
+{
+  "schema_id": "drive.ensure-path.v1",
+  "target": "make_proxy",
+  "path": "TikTok/Exports/Raw",
+  "dryRun": true
+}

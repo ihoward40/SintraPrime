@@ -1,0 +1,48 @@
+name: litigation_archive_gate
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "artifacts/**"
+      - "scripts/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/litigation_archive_gate.yml"
+
+concurrency:
+  group: litigation-archive-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  archive-grade-b:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - run: npm ci --no-fund --no-audit
+
+      - name: Verify packet (min Grade B)
+        run: |
+          npm run -s litigation:verify -- artifacts/SELFTEST-NJ-ESSEX-0001/litigation \
+            --case "CI_ARCHIVE" \
+            --json \
+            --git \
+            --min-grade B \
+            --print-policy \
+            --report
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: litigation-verify-reports
+          path: runs/_verify_reports/**
+          if-no-files-found: ignore

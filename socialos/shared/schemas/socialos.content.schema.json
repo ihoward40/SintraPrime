@@ -1,0 +1,57 @@
+{
+  "$id": "https://schemas.sintraprime.io/socialos/content.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "content_id",
+    "version",
+    "content_fingerprint",
+    "status",
+    "canonical_assets",
+    "created_at",
+    "updated_at"
+  ],
+  "properties": {
+    "content_id": { "type": "string", "format": "uuid" },
+    "campaign_id": { "type": ["string", "null"], "format": "uuid" },
+    "version": { "type": "string", "minLength": 1 },
+    "content_fingerprint": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "status": {
+      "type": "string",
+      "enum": ["draft", "review", "approved", "scheduled", "published", "measured", "refused"]
+    },
+    "governance_level": { "type": "integer", "minimum": 0, "maximum": 10 },
+    "risk_level": { "type": "string", "enum": ["low", "medium", "high"] },
+    "canonical_assets": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["media", "text"],
+      "properties": {
+        "media": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["file_ref", "hash"],
+            "properties": {
+              "file_ref": { "type": "string", "minLength": 1 },
+              "hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+            }
+          }
+        },
+        "text": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["original", "variations"],
+          "properties": {
+            "original": { "type": "string" },
+            "variations": { "type": "array", "items": { "type": "string" } }
+          }
+        }
+      }
+    },
+    "tags": { "type": "array", "items": { "type": "string" } },
+    "created_at": { "type": "string", "format": "date-time" },
+    "updated_at": { "type": "string", "format": "date-time" }
+  }
+}

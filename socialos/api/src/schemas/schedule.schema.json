@@ -1,0 +1,15 @@
+{
+  "$id": "https://schemas.sintraprime.io/socialos/api/schedule_request.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["actor", "content_id", "platform", "when"],
+  "properties": {
+    "actor": { "type": "string", "minLength": 1 },
+    "content_id": { "type": "string", "format": "uuid" },
+    "platform": { "type": "string", "minLength": 1 },
+    "when": { "type": "string", "format": "date-time" },
+    "queue_id": { "type": "string" },
+    "priority": { "type": "integer", "minimum": 0, "maximum": 10, "default": 5 }
+  }
+}

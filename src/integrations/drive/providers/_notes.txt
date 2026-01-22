@@ -1,0 +1,1 @@
+Intentionally minimal and deterministic. Real Drive behavior depends on your account permissions and configured approved roots.

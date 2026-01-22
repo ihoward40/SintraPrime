@@ -1,0 +1,14 @@
+{
+  "$id": "https://sintraprime.local/schemas/job-command.v1.schema.json",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["template_name", "case_id", "job_type", "idempotency_key", "params"],
+  "properties": {
+    "template_name": { "type": "string", "minLength": 1 },
+    "case_id": { "type": "string", "minLength": 1 },
+    "job_type": { "type": "string", "minLength": 1 },
+    "idempotency_key": { "type": "string", "minLength": 1 },
+    "params": { "type": "object", "additionalProperties": true }
+  }
+}

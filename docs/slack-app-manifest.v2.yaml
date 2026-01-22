@@ -1,0 +1,71 @@
+display_information:
+  name: SintraPrime
+  description: "Autonomous Paralegal + Enforcement AI | Howard Trust Navigator"
+  background_color: "#000000"
+
+features:
+  bot_user:
+    display_name: SintraPrime
+    always_online: true
+  slash_commands:
+    - command: /sintra
+      url: https://YOUR_SERVER/api/slack/command
+      description: SintraPrime command router
+      usage_hint: "help | explain | status"
+      should_escape: false
+    - command: /paralegal
+      url: https://YOUR_SERVER/api/slack/command
+      description: Paralegal OS commands
+      usage_hint: "help | cases | tasks"
+      should_escape: false
+    - command: /case
+      url: https://YOUR_SERVER/api/slack/command
+      description: Case commands
+      usage_hint: "packet <caseId>"
+      should_escape: false
+
+oauth_config:
+  scopes:
+    bot:
+      - app_mentions:read
+      - channels:history
+      - channels:join
+      - channels:read
+      - chat:write
+      - chat:write.public
+      - files:write
+      - groups:history
+      - groups:read
+      - im:history
+      - im:read
+      - im:write
+      - mpim:history
+      - mpim:read
+      - reactions:read
+      - reactions:write
+      - team:read
+      - users:read
+      - users:read.email
+
+settings:
+  event_subscriptions:
+    request_url: https://YOUR_SERVER/api/slack/events
+    bot_events:
+      - app_mention
+      - message.channels
+      - message.groups
+      - message.im
+      - reaction_added
+      - reaction_removed
+
+  interactivity:
+    is_enabled: true
+    request_url: https://YOUR_SERVER/api/slack/interact
+
+  org_deploy_enabled: false
+  socket_mode_enabled: true
+
+# NOTE:
+# - Slack App manifests cannot embed real tokens. After import, create an App-Level Token (xapp-...)
+#   and set SLACK_APP_TOKEN in control/secrets.env.
+# - If you're not using a public URL, leave event_subscriptions/interactivity disabled and use Socket Mode.

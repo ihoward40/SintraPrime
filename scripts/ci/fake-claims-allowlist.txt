@@ -1,0 +1,10 @@
+# Fake-claims scanner allowlist (warning suppression)
+#
+# One phrase per line. Case-insensitive substring match.
+# Use this to avoid sprinkling <!-- fake-claims:ignore --> across docs.
+#
+# Examples (uncomment to allow):
+# no guarantees
+# example metrics
+# hypothetical
+# template placeholder

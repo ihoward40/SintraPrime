@@ -1,0 +1,50 @@
+name: litigation_publish_gate
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ master ]
+    paths:
+      - "artifacts/**"
+      - "scripts/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/litigation_publish_gate.yml"
+
+concurrency:
+  group: litigation-publish-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  publish-grade-a:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - run: npm ci --no-fund --no-audit
+
+      - name: Verify packet (must be Grade A)
+        run: |
+          npm run -s litigation:verify -- artifacts/SELFTEST-NJ-ESSEX-0001/litigation \
+            --case "CI_PUBLISH" \
+            --json \
+            --git \
+            --min-grade A \
+            --fail-on WARN_GIT_DIRTY,WARN_NO_GIT_CONTEXT \
+            --print-policy \
+            --report
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: litigation-verify-reports
+          path: runs/_verify_reports/**
+          if-no-files-found: ignore

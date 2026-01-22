@@ -1,0 +1,27 @@
+{
+  "case_id": "verizon-2025",
+  "timezone": "America/New_York",
+  "defaults": {
+    "forum_track": "regulator_parallel",
+    "cure_window_hours": 72,
+    "clock_policy": "strict",
+    "zip_root_dir": "Regulator_Submission",
+    "style_registry_id": "docx_style_registry.v1"
+  },
+  "tokens": {
+    "events_digest": "__EVENTS_DIGEST_SHA256__",
+    "snapshot": "__SNAPSHOT_SHA256__",
+    "manifest": "__MANIFEST_SHA256__",
+    "date": "__DATE_ISO__"
+  },
+  "folders": {
+    "root": "Cases/{case_id}/",
+    "evidence": "Cases/{case_id}/Evidence/",
+    "ledger": "Cases/{case_id}/Ledger/",
+    "artifacts": "Cases/{case_id}/Artifacts/",
+    "manifests": "Cases/{case_id}/Manifests/",
+    "public": "Cases/{case_id}/Public/",
+    "private": "Cases/{case_id}/Private/",
+    "submissions": "Cases/{case_id}/Submissions/"
+  }
+}

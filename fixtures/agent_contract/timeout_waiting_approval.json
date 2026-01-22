@@ -1,0 +1,12 @@
+{
+  "interface": "sintraprime.agent",
+  "interface_version": "1.0.0",
+  "ok": false,
+  "error": "Approval wait failed",
+  "stage": "approval_wait",
+  "wait": {
+    "ok": false,
+    "reason": "timeout",
+    "waited_ms": 1000
+  }
+}

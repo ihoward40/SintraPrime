@@ -1,0 +1,53 @@
+{
+  "defaults": {
+    "maxDepthPerCall": 12,
+    "maxCreatesPerCall": 20,
+    "denyPatterns": ["..", "//"],
+    "requireRootAllowlist": true
+  },
+  "targets": [
+    {
+      "alias": "my_drive_ops",
+      "auth": {
+        "type": "oauth",
+        "account": "howardisiah@gmail.com",
+        "clientIdSecretRef": "GDRIVE_OAUTH_CLIENT_ID",
+        "clientSecretSecretRef": "GDRIVE_OAUTH_CLIENT_SECRET",
+        "refreshTokenSecretRef": "GDRIVE_OAUTH_REFRESH_TOKEN__HOWARDISIAH_GMAIL_COM"
+      },
+      "driveType": "folder",
+      "approvedRoots": ["REPLACE_WITH_APPROVED_ROOT_FOLDER_ID"],
+      "defaultRoot": "REPLACE_WITH_APPROVED_ROOT_FOLDER_ID"
+    },
+    {
+      "alias": "shared_drive_marketing",
+      "auth": {
+        "type": "oauth",
+        "account": "howardisiah@gmail.com",
+        "clientIdSecretRef": "GDRIVE_OAUTH_CLIENT_ID",
+        "clientSecretSecretRef": "GDRIVE_OAUTH_CLIENT_SECRET",
+        "refreshTokenSecretRef": "GDRIVE_OAUTH_REFRESH_TOKEN__HOWARDISIAH_GMAIL_COM"
+      },
+      "driveType": "folder",
+      "approvedRoots": ["REPLACE_WITH_APPROVED_ROOT_FOLDER_ID"],
+      "defaultRoot": "REPLACE_WITH_APPROVED_ROOT_FOLDER_ID"
+    },
+    {
+      "alias": "trust_vault",
+      "auth": {
+        "type": "serviceAccount",
+        "secretRef": "GSA_TRUST_VAULT_JSON"
+      },
+      "driveType": "folder",
+      "approvedRoots": ["REPLACE_WITH_APPROVED_ROOT_FOLDER_ID"],
+      "defaultRoot": "REPLACE_WITH_APPROVED_ROOT_FOLDER_ID"
+    },
+    {
+      "alias": "make_proxy",
+      "auth": { "type": "make", "webhookUrlSecretRef": "MAKE_DRIVE_ENSUREPATH_URL" },
+      "driveType": "folder",
+      "approvedRoots": ["REPLACE_WITH_APPROVED_ROOT_FOLDER_ID"],
+      "defaultRoot": "REPLACE_WITH_APPROVED_ROOT_FOLDER_ID"
+    }
+  ]
+}

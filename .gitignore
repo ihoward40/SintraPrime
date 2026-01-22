@@ -22,6 +22,9 @@ exports/
 logs/
 artifacts/
 
+# Local runtime outputs (non-authoritative)
+output/
+
 # Generated governance reports (outputs, not inputs)
 governance/make-lint/lint-report.json
 governance/slack-workflows/workflows-report.json

@@ -1,0 +1,62 @@
+# Slack App Manifest for SintraPrime UI server
+#
+# Import at: https://api.slack.com/apps → Create New App → From an app manifest
+#
+# Replace YOUR_PUBLIC_BASE_URL before import.
+# Example (dev): https://<ngrok-subdomain>.ngrok-free.app
+#
+# Notes:
+# - Slash commands POST to /api/slack/command
+# - This repo is designed for Make.com → SintraPrime → Slack actions, so Events are optional.
+
+_display_information:
+  name: SintraPrime
+  description: SintraPrime control-plane + notifications
+  background_color: "#0b0f14"
+
+features:
+  bot_user:
+    display_name: SintraPrime
+    always_online: false
+
+  slash_commands:
+    - command: /sintra
+      description: SintraPrime command console
+      usage_hint: "help | status | system | enforce <Creditor>"
+      should_escape: false
+      url: YOUR_PUBLIC_BASE_URL/api/slack/command
+
+oauth_config:
+  scopes:
+    bot:
+      # Send messages
+      - chat:write
+      - chat:write.public
+
+      # Resolve channels / join channels (optional but recommended)
+      - channels:read
+      - groups:read
+      - channels:join
+
+      # Optional: read message history if you later add Slack Events ingestion
+      # - channels:history
+      # - groups:history
+
+      # Needed for auth.test and basic identity
+      - users:read
+
+settings:
+  # Enable only if you later add interactive components.
+  interactivity:
+    is_enabled: true
+    request_url: YOUR_PUBLIC_BASE_URL/api/slack/interact
+
+  org_deploy_enabled: false
+  socket_mode_enabled: false
+
+  # If you later add event subscriptions in code, flip this on and set request_url.
+  event_subscriptions:
+    is_enabled: true
+    request_url: YOUR_PUBLIC_BASE_URL/api/slack/events
+
+  token_rotation_enabled: true

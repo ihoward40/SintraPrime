@@ -6,6 +6,45 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object" && !Array.isArray(value);
 }
 
+function lastEgressPolicySnapshot(runLog: ExecutionRunLog): {
+  decision_reason: string;
+  allowlist_match: "exact" | "regex" | "none";
+  approved_hash: string | null;
+  current_hash: string | null;
+  approval_freshness_mode: "max_age_ok" | "approved_after_index" | "fail" | "n/a";
+} | null {
+  const steps = Array.isArray((runLog as any)?.steps) ? ((runLog as any).steps as any[]) : [];
+  for (let i = steps.length - 1; i >= 0; i -= 1) {
+    const snap = steps[i]?.egress_policy_snapshot;
+    if (!isRecord(snap)) continue;
+    if (snap.requires_guard !== true) continue;
+
+    const decision_reason = typeof snap.decision_reason === "string" ? snap.decision_reason : "";
+    const allowlist_match = snap.allowlist_match;
+    const approved_hash = typeof snap.approved_hash === "string" ? snap.approved_hash : null;
+    const current_hash = typeof snap.current_hash === "string" ? snap.current_hash : null;
+    const approval_freshness_mode = snap.approval_freshness_mode;
+
+    const allowOk = allowlist_match === "exact" || allowlist_match === "regex" || allowlist_match === "none";
+    const freshnessOk =
+      approval_freshness_mode === "max_age_ok" ||
+      approval_freshness_mode === "approved_after_index" ||
+      approval_freshness_mode === "fail" ||
+      approval_freshness_mode === "n/a";
+
+    if (!decision_reason || !allowOk || !freshnessOk) continue;
+
+    return {
+      decision_reason,
+      allowlist_match,
+      approved_hash,
+      current_hash,
+      approval_freshness_mode,
+    };
+  }
+  return null;
+}
+
 export async function persistRun(runLog: ExecutionRunLog) {
   const planVersion = process.env.PLAN_VERSION ?? "ExecutionPlan@1";
   const denied = runLog.status === "denied";
@@ -43,6 +82,9 @@ export async function persistRun(runLog: ExecutionRunLog) {
       denied,
       code: runLog.policy_denied?.code ?? null,
     },
+    // Compact operator-friendly summary derived from the last guarded external step.
+    // Useful for quick “why did it pass/fail” inspection without parsing the full step log.
+    egress_policy_snapshot: lastEgressPolicySnapshot(runLog),
   };
 
   // Allow custom receipts to attach structured payloads without expanding the

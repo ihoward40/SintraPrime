@@ -1,0 +1,17 @@
+{
+  "name": "@sintraprime/socialos-api",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "node src/server.mjs",
+    "lint:schemas": "node src/schemas/ajv-compile-check.mjs",
+    "test:health-history-order": "node src/tests/health_history_order.mjs",
+    "test:status-codes": "node src/tests/status_code_contract.mjs"
+  },
+  "dependencies": {
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
+    "express": "^4.19.2",
+    "pg": "^8.12.0"
+  }
+}

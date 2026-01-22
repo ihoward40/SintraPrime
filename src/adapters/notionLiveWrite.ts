@@ -78,3 +78,62 @@ export async function notionLivePatchWithIdempotency(
 
   return { http_status: res.status, redacted };
 }
+
+export async function notionLivePost(path: string, body: any) {
+  const base = process.env.NOTION_API_BASE || "https://api.notion.com";
+  const token = process.env.NOTION_TOKEN;
+  if (!token) throw new Error("NOTION_TOKEN missing");
+
+  const version = process.env.NOTION_API_VERSION || "2022-06-28";
+  const url = `${base}${path}`;
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Notion-Version": version,
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  const raw = await res.json();
+  const redacted = redact(raw, redactKeysFromEnv());
+
+  return { http_status: res.status, redacted };
+}
+
+export async function notionLivePostWithIdempotency(
+  path: string,
+  body: any,
+  idempotencyKey: string | null | undefined
+) {
+  const base = process.env.NOTION_API_BASE || "https://api.notion.com";
+  const token = process.env.NOTION_TOKEN;
+  if (!token) throw new Error("NOTION_TOKEN missing");
+
+  const version = process.env.NOTION_API_VERSION || "2022-06-28";
+  const url = `${base}${path}`;
+
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${token}`,
+    "Notion-Version": version,
+    Accept: "application/json",
+    "Content-Type": "application/json",
+  };
+  if (typeof idempotencyKey === "string" && idempotencyKey.trim()) {
+    headers["Idempotency-Key"] = idempotencyKey;
+  }
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(body),
+  });
+
+  const raw = await res.json();
+  const redacted = redact(raw, redactKeysFromEnv());
+
+  return { http_status: res.status, redacted };
+}

@@ -1,0 +1,25 @@
+{
+  "$id": "https://schemas.sintraprime.io/socialos/audit_event.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "event_id",
+    "timestamp",
+    "actor",
+    "action",
+    "entity_type",
+    "entity_id",
+    "payload_hash",
+    "signature"
+  ],
+  "properties": {
+    "event_id": { "type": "string", "format": "uuid" },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "actor": { "type": "string", "minLength": 1 },
+    "action": { "type": "string", "minLength": 1 },
+    "entity_type": { "type": "string", "enum": ["content", "variant", "schedule", "receipt"] },
+    "entity_id": { "type": "string", "minLength": 1 },
+    "payload_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "signature": { "type": "string", "minLength": 1 }
+  }
+}

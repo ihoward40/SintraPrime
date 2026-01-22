@@ -4,10 +4,24 @@ import crypto from "node:crypto";
 import { computePlanHash } from "../utils/planHash.js";
 import { proposeStatus } from "../analysis/proposeStatus.js";
 import { notionLiveGet, notionLiveWhoAmI } from "../adapters/notionLiveRead.js";
-import { notionLivePatchWithIdempotency } from "../adapters/notionLiveWrite.js";
+import { notionLivePatchWithIdempotency, notionLivePostWithIdempotency } from "../adapters/notionLiveWrite.js";
 import { writeNotionLiveWriteArtifact } from "../artifacts/writeNotionLiveWriteArtifact.js";
 import { writeDocsCaptureArtifact } from "../artifacts/writeDocsCaptureArtifact.js";
 import { getIdempotencyRecord, writeIdempotencyRecord } from "../idempotency/idempotencyLedger.js";
+import { computeBundleHashFromIndexStrict, assertApprovedForSend } from "../cases/approval.js";
+import { readArtifactIndex } from "../cases/artifactIndex.js";
+import { appendCaseEvent } from "../cases/mirror.js";
+import type { CaseStage } from "../cases/types.js";
+import {
+  initPlanState,
+  loadEgressAllowlistFromEnv,
+  isHostAllowed,
+  allowlistMatch,
+  requiresEgressGuard,
+  updatePlanStateAfterStep,
+  safeHostFromUrl,
+  redactUrlForLogs,
+} from "./egressPolicy.js";
 
 type RunStatus =
   | "running"
@@ -48,6 +62,18 @@ export type StepRunLog = {
       sha256: string;
       captured_at: string;
     }>;
+  };
+
+  // Audit-friendly policy snapshot for guarded external steps.
+  egress_policy_snapshot?: {
+    decision_reason: string;
+    requires_guard: boolean;
+    host: string | null;
+    allowlist_match: "exact" | "regex" | "none";
+    approval_status: string | null;
+    approved_hash: string | null;
+    current_hash: string | null;
+    approval_freshness_mode: "max_age_ok" | "approved_after_index" | "fail" | "n/a";
   };
 };
 
@@ -233,6 +259,82 @@ async function executeStep(step: ExecutionStep, timeoutMs: number) {
   }
 }
 
+class EgressRefusedError extends Error {
+  public readonly code: string;
+  public readonly caseId?: string;
+  public readonly notionPageId?: string;
+  public readonly stepId?: string;
+  public readonly action?: string;
+  public readonly method?: string;
+  public readonly host?: string;
+  public readonly decisionReason?: string;
+
+  constructor(
+    code: string,
+    message: string,
+    meta?: {
+      caseId?: string;
+      notionPageId?: string;
+      stepId?: string;
+      action?: string;
+      method?: string;
+      host?: string;
+      decisionReason?: string;
+    }
+  ) {
+    super(message);
+    this.code = code;
+    this.caseId = meta?.caseId;
+    this.notionPageId = meta?.notionPageId;
+    this.stepId = meta?.stepId;
+    this.action = meta?.action;
+    this.method = meta?.method;
+    this.host = meta?.host;
+    this.decisionReason = meta?.decisionReason;
+  }
+}
+
+function parseDateMs(iso: string | null | undefined): number | null {
+  const s = String(iso ?? "").trim();
+  if (!s) return null;
+  const t = new Date(s).getTime();
+  return Number.isFinite(t) ? t : null;
+}
+
+function approvalIsFresh(params: {
+  approvedAtIso: string | null | undefined;
+  indexUpdatedAtIso: string | null | undefined;
+  maxAgeDays: number;
+}): boolean {
+  const approvedAtMs = parseDateMs(params.approvedAtIso);
+  if (approvedAtMs === null) return false;
+
+  const maxAgeMs = Math.max(1, params.maxAgeDays) * 24 * 60 * 60 * 1000;
+  const withinWindow = Date.now() - approvedAtMs <= maxAgeMs;
+
+  const indexUpdatedAtMs = parseDateMs(params.indexUpdatedAtIso);
+  const afterIndexUpdate = indexUpdatedAtMs === null ? false : approvedAtMs >= indexUpdatedAtMs;
+
+  return withinWindow || afterIndexUpdate;
+}
+
+function computeFreshnessMode(params: {
+  approvedAtIso: string | null | undefined;
+  indexUpdatedAtIso: string | null | undefined;
+  maxAgeDays: number;
+}): "max_age_ok" | "approved_after_index" | "fail" {
+  const approvedAtMs = parseDateMs(params.approvedAtIso);
+  if (approvedAtMs === null) return "fail";
+
+  const maxAgeMs = Math.max(1, params.maxAgeDays) * 24 * 60 * 60 * 1000;
+  const withinWindow = Date.now() - approvedAtMs <= maxAgeMs;
+  if (withinWindow) return "max_age_ok";
+
+  const indexUpdatedAtMs = parseDateMs(params.indexUpdatedAtIso);
+  const afterIndexUpdate = indexUpdatedAtMs === null ? false : approvedAtMs >= indexUpdatedAtMs;
+  return afterIndexUpdate ? "approved_after_index" : "fail";
+}
+
 async function executeDocsCaptureStep(step: ExecutionStep, timeoutMs: number, execution_id: string) {
   const headers: Record<string, string> = { ...(step.headers ?? {}) };
 
@@ -316,6 +418,10 @@ export async function executePlan(rawPlan: unknown, opts: ExecutePlanOptions = {
     const maxRuntimeMs = getMaxRuntimeMs();
     const startedWall = Date.now();
 
+    const casesRootDir = process.env.CASES_ROOT_DIR ?? process.cwd();
+    const egressAllowlist = loadEgressAllowlistFromEnv(process.env);
+    const planState = initPlanState();
+
     for (const step of plan.steps) {
       if (maxRuntimeMs !== null && Date.now() - startedWall > maxRuntimeMs) {
         runLog.status = "denied";
@@ -357,6 +463,269 @@ export async function executePlan(rawPlan: unknown, opts: ExecutePlanOptions = {
           stepLog.status = "skipped";
           stepLog.response = { dry_run: true };
         } else {
+          // Egress preflight: classify GET/HEAD safely (only when plan is egress-bearing), enforce domain allowlists,
+          // and apply approval-by-hash + drift/freshness checks at the true send boundary.
+          const host = safeHostFromUrl(step.url);
+          const isLocal = host === "localhost" || host === "127.0.0.1";
+          const isNotion = host === "api.notion.com";
+          const isExternal = Boolean(host) && !isLocal && !isNotion;
+
+          const decision = requiresEgressGuard(step as any, planState);
+          const guard = (step as any).egress_guard as
+            | {
+                case_id: string;
+                notion_page_id: string;
+                stage?: string;
+                kind?: "packet" | "binder";
+                override_reason?: string;
+                override_by?: string;
+              }
+            | undefined;
+
+          // Domain allowlist is enforced only when a guard is required.
+          if (isExternal && decision.requires_guard) {
+            if (!host || !isHostAllowed(host, egressAllowlist)) {
+              throw new EgressRefusedError(
+                "EGRESS_DOMAIN_NOT_ALLOWED",
+                `Refusing external egress to non-allowlisted domain (host=${host ?? "(unknown)"}). Set EGRESS_ALLOWED_DOMAINS/EGRESS_ALLOWED_DOMAINS_REGEX to include this host.`,
+                {
+                  caseId: guard?.case_id,
+                  notionPageId: guard?.notion_page_id,
+                  stepId: step.step_id,
+                  action: step.action,
+                  method: step.method,
+                  host: host ?? undefined,
+                  decisionReason: decision.reason,
+                }
+              );
+            }
+          }
+
+          // Default snapshot (filled in more fully for send steps).
+          if (isExternal && decision.requires_guard) {
+            stepLog.egress_policy_snapshot = {
+              decision_reason: decision.reason,
+              requires_guard: true,
+              host,
+              allowlist_match: host ? allowlistMatch(host, egressAllowlist) : "none",
+              approval_status: null,
+              approved_hash: null,
+              current_hash: null,
+              approval_freshness_mode: "n/a",
+            };
+          }
+
+          if (isExternal && decision.requires_guard) {
+            if (!guard || !guard.case_id || !guard.notion_page_id) {
+              throw new EgressRefusedError(
+                "EGRESS_GUARD_MISSING",
+                `Refusing external request without egress_guard (method=${step.method} host=${host}). Provide egress_guard.case_id + egress_guard.notion_page_id.`,
+                {
+                  stepId: step.step_id,
+                  action: step.action,
+                  method: step.method,
+                  host: host ?? undefined,
+                  decisionReason: decision.reason,
+                }
+              );
+            }
+
+            // Approval-by-hash is enforced at the send boundary (non-GET/HEAD).
+            if (step.method !== "GET" && step.method !== "HEAD") {
+              const page = await notionLiveGet(`/v1/pages/${guard.notion_page_id}`);
+              if (page.http_status < 200 || page.http_status >= 300) {
+                throw new EgressRefusedError(
+                  "EGRESS_NOTION_READ_FAILED",
+                  `Refusing send: cannot read Notion page for approval (http_status=${page.http_status})`,
+                  {
+                    caseId: guard.case_id,
+                    notionPageId: guard.notion_page_id,
+                    stepId: step.step_id,
+                    action: step.action,
+                    method: step.method,
+                    host: host ?? undefined,
+                    decisionReason: decision.reason,
+                  }
+                );
+              }
+
+              const props = (page as any).redacted?.properties ?? (page as any).properties ?? {};
+              const approvalStatus = String(props?.["Approval Status"]?.select?.name ?? "");
+              const approvedBundleHash = String(props?.["Approved Bundle Hash"]?.rich_text?.[0]?.plain_text ?? "");
+              const approvedAt = String(props?.["Approved At"]?.date?.start ?? "");
+
+              const overrideReason = String(props?.["Approval Override Reason"]?.rich_text?.[0]?.plain_text ?? "");
+              const overrideBy = Array.isArray(props?.["Approval Override By"]?.people)
+                ? String(props?.["Approval Override By"]?.people?.[0]?.id ?? "")
+                : "";
+              const overrideStage = String(props?.["Approval Override Stage"]?.select?.name ?? "");
+              const overrideBundleHash = String(props?.["Approval Override Bundle Hash"]?.rich_text?.[0]?.plain_text ?? "");
+              const overrideUntil = String(props?.["Approval Override Until"]?.date?.start ?? "");
+
+              const stageFromNotion = String(props?.["Stage"]?.select?.name ?? "");
+              const stage = (guard.stage ? String(guard.stage) : stageFromNotion) as unknown as CaseStage;
+              const kind = guard.kind ?? "packet";
+              if (!stage || typeof stage !== "string") {
+                throw new EgressRefusedError(
+                  "EGRESS_STAGE_MISSING",
+                  "Refusing send: missing stage for bundle-hash computation",
+                  {
+                    caseId: guard.case_id,
+                    notionPageId: guard.notion_page_id,
+                    stepId: step.step_id,
+                    action: step.action,
+                    method: step.method,
+                    host: host ?? undefined,
+                    decisionReason: decision.reason,
+                  }
+                );
+              }
+
+              const { bundleHash } = computeBundleHashFromIndexStrict({
+                rootDir: casesRootDir,
+                caseId: String(guard.case_id),
+                stage,
+                kind,
+              });
+
+              if (stepLog.egress_policy_snapshot) {
+                stepLog.egress_policy_snapshot.current_hash = bundleHash;
+              }
+
+              const idx = readArtifactIndex(casesRootDir, String(guard.case_id));
+              const maxAgeDays = (() => {
+                const raw = process.env.APPROVAL_MAX_AGE_DAYS;
+                const n = raw ? Number(raw) : 30;
+                return Number.isFinite(n) && n > 0 ? n : 30;
+              })();
+
+              const stepRequestsOverride = Boolean(guard.override_reason && guard.override_by);
+              const notionHasOverride = Boolean(overrideReason && overrideBy);
+
+              if (stepRequestsOverride || notionHasOverride) {
+                if (!stepRequestsOverride) {
+                  throw new EgressRefusedError(
+                    "EGRESS_OVERRIDE_STEP_MISSING",
+                    "Refusing send: Notion has override fields set but this step did not declare override metadata (override_reason/override_by)",
+                    {
+                      caseId: guard.case_id,
+                      notionPageId: guard.notion_page_id,
+                      stepId: step.step_id,
+                      action: step.action,
+                      method: step.method,
+                      host: host ?? undefined,
+                      decisionReason: decision.reason,
+                    }
+                  );
+                }
+                if (!notionHasOverride) {
+                  throw new EgressRefusedError(
+                    "EGRESS_OVERRIDE_NOTION_MISSING",
+                    "Refusing send: step declared override metadata but Notion override fields are missing",
+                    {
+                      caseId: guard.case_id,
+                      notionPageId: guard.notion_page_id,
+                      stepId: step.step_id,
+                      action: step.action,
+                      method: step.method,
+                      host: host ?? undefined,
+                      decisionReason: decision.reason,
+                    }
+                  );
+                }
+
+                // Painful-but-possible bypass: override must be stage-specific and hash-specific.
+                if (!overrideStage || overrideStage !== stage) {
+                  throw new EgressRefusedError(
+                    "EGRESS_OVERRIDE_STAGE_MISMATCH",
+                    `Refusing send: override stage missing/mismatch (override_stage=${overrideStage || "(unset)"} required_stage=${stage})`,
+                    {
+                      caseId: guard.case_id,
+                      notionPageId: guard.notion_page_id,
+                      stepId: step.step_id,
+                      action: step.action,
+                      method: step.method,
+                      host: host ?? undefined,
+                      decisionReason: decision.reason,
+                    }
+                  );
+                }
+                if (!overrideBundleHash || overrideBundleHash !== bundleHash) {
+                  throw new EgressRefusedError(
+                    "EGRESS_OVERRIDE_HASH_MISMATCH",
+                    `Refusing send: override bundle hash missing/mismatch (override=${overrideBundleHash || "(unset)"} current=${bundleHash})`,
+                    {
+                      caseId: guard.case_id,
+                      notionPageId: guard.notion_page_id,
+                      stepId: step.step_id,
+                      action: step.action,
+                      method: step.method,
+                      host: host ?? undefined,
+                      decisionReason: decision.reason,
+                    }
+                  );
+                }
+                const untilMs = parseDateMs(overrideUntil);
+                if (untilMs !== null && untilMs < Date.now()) {
+                  throw new EgressRefusedError(
+                    "EGRESS_OVERRIDE_EXPIRED",
+                    `Refusing send: override expired (override_until=${overrideUntil})`,
+                    {
+                      caseId: guard.case_id,
+                      notionPageId: guard.notion_page_id,
+                      stepId: step.step_id,
+                      action: step.action,
+                      method: step.method,
+                      host: host ?? undefined,
+                      decisionReason: decision.reason,
+                    }
+                  );
+                }
+
+                if (stepLog.egress_policy_snapshot) {
+                  stepLog.egress_policy_snapshot.approval_status = "OVERRIDE";
+                  stepLog.egress_policy_snapshot.approved_hash = overrideBundleHash || null;
+                  stepLog.egress_policy_snapshot.approval_freshness_mode = "n/a";
+                }
+              } else {
+                assertApprovedForSend({ approval: { approvalStatus, approvedBundleHash }, currentBundleHash: bundleHash });
+
+                const freshnessMode = computeFreshnessMode({
+                  approvedAtIso: approvedAt,
+                  indexUpdatedAtIso: idx.updated_at,
+                  maxAgeDays,
+                });
+
+                if (stepLog.egress_policy_snapshot) {
+                  stepLog.egress_policy_snapshot.approval_status = approvalStatus || null;
+                  stepLog.egress_policy_snapshot.approved_hash = approvedBundleHash || null;
+                  stepLog.egress_policy_snapshot.approval_freshness_mode = freshnessMode;
+                }
+
+                if (freshnessMode === "fail") {
+                  throw new EgressRefusedError(
+                    "EGRESS_APPROVAL_STALE",
+                    `Refusing send: approval is stale (approved_at=${approvedAt || "(unset)"}, index_updated_at=${idx.updated_at}, max_age_days=${maxAgeDays})`,
+                    {
+                      caseId: guard.case_id,
+                      notionPageId: guard.notion_page_id,
+                      stepId: step.step_id,
+                      action: step.action,
+                      method: step.method,
+                      host: host ?? undefined,
+                      decisionReason: decision.reason,
+                    }
+                  );
+                }
+              }
+            }
+          }
+
+          // GOTCHA: Only flip chain state once validation is complete and we are committed to executing the request.
+          if (isExternal) {
+            updatePlanStateAfterStep(step as any, planState, decision);
+          }
+
           const out =
             step.action === "analysis.propose_status"
               ? {
@@ -460,6 +829,78 @@ export async function executePlan(rawPlan: unknown, opts: ExecutePlanOptions = {
                         responseJson: r.redacted,
                       };
                     })()
+                : step.action === "notion.live.query"
+                  ? await (async () => {
+                      const notionPath =
+                        typeof (step as any).notion_path === "string" && String((step as any).notion_path).trim()
+                          ? String((step as any).notion_path)
+                          : new URL(step.url).pathname;
+
+                      const payload = (step as any).payload;
+                      const r = await notionLivePostWithIdempotency(notionPath, payload ?? {}, null);
+                      return {
+                        ok: r.http_status >= 200 && r.http_status < 300,
+                        status: r.http_status,
+                        response: r.redacted,
+                        responseJson: r.redacted,
+                      };
+                    })()
+                  : step.action === "notion.live.create"
+                    ? await (async () => {
+                        const notionPath =
+                          typeof (step as any).notion_path === "string" && String((step as any).notion_path).trim()
+                            ? String((step as any).notion_path)
+                            : new URL(step.url).pathname;
+
+                        const body = (step as any).payload;
+
+                        const stepIdempotencyKey =
+                          typeof (step as any).idempotency_key === "string" && String((step as any).idempotency_key).trim()
+                            ? String((step as any).idempotency_key).trim()
+                            : deriveIdempotencyKey({
+                                action: String(step.action),
+                                plan_hash,
+                                step_id: String(step.step_id),
+                                threadId: String(plan.threadId),
+                              });
+                        (step as any).idempotency_key = stepIdempotencyKey;
+
+                        const existing = getIdempotencyRecord(stepIdempotencyKey);
+                        if (existing && typeof existing?.http_status === "number") {
+                          return {
+                            ok: true,
+                            status: existing.http_status,
+                            response: existing.response ?? null,
+                            responseJson: existing.response ?? null,
+                          };
+                        }
+
+                        const r = await notionLivePostWithIdempotency(notionPath, body ?? {}, stepIdempotencyKey);
+                        if (r.http_status >= 400) {
+                          throw new Error(`Notion POST failed HTTP ${r.http_status}`);
+                        }
+
+                        writeIdempotencyRecord(stepIdempotencyKey, {
+                          status: "executed",
+                          idempotency_key: stepIdempotencyKey,
+                          execution_id: plan.execution_id,
+                          plan_hash,
+                          threadId: plan.threadId,
+                          step_id: step.step_id,
+                          action: step.action,
+                          notion_path: notionPath,
+                          http_status: r.http_status,
+                          response: r.redacted,
+                          executed_at: new Date().toISOString(),
+                        });
+
+                        return {
+                          ok: true,
+                          status: r.http_status,
+                          response: r.redacted,
+                          responseJson: r.redacted,
+                        };
+                      })()
                 : step.action === "docs.capture"
                   ? await executeDocsCaptureStep(step, timeoutMs, plan.execution_id)
                 : await executeStep(step, timeoutMs);
@@ -521,6 +962,45 @@ export async function executePlan(rawPlan: unknown, opts: ExecutePlanOptions = {
         stepLog.status = "failed";
         stepLog.error = e?.name === "AbortError" ? `Timeout after ${timeoutMs}ms` : (e?.message ?? String(e));
         stepLog.response = null;
+
+        // Make refusal auditable: write a case event when possible.
+        if (!plan.dry_run && e instanceof EgressRefusedError && e.caseId) {
+          try {
+            const eventHost = typeof step.url === "string" ? safeHostFromUrl(step.url) : null;
+            appendCaseEvent({
+              rootDir: casesRootDir,
+              caseId: e.caseId,
+              event_type: "EGRESS_REFUSED",
+              actor: "executor",
+              timestamp: nowIso(),
+              details: {
+                code: e.code,
+                message: e.message,
+                decision_reason: e.decisionReason ?? null,
+                requires_guard: true,
+                step_id: e.stepId ?? step.step_id,
+                action: e.action ?? step.action,
+                method: e.method ?? step.method,
+                url_redacted: typeof step.url === "string" ? redactUrlForLogs(step.url) : null,
+                host: e.host ?? eventHost,
+                allowlist_match: eventHost ? allowlistMatch(eventHost, egressAllowlist) : null,
+                notion_page_id: e.notionPageId ?? null,
+              },
+              related_artifacts: [],
+            });
+          } catch {
+            // best-effort only
+          }
+
+          try {
+            process.stderr.write(
+              "EGRESS_REFUSED: From repo root, run:\n" +
+                `npm run -s policy:snapshot -- --execution ${plan.execution_id} --include-refusals\n`
+            );
+          } catch {
+            // ignore
+          }
+        }
       } finally {
         stepLog.duration_ms = Date.now() - start;
         stepLog.finished_at = nowIso();

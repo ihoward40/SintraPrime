@@ -1,0 +1,28 @@
+{
+  "brand_id": "vault-guardian.black-gold",
+  "version": "1.0.0",
+  "assets": {
+    "logo_path": "assets/brand/logo.png",
+    "background_path": ""
+  },
+  "colors": {
+    "background": "#0b0b0f",
+    "text": "#f3f3f7",
+    "accent": "#d4af37",
+    "muted": "#a9a9b3",
+    "card_bg": "#151520"
+  },
+  "typography": {
+    "font_family": "Inter",
+    "title_size": 36,
+    "body_size": 18,
+    "mono_family": "JetBrains Mono"
+  },
+  "layout": {
+    "slide_w": 13.333,
+    "slide_h": 7.5,
+    "margin": 0.6,
+    "card_gap": 0.3,
+    "max_bullets": 6
+  }
+}

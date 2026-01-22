@@ -1,0 +1,104 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "sintraprime://slides/deck.schema.json",
+  "title": "SintraPrime Deck",
+  "type": "object",
+  "required": ["deck_id", "version", "title", "cards"],
+  "properties": {
+    "deck_id": { "type": "string" },
+    "version": { "type": "string" },
+    "title": { "type": "string" },
+    "subtitle": { "type": "string" },
+    "meta": {
+      "type": "object",
+      "properties": {
+        "source_type": { "type": "string" },
+        "source_hash": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "cards": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/card" },
+      "minItems": 1
+    }
+  },
+  "definitions": {
+    "card": {
+      "type": "object",
+      "required": ["card_id", "kind", "title"],
+      "properties": {
+        "card_id": { "type": "string" },
+        "kind": {
+          "type": "string",
+          "enum": ["title", "agenda", "bullets", "quote", "image", "section", "code", "table"]
+        },
+        "title": { "type": "string" },
+        "subtitle": { "type": "string" },
+        "section_no": { "type": "integer", "minimum": 1 },
+        "section_title": { "type": "string" },
+        "bullets": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "agenda": {
+          "type": "object",
+          "required": ["sections"],
+          "properties": {
+            "sections": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "section_no": { "type": "integer", "minimum": 1 },
+                  "section_title": { "type": "string" },
+                  "title": { "type": "string" },
+                  "topics": {
+                    "type": "array",
+                    "items": { "type": "string" }
+                  }
+                },
+                "anyOf": [
+                  { "required": ["title"] },
+                  { "required": ["section_title"] }
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "quote": { "type": "string" },
+        "attribution": { "type": "string" },
+        "code": {
+          "type": "object",
+          "required": ["text"],
+          "properties": {
+            "language": { "type": "string" },
+            "text": { "type": "string" }
+          },
+          "additionalProperties": false
+        },
+        "table": {
+          "type": "object",
+          "required": ["markdown"],
+          "properties": {
+            "markdown": { "type": "string" }
+          },
+          "additionalProperties": false
+        },
+        "image": {
+          "type": "object",
+          "properties": {
+            "path": { "type": "string" },
+            "alt": { "type": "string" }
+          },
+          "additionalProperties": false
+        },
+        "notes": { "type": "string" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

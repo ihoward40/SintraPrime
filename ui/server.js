@@ -4,18 +4,282 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import { sendMessage } from "../sendMessage.js";
+import voiceRoutes from "./routes/voice.routes.js";
+import slackRoutes from "./routes/slack.routes.js";
+import slackCommandRoutes from "./routes/slack.commands.routes.js";
+import slackInboundRoutes from "./routes/slack.inbound.routes.js";
+import slackGraphRoutes from "./routes/slack.graph.routes.js";
+import dashboardRoutes from "./routes/dashboard.routes.js";
+import caseConfigRoutes from "./routes/caseConfig.routes.js";
+import enforcementTestRoutes from "./routes/enforcementTest.routes.js";
+import clusterRoutes from "./routes/cluster.routes.js";
+import analyticsRoutes from "./routes/analytics.routes.js";
+import adminNodeRoutes from "./routes/admin.node.routes.js";
+import adminCaseRoutes from "./routes/admin.case.routes.js";
+import adminAnalyticsRoutes from "./routes/admin.analytics.routes.js";
+import adminSecurityRoutes from "./routes/admin.security.routes.js";
+import adminSecurityBinderRoutes from "./routes/admin.securityBinder.routes.js";
+import adminBlueTeamRoutes from "./routes/admin.blueTeam.routes.js";
+import adminSlackRoutes from "./routes/admin.slack.routes.js";
+import adminDebugRoutes from "./routes/admin.debug.routes.js";
+import adminLitigationRoutes from "./routes/admin.litigation.routes.js";
+import debugRoutes from "./routes/debug.routes.js";
+import advisorRoutes from "./routes/advisor.routes.js";
+import webhooksRoutes from "./routes/webhooks.routes.js";
+import timelineRoutes from "./routes/timeline.routes.js";
+import omniRoutes from "./routes/omni.routes.js";
+import judgesRoutes from "./routes/judges.routes.js";
+import templateHistoryRoutes from "./routes/templateHistory.routes.js";
+import strategyRoutes from "./routes/strategy.routes.js";
+import governorRoutes from "./routes/governor.routes.js";
+import adminGovernorRoutes from "./routes/admin.governor.routes.js";
+import securityRoutes from "./routes/security.routes.js";
+import paralegalRoutes from "./routes/paralegal.routes.js";
+import { ensureSelfRegistered, setSelfUrl } from "./core/clusterManager.js";
+import { loadControlSecretsEnv } from "./core/envLoader.js";
+
+import { securityHeaders } from "./security/securityHeaders.js";
+import { perimeterVision } from "./security/perimeterVision.js";
+import { networkVision } from "./security/networkVision.js";
+import { threatAwareGuard } from "./security/threatAwareGuard.js";
+import { createRateLimiter } from "./security/rateLimit.js";
+import { SlackClient } from "./services/SlackClient.js";
+import { startSlackTokenWatchdog } from "../src/watchers/slackTokenWatchdog.js";
+import registerSlackTestRoutes from "../src/routes/slack.test.routes.js";
+
+// Side-effect import: registers Slack event bus bindings
+import "./integrations/slackEvents.js";
+// Side-effect import: registers Slack slash command handlers
+import "./integrations/slackCommandHandlers.js";
+// Side-effect import: posts interactive Slack alerts for key events
+import "./integrations/slackExpansionAlerts.js";
+
+// Side-effect import: optional voice autopilot (env-gated)
+import "./integrations/voiceAutopilot.js";
+
+// Side-effect import: Notion mirroring for paralegal cases/tasks (env-gated)
+import "./integrations/notionParalegalSync.js";
+
+// Side-effect imports: Slack command fusion bridges
+import "./intelligence/slackNotionBridge.js";
+import "./intelligence/slackCalendarBridge.js";
+import "./intelligence/slackMakeBridge.js";
+import "./intelligence/slackVoiceBridge.js";
+import "./intelligence/slackEnforcementBus.js";
+
+// Side-effect import: autonomous mode engine (env-gated)
+import "./intelligence/autonomousEngine.js";
+
+// Side-effect import: Governor + Tribunal engine (env-gated internally)
+import "./intelligence/governorBoot.js";
+
+// Side-effect import: Autonomous Paralegal orchestrator
+import "./intelligence/paralegal/paralegalOrchestrator.js";
+
+// Side-effect import: load latest Slack knowledge graph (if present)
+import "./intelligence/slackGraphBoot.js";
+
+// Side-effect import: autonomous paralegal task/case engine (env-gated)
+import "./intelligence/autonomousParalegal.js";
+
+// Side-effect imports: log/timeline persistence for ops UI
+import "./services/advisorLogEngine.js";
+import "./services/timelineEngine.js";
+import { startOmniSkillEngine } from "./intelligence/omniSkillEngine.js";
+
+// Side-effect import: security + vision + threat engines
+import "./security/securityBoot.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Load local secrets early (no override) so the UI server sees control/secrets.env.
+loadControlSecretsEnv();
+
 const app = express();
-const PORT = Number(process.env.UI_PORT || 3000);
+
+// If behind a reverse proxy in prod, set UI_TRUST_PROXY=1 so req.ip is correct.
+if (String(process.env.UI_TRUST_PROXY || "").trim() === "1") {
+  app.set("trust proxy", true);
+}
+const DESIRED_PORT = Number(process.env.UI_PORT || 3001);
+const HOST = String(process.env.UI_HOST || "127.0.0.1").trim() || "127.0.0.1";
+const PORT_FALLBACK_RANGE = Number(process.env.UI_PORT_FALLBACK_RANGE || 20);
 const RUNS_DIR = path.resolve(process.cwd(), "runs");
 const EXPORTS_DIR = path.resolve(process.cwd(), "exports");
 const CLIENT_DIST = path.join(__dirname, "client", "dist");
 const LEGACY_PUBLIC = path.join(__dirname, "public");
 
-app.use(express.json({ limit: "100kb" }));
+app.get("/health", (_req, res) => {
+  res.json({ ok: true, service: "sintraprime-ui", uptime_s: Math.round(process.uptime()) });
+});
+
+app.get("/healthz", (_req, res) => {
+  res.json({ ok: true, service: "sintraprime-ui", uptime_s: Math.round(process.uptime()) });
+});
+
+app.use("/api/slack", slackGraphRoutes);
+
+// Allow local dev UIs (e.g. Next on :3000) to call this server directly.
+// Configure via UI_CORS_ORIGINS="http://localhost:3000,http://127.0.0.1:3000".
+const DEFAULT_CORS = "http://localhost:3000,http://127.0.0.1:3000";
+const CORS_ORIGINS = String(process.env.UI_CORS_ORIGINS || DEFAULT_CORS)
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+
+app.use((req, res, next) => {
+  const origin = String(req.headers.origin || "").trim();
+  if (origin && (CORS_ORIGINS.includes("*") || CORS_ORIGINS.includes(origin))) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Vary", "Origin");
+    res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
+    res.setHeader(
+      "Access-Control-Allow-Headers",
+      "Content-Type, X-API-Key, X-Sintra-Admin",
+    );
+  }
+
+  if (req.method === "OPTIONS") return res.status(204).end();
+  next();
+});
+
+// Baseline security headers + basic request vision.
+app.use(securityHeaders);
+app.use(perimeterVision);
+app.use(networkVision);
+app.use(threatAwareGuard);
+
+app.use(
+  express.json({
+    limit: "2mb",
+    verify: (req, _res, buf) => {
+      // Capture raw JSON for HMAC verification on signed webhook routes.
+      // This must be done at the first JSON parser that consumes the stream.
+      req.rawBody = buf?.toString("utf8") || "";
+    },
+  }),
+);
+
+// Rate limit the most sensitive surfaces.
+const adminLimiter = createRateLimiter({ windowMs: 60_000, max: 40, keyFn: (req) => req.ip, label: "admin" });
+const slackCmdLimiter = createRateLimiter({ windowMs: 60_000, max: 120, keyFn: (req) => req.ip, label: "slack-command" });
+app.use("/api/admin", adminLimiter);
+app.use("/api/slack/command", slackCmdLimiter);
+
+// Ensure at least a local node exists in the cluster view.
+ensureSelfRegistered();
+
+let slackClientForOps = null;
+
+function safeInit(label, fn) {
+  try {
+    const out = fn();
+    if (out && typeof out.then === "function") {
+      out.catch((err) => {
+        console.warn(`[UI] ⚠️ ${label} failed: ${err?.message || String(err)}`);
+      });
+    }
+  } catch (err) {
+    console.warn(`[UI] ⚠️ ${label} failed: ${err?.message || String(err)}`);
+  }
+}
+
+// OmniSkill planning engine (event-bus wiring)
+startOmniSkillEngine();
+
+// Optional: concise log when Slack self-heals
+safeInit("Slack reconnection logger", async () => {
+  const { eventBus } = await import("./core/eventBus.js");
+  eventBus.on("slack.reconnected", (evt) => {
+    console.log("[Watchtower] Slack reconnected at", evt?.time, "via", evt?.source);
+  });
+});
+
+// Slack Token Watchtower (optional): proactive auth health + best-effort OAuth refresh.
+// NOTE: Token refresh only works if Slack issued a refresh token for your install.
+safeInit("Slack Token Watchtower", () => {
+  const offline = String(process.env.SLACK_OFFLINE || "").trim() === "1";
+  if (offline) return;
+
+  const enabled = String(process.env.SLACK_WATCHTOWER || "").trim();
+  if (enabled === "0") return;
+
+  // Auto-enable if token present unless explicitly disabled.
+  const hasToken = Boolean(process.env.SLACK_BOT_TOKEN || process.env.SLACK_TOKEN);
+  if (enabled !== "1" && !hasToken) return;
+
+  const slackClient = new SlackClient({
+    defaultChannel: process.env.SLACK_PARALEGAL_CHANNEL || process.env.SLACK_DEFAULT_CHANNEL || "#all-ikesolutions",
+  });
+
+  slackClientForOps = slackClient;
+
+  startSlackTokenWatchdog(slackClient);
+});
+
+// Slack test suite routes (admin-gated; see src/routes/slack.test.routes.js)
+registerSlackTestRoutes(app, { getSlackClient: () => slackClientForOps });
+
+// Voice synthesis API (ElevenLabs)
+app.use("/api/voice", voiceRoutes);
+// Compatibility alias (requested): /voice/test/:mode
+app.use("/voice", voiceRoutes);
+
+// Slack brainstem API (Make.com should call this, not Slack directly)
+app.use("/api/slack", slackRoutes);
+
+// Slack slash commands (e.g. /sintra)
+app.use("/api/slack", slackCommandRoutes);
+
+// Slack Events API + Interactivity (optional; requires public URL and signing secret)
+app.use("/api/slack", slackInboundRoutes);
+
+// Unified inbound webhooks (Make/TikTok/etc). These are public-facing; keep them signed.
+app.use(webhooksRoutes);
+
+// Dashboard APIs (enforcement status + controls)
+app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/cases", caseConfigRoutes);
+app.use("/api/enforcement", enforcementTestRoutes);
+
+// Advisor + timeline APIs
+app.use("/api/advisor", advisorRoutes);
+app.use("/api/timeline", timelineRoutes);
+
+// OmniSkill APIs
+app.use("/api/omni", omniRoutes);
+
+// Autonomous Paralegal state API
+app.use("/api", paralegalRoutes);
+
+// Debug-only event injection API (env-gated; can be admin-protected)
+app.use("/api", debugRoutes);
+
+// Judge + template evolution + strategy (Cluster Console)
+app.use("/api/judges", judgesRoutes);
+app.use("/api/template-history", templateHistoryRoutes);
+app.use("/api/strategy", strategyRoutes);
+app.use("/api/governor", governorRoutes);
+
+// Cluster + analytics APIs
+app.use("/api/cluster", clusterRoutes);
+app.use("/api/analytics", analyticsRoutes);
+
+// Security state + incidents
+app.use("/api/security", securityRoutes);
+
+// Admin control plane
+app.use("/api/admin", adminNodeRoutes);
+app.use("/api/admin", adminCaseRoutes);
+app.use("/api/admin", adminAnalyticsRoutes);
+app.use("/api/admin", adminGovernorRoutes);
+app.use("/api/admin", adminSecurityRoutes);
+app.use("/api/admin", adminSecurityBinderRoutes);
+app.use("/api/admin", adminBlueTeamRoutes);
+app.use("/api/admin", adminSlackRoutes);
+app.use("/api/admin", adminDebugRoutes);
+app.use("/api/admin", adminLitigationRoutes);
 
 function safeReadJson(absPath) {
   try {
@@ -381,7 +645,96 @@ if (fs.existsSync(CLIENT_DIST) && fs.existsSync(path.join(CLIENT_DIST, "index.ht
   app.use(express.static(LEGACY_PUBLIC));
 }
 
-app.listen(PORT, "127.0.0.1", () => {
-  console.log(`[UI] Operator console at http://localhost:${PORT}`);
-  if (fs.existsSync(LEGACY_PUBLIC)) console.log(`[UI] Legacy UI at http://localhost:${PORT}/legacy`);
+let _server = null;
+
+function listenOnce(port) {
+  return new Promise((resolve, reject) => {
+    const srv = app.listen(port, HOST, () => resolve({ server: srv, port }));
+    srv.on("error", (err) => {
+      try {
+        srv.close(() => reject(err));
+      } catch {
+        reject(err);
+      }
+    });
+  });
+}
+
+async function startServer() {
+  const maxTries = Number.isFinite(PORT_FALLBACK_RANGE) ? Math.max(0, PORT_FALLBACK_RANGE) : 20;
+  let lastErr = null;
+
+  for (let i = 0; i <= maxTries; i++) {
+    const port = DESIRED_PORT + i;
+    try {
+      const { server, port: bound } = await listenOnce(port);
+      _server = server;
+
+      // Best-effort: set this node's URL for cluster views.
+      try {
+        setSelfUrl(`http://${HOST}:${bound}`);
+      } catch {
+        // ignore
+      }
+
+      // Best-effort: persist selected port for other tools/processes.
+      try {
+        if (!fs.existsSync(RUNS_DIR)) fs.mkdirSync(RUNS_DIR, { recursive: true });
+        fs.writeFileSync(
+          path.join(RUNS_DIR, "ui-port.json"),
+          JSON.stringify({ port: bound, host: HOST, at: new Date().toISOString() }, null, 2),
+          "utf8",
+        );
+      } catch {
+        // ignore
+      }
+
+      console.log(`[UI] Operator console at http://localhost:${bound}`);
+      if (fs.existsSync(LEGACY_PUBLIC)) console.log(`[UI] Legacy UI at http://localhost:${bound}/legacy`);
+      if (bound !== DESIRED_PORT) {
+        console.warn(`[UI] ⚠️ Port ${DESIRED_PORT} busy; using ${bound} instead.`);
+      }
+      return;
+    } catch (err) {
+      lastErr = err;
+      if (err?.code === "EADDRINUSE") continue;
+      throw err;
+    }
+  }
+
+  const msg = lastErr?.message || String(lastErr || "unknown error");
+  const e = new Error(`Unable to bind UI server after ${maxTries + 1} attempts: ${msg}`);
+  e.cause = lastErr;
+  throw e;
+}
+
+function shutdown(signal) {
+  if (!_server) process.exit(0);
+  _server.close(() => {
+    // eslint-disable-next-line no-console
+    console.log(`[UI] Server stopped (${signal || "shutdown"}).`);
+    process.exit(0);
+  });
+}
+
+process.on("SIGINT", () => shutdown("SIGINT"));
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+
+// Crash-to-supervisor policy: log and exit non-zero so scripts/supervise-ui-server.mjs can restart.
+process.on("uncaughtException", (err) => {
+  // eslint-disable-next-line no-console
+  console.error("[UI] ❌ Uncaught exception:", err?.stack || err);
+  process.exit(1);
+});
+
+process.on("unhandledRejection", (reason) => {
+  // eslint-disable-next-line no-console
+  console.error("[UI] ❌ Unhandled rejection:", reason);
+  process.exit(1);
+});
+
+startServer().catch((err) => {
+  // eslint-disable-next-line no-console
+  console.error("[UI] ❌ Failed to start server:", err?.stack || err);
+  process.exit(1);
 });
