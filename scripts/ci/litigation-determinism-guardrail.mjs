@@ -46,6 +46,17 @@ async function fileExists(absPath) {
 async function main() {
   const repoRoot = process.cwd();
 
+  const verifierRel = "scripts/verify-litigation-packet.mjs";
+  const verifierAbs = path.resolve(repoRoot, verifierRel);
+  if (!fssync.existsSync(verifierAbs)) {
+    die([
+      "Determinism gate preflight FAIL: litigation verifier missing.",
+      `Expected: ${verifierRel}`,
+      "Fix: restore scripts/verify-litigation-packet.mjs (guardrail dependency) and re-run.",
+      "",
+    ].join("\n"));
+  }
+
   const caseId = String(process.env.CI_LITIGATION_CASE_ID || "CI-DETERMINISM-GUARDRAIL").trim();
   const fixedGeneratedAt = String(process.env.CI_LITIGATION_GENERATED_AT || "2000-01-01T00:00:00.000Z").trim();
   const exhibitToCheck = String(process.env.CI_LITIGATION_EXHIBIT || "L1-C").trim();

@@ -40,6 +40,7 @@ jobs:
         node:
           - "20.11.1"
           - "22.11.0"
+          - "24.11.1"
     env:
       CI: "1"
       NODE_OPTIONS: "--unhandled-rejections=strict"
