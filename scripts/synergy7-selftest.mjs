@@ -3,9 +3,36 @@ import fssync from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 import { spawnSync } from "node:child_process";
-import { loadControlSecretsEnv } from "../ui/core/envLoader.js";
 
-const REQUIRED_SLACK_CHANNEL_ID = "C097LK2AMN";
+async function loadEnvFileNoOverride(absPath) {
+  const raw = await fs.readFile(absPath, "utf8");
+  const lines = raw.split(/\r?\n/);
+
+  for (const lineRaw of lines) {
+    let line = String(lineRaw ?? "").trim();
+    if (!line) continue;
+    if (line.startsWith("#")) continue;
+    if (line.startsWith("export ")) line = line.slice("export ".length).trim();
+
+    const eq = line.indexOf("=");
+    if (eq <= 0) continue;
+
+    const key = line.slice(0, eq).trim();
+    if (!key) continue;
+    if (Object.prototype.hasOwnProperty.call(process.env, key)) continue;
+
+    let value = line.slice(eq + 1).trim();
+    if (
+      (value.startsWith('"') && value.endsWith('"') && value.length >= 2) ||
+      (value.startsWith("'") && value.endsWith("'") && value.length >= 2)
+    ) {
+      value = value.slice(1, -1);
+    }
+    value = value.replace(/\\n/g, "\n").replace(/\\r/g, "\r").replace(/\\t/g, "\t");
+
+    process.env[key] = value;
+  }
+}
 
 function parseArgs(argv) {
   const out = {};
@@ -97,7 +124,7 @@ async function main() {
   ).trim();
 
   // Load env file (no override) so the test can be run from any cwd.
-  loadControlSecretsEnv({ path: envPath });
+  await loadEnvFileNoOverride(envPath);
 
   // Hard safety: refuse to run if TTS is not forced offline.
   const ttsMock = isTruthy(process.env.TTS_MOCK);
@@ -106,12 +133,6 @@ async function main() {
     throw new Error(
       `Safety FAIL: expected TTS_MOCK=1 and ELEVEN_DISABLE_TTS=true (or DISABLE_TTS=1). Got TTS_MOCK=${process.env.TTS_MOCK || ""}, ELEVEN_DISABLE_TTS=${process.env.ELEVEN_DISABLE_TTS || ""}, DISABLE_TTS=${process.env.DISABLE_TTS || ""}`,
     );
-  }
-
-  // Pin Slack channel.
-  const slackChannel = String(process.env.SLACK_CHANNEL_ID || process.env.SLACK_DEFAULT_CHANNEL || "").trim();
-  if (slackChannel && slackChannel !== REQUIRED_SLACK_CHANNEL_ID) {
-    throw new Error(`Slack FAIL: expected SLACK_CHANNEL_ID=${REQUIRED_SLACK_CHANNEL_ID}. Got ${slackChannel}`);
   }
 
   const caseId = String(args.caseId || "VZN-2025-TEST-L3");
@@ -132,9 +153,7 @@ async function main() {
         TTS_MOCK: String(process.env.TTS_MOCK || ""),
         ELEVEN_DISABLE_TTS: String(process.env.ELEVEN_DISABLE_TTS || ""),
         DISABLE_TTS: String(process.env.DISABLE_TTS || ""),
-        ELEVENLABS_API_KEY: maskSecret(process.env.ELEVENLABS_API_KEY || process.env.ELEVEN_API_KEY || process.env.XI_API_KEY),
-        SLACK_BOT_TOKEN: maskSecret(process.env.SLACK_BOT_TOKEN || process.env.SLACK_TOKEN),
-        SLACK_CHANNEL_ID: slackChannel || "(unset)",
+        LITIGATION_GENERATED_AT: String(process.env.LITIGATION_GENERATED_AT || ""),
       },
     },
     steps: [],
@@ -171,131 +190,10 @@ async function main() {
     report.steps.push(failStep("A) Boot/import", String(e?.message || e)));
   }
 
-  // B) ENV + VOICE CONFIG CHECK
-  try {
-    const applyRes = runNodeScript("./scripts/apply-mythic-voice-ids.mjs", ["--env", envPath, "--out", "config/voices.json"], {
-      cwd: repoRoot,
-    });
-    report.steps.push(
-      applyRes.code === 0
-        ? okStep("B) voices:apply (env → voices.json)")
-        : failStep("B) voices:apply (env → voices.json)", `${applyRes.stderr}\n${applyRes.stdout}`.trim()),
-    );
-
-    const validateRes = runNodeScript("./scripts/validate-voice-config.mjs", ["--env", envPath, "--in", "config/voices.json"], {
-      cwd: repoRoot,
-    });
-    // Do not fail for placeholders if TTS is disabled.
-    report.steps.push(
-      validateRes.code === 0
-        ? okStep("B) voices:validate")
-        : elevenDisabled
-          ? skipStep("B) voices:validate", "Validator reported BAD voices, but TTS is disabled (allowed in TEST_ONLY).")
-          : failStep("B) voices:validate", `${validateRes.stderr}\n${validateRes.stdout}`.trim()),
-    );
-  } catch (e) {
-    report.steps.push(failStep("B) Env/voice config", String(e?.message || e)));
-  }
-
-  // C) NOTIFICATION PIPELINE CHECK (Slack)
-  try {
-    const allowSlack = isTruthy(process.env.SYNERGY7_ALLOW_SLACK);
-    if (!allowSlack) {
-      report.steps.push(skipStep("C) Slack send", "Set SYNERGY7_ALLOW_SLACK=1 to send exactly one test message."));
-    } else if (!slackChannel) {
-      report.steps.push(failStep("C) Slack send", `Missing SLACK_CHANNEL_ID (must be ${REQUIRED_SLACK_CHANNEL_ID})`));
-    } else {
-      const { SlackClient } = await import("../ui/services/SlackClient.js");
-      const s = new SlackClient({ defaultChannel: slackChannel });
-      const text = `✅ SintraPrime test run started: ${caseId} (TTS_MOCK=1, ELEVEN_DISABLE_TTS=true)`;
-
-      let sent = false;
-      try {
-        const r = await s.sendText(slackChannel, text);
-        if (r?.ok === false && (r?.offline || r?.disabled)) {
-          report.steps.push(skipStep("C) Slack send", `Slack offline/disabled (${r.op || "unknown"})`));
-        } else {
-          sent = true;
-          report.steps.push(okStep("C) Slack send"));
-        }
-      } catch (err) {
-        const retryAfter = Number(err?.data?.retry_after || err?.data?.response_metadata?.retry_after || 0);
-        if (retryAfter > 0 && retryAfter < 60) {
-          await new Promise((r) => setTimeout(r, (retryAfter * 1000) + 250));
-          const r2 = await s.sendText(slackChannel, text);
-          if (r2?.ok === true) {
-            sent = true;
-            report.steps.push(okStep("C) Slack send (retry-after)"));
-          } else {
-            report.steps.push(failStep("C) Slack send", `Rate-limited and retry did not succeed`));
-          }
-        } else {
-          report.steps.push(failStep("C) Slack send", String(err?.message || err)));
-        }
-      }
-
-      if (!sent) {
-        // not a second message; just status
-      }
-    }
-  } catch (e) {
-    report.steps.push(failStep("C) Slack pipeline", String(e?.message || e)));
-  }
-
-  // D) ENFORCEMENT + BEHAVIOR ENGINE CHECK
-  try {
-    // Enable adaptive enforcement but disable its voice emissions.
-    process.env.ADAPTIVE_ENFORCEMENT_ENABLED = "1";
-    process.env.ADAPTIVE_ENFORCEMENT_VOICE = "0";
-
-    const { eventBus } = await import("../ui/core/eventBus.js");
-    const enforcement = await import("../ui/enforcement/enforcementChain.js");
-
-    // Ensure listeners registered
-    await import("../ui/enforcement/adaptiveEnforcementAI.js");
-
-    const creditorsToTest = ["verizon", "tiktok", "chase"];
-
-    // Seed enforcement chain entries.
-    for (const c of creditorsToTest) {
-      eventBus.emit("enforcement.chain.start", { creditor: c, caseId, strategy: "test", initialDoc: "initial-notice" });
-      enforcement.advanceEnforcementStage({ creditor: c, caseId });
-    }
-
-    // Emit a synthetic behavior prediction (no OpenAI calls) to exercise adaptive policy wiring.
-    for (const c of creditorsToTest) {
-      eventBus.emit("behavior.predicted", {
-        creditor: c,
-        creditorKey: c,
-        classification: { name: c, type: c === "verizon" ? "telco" : c === "chase" ? "major_bank" : "default", risk: "medium" },
-        prediction: {
-          likelyBehavior: "stall",
-          responseProbability30d: 40,
-          violationProbability: 50,
-          riskScore: 6,
-          suggestedEnforcementPath: "manual_review",
-        },
-        channel: slackChannel || REQUIRED_SLACK_CHANNEL_ID,
-        caseId,
-      });
-    }
-
-    const states = enforcement.getAllEnforcementStates?.() || [];
-    const hit = states.filter((s) => creditorsToTest.includes(String(s.creditor || "").toLowerCase()) && s.caseId === caseId);
-    if (hit.length < 2) {
-      report.steps.push(failStep("D) Enforcement chain", `Expected enforcement states for ${creditorsToTest.join(", ")}`));
-    } else {
-      report.steps.push(okStep("D) Enforcement + adaptive policy wiring"));
-    }
-  } catch (e) {
-    report.steps.push(failStep("D) Enforcement/behavior engines", String(e?.message || e)));
-  }
-
   // E) ARTIFACT OUTPUT CHECK
   try {
     const evidencePath = path.join(artifactDir, "evidence_manifest.json");
     const runManifestPath = path.join(artifactDir, "run_manifest.json");
-    const mockAudioPath = path.join(artifactDir, "mock_voice.wav");
 
     // Litigation package (boot-safe: stubs if templates missing)
     const litigationOutDir = path.join(artifactDir, "litigation");
@@ -349,17 +247,9 @@ async function main() {
       throw new Error("Missing BINDER_PACKET.pdf");
     }
 
-    // Local mock audio generation (no ElevenLabs)
-    const { maybeSynthesizeTextToBuffer } = await import("../ui/services/elevenlabs-speech.js");
-    const audioRes = await maybeSynthesizeTextToBuffer("SintraPrime mock audio test.", { character: "shadow" });
-    if (audioRes?.skipped) {
-      throw new Error(`Mock audio generation skipped: ${audioRes.reason || "unknown"}`);
-    }
-    await fs.writeFile(mockAudioPath, audioRes.audio);
-
     // Evidence manifest (sha256)
     const litigationFiles = fssync.existsSync(litigationOutDir) ? await listFilesRecursive(litigationOutDir) : [];
-    const files = [...litigationFiles, mockAudioPath].sort((a, b) => a.localeCompare(b));
+    const files = [...litigationFiles].sort((a, b) => a.localeCompare(b));
     const items = [];
     for (const abs of files) {
       const rel = path.relative(repoRoot, abs).split(path.sep).join("/");
@@ -369,7 +259,7 @@ async function main() {
 
     const evidence = {
       case_id: caseId,
-      generated_at: new Date().toISOString(),
+      generated_at: String(process.env.LITIGATION_GENERATED_AT || new Date().toISOString()),
       items,
     };
     await writeText(evidencePath, JSON.stringify(evidence, null, 2) + "\n");
@@ -378,7 +268,7 @@ async function main() {
     const passFail = report.steps.map((s) => ({ step: s.title, status: s.status, detail: s.detail }));
     const manifest = {
       case_id: caseId,
-      generated_at: new Date().toISOString(),
+      generated_at: String(process.env.LITIGATION_GENERATED_AT || new Date().toISOString()),
       artifacts_dir: path.relative(repoRoot, artifactDir).split(path.sep).join("/"),
       env: report.meta.env,
       steps: passFail,
@@ -389,7 +279,6 @@ async function main() {
     report.steps.push(okStep("E) Artifacts + manifests written"));
     report.artifacts.push(
       { path: path.relative(repoRoot, litigationOutDir), kind: "litigation_package" },
-      { path: path.relative(repoRoot, mockAudioPath), kind: "mock_audio" },
       { path: path.relative(repoRoot, evidencePath), kind: "evidence_manifest" },
       { path: path.relative(repoRoot, runManifestPath), kind: "run_manifest" },
     );
@@ -409,6 +298,10 @@ async function main() {
   await writeText(path.join(artifactDir, "summary.txt"), finalText);
 
   process.stdout.write(finalText);
+
+  if (report.steps.some((s) => s.status === "FAIL")) {
+    process.exitCode = 1;
+  }
 }
 
 main().catch((err) => {

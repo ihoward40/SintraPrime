@@ -42,6 +42,7 @@ function Classify([string]$p) {
     'no-network-preload.mjs',
     'scripts/ci/litigation-determinism-guardrail.mjs',
     'scripts/ci/no-network-preload.mjs',
+    'scripts/postbuild-copy-litigation.mjs',
     '.github/workflows/ci.yml',
     'ci.yml',
     'package.json',
