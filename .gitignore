@@ -42,3 +42,7 @@ releases/policy-appendix/watch-mode/v1.0.0/SintraPrime_Policy_Appendix_Watch_Mod
 
 # OS / tooling noise
 Thumbs.db
+
+# Build / compiled artifacts
+__pycache__/
+*.zip
