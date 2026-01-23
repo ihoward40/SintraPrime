@@ -1,0 +1,23 @@
+{
+  "Run_ID": "RUN-TEST-PII-EXPOSURE-001",
+  "Timestamp": "2026-01-23T11:45:00Z",
+  "Scenario_Name": "PII Review Batch",
+  "Scenario_ID": "PII_REVIEW_v1",
+  "Job_Type": "ANALYSIS",
+  "Status": "Quarantined",
+  "Credits_Total": 3200,
+  "Credits_In": 2400,
+  "Credits_Out": 800,
+  "Model": "gpt-4",
+  "Input_Tokens": 300000,
+  "Output_Tokens": 62000,
+  "Artifacts_Link": "https://drive.google.com/artifacts/test-002",
+  "Severity": "SEV4",
+  "Risk_Flags": ["pii_exposure"],
+  "Misconfig_Likelihood": "Low",
+  "Baseline_Expected_Credits": 200,
+  "Variance_Multiplier": 0,
+  "retry_count": 12,
+  "has_max_items_config": false,
+  "has_idempotency_key": false
+}

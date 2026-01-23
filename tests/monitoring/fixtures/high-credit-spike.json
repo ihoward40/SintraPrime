@@ -1,0 +1,22 @@
+{
+  "Run_ID": "RUN-TEST-HIGH-SPIKE-001",
+  "Timestamp": "2026-01-23T10:30:00Z",
+  "Scenario_Name": "Binder Export Quarterly",
+  "Scenario_ID": "BINDER_EXPORT_v2",
+  "Job_Type": "BINDER_EXPORT",
+  "Status": "Success",
+  "Credits_Total": 2480,
+  "Credits_In": 1800,
+  "Credits_Out": 680,
+  "Model": "gpt-4",
+  "Input_Tokens": 220000,
+  "Output_Tokens": 52000,
+  "Artifacts_Link": "https://drive.google.com/artifacts/test-001",
+  "Severity": "SEV4",
+  "Misconfig_Likelihood": "Low",
+  "Baseline_Expected_Credits": 320,
+  "Variance_Multiplier": 0,
+  "retry_count": 8,
+  "has_max_items_config": false,
+  "has_idempotency_key": false
+}
