@@ -14,9 +14,12 @@ export class SeverityClassifier {
     let legit_score = 0;
 
     // Calculate variance multiplier
-    const variance_multiplier = run.baseline_expected_credits && run.credits_total
-      ? run.credits_total / run.baseline_expected_credits
-      : 1;
+    const variance_multiplier = 
+      run.baseline_expected_credits && 
+      run.baseline_expected_credits > 0 && 
+      run.credits_total
+        ? run.credits_total / run.baseline_expected_credits
+        : 1;
 
     // Detect risk flags
     if (this.detectRetryLoop(run)) {
@@ -66,26 +69,35 @@ export class SeverityClassifier {
   }
 
   private detectRetryLoop(run: Partial<RunRecord>): boolean {
-    // Placeholder: This is a simplified heuristic. Production implementation should:
+    // TODO: Placeholder implementation - Production version should:
     // - Check for repeated executions of the same scenario_id
     // - Analyze retry metadata from run artifacts
     // - Examine error patterns indicating retry conditions
-    // Currently returns false to avoid false positives until proper detection is implemented
+    // Currently returns false to avoid false positives
     return false;
   }
 
   private detectUnboundedIterator(run: Partial<RunRecord>): boolean {
-    // Placeholder: integrate with scenario config checks
+    // TODO: Placeholder implementation - Production version should:
+    // - Integrate with scenario config checks
+    // - Detect loop constructs without proper bounds
+    // - Check for runaway iteration patterns
     return false;
   }
 
   private detectMissingIdempotency(run: Partial<RunRecord>): boolean {
-    // Placeholder
+    // TODO: Placeholder implementation - Production version should:
+    // - Check scenario configuration for idempotency keys
+    // - Verify duplicate detection mechanisms
+    // - Validate transaction boundaries
     return false;
   }
 
   private detectPIIExposure(run: Partial<RunRecord>): boolean {
-    // Placeholder: integrate with data validation
+    // TODO: Placeholder implementation - Production version should:
+    // - Integrate with data validation pipelines
+    // - Check for PII patterns in outputs
+    // - Validate data classification tags
     return false;
   }
 
