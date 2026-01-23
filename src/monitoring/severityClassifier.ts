@@ -14,8 +14,8 @@ export class SeverityClassifier {
     let legit_score = 0;
 
     // Calculate variance multiplier
-    const variance_multiplier = run.baseline_expected_credits
-      ? run.credits_total! / run.baseline_expected_credits
+    const variance_multiplier = run.baseline_expected_credits && run.credits_total
+      ? run.credits_total / run.baseline_expected_credits
       : 1;
 
     // Detect risk flags
@@ -66,8 +66,12 @@ export class SeverityClassifier {
   }
 
   private detectRetryLoop(run: Partial<RunRecord>): boolean {
-    // Placeholder: integrate with actual retry detection logic
-    return run.status === 'Failed';
+    // Placeholder: This is a simplified heuristic. Production implementation should:
+    // - Check for repeated executions of the same scenario_id
+    // - Analyze retry metadata from run artifacts
+    // - Examine error patterns indicating retry conditions
+    // Currently returns false to avoid false positives until proper detection is implemented
+    return false;
   }
 
   private detectUnboundedIterator(run: Partial<RunRecord>): boolean {

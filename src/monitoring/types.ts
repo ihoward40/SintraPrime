@@ -4,7 +4,7 @@ export type RunStatus = 'Success' | 'Failed' | 'Quarantined' | 'Escalated';
 export type MisconfigLikelihood = 'High' | 'Medium' | 'Low';
 export type CaseCategory = 'Cost/Credits' | 'Data/PII' | 'Delivery/Email' | 'Filing/Regulatory' | 'Reliability' | 'Other';
 export type CaseStatus = 'Open' | 'Investigating' | 'Mitigating' | 'Resolved';
-export type ExposureBand = 'Regulatory' | 'Financial' | 'Privacy' | 'Operational' | 'None';
+export type ExposureBand = 'Regulatory' | 'Financial' | 'Privacy' | 'Operational';
 
 export interface RunRecord {
   run_id: string;
