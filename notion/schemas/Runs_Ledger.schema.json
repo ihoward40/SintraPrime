@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "sintraprime://schemas/runs_ledger.schema.json",
+  "title": "Runs Ledger",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "run_id",
+    "timestamp",
+    "scenario_name",
+    "scenario_id",
+    "job_type",
+    "status",
+    "credits_total",
+    "severity",
+    "owner"
+  ],
+  "properties": {
+    "run_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$",
+      "description": "Unique run identifier"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Run execution timestamp (UTC)"
+    },
+    "scenario_name": { "type": "string", "maxLength": 240 },
+    "scenario_id": { "type": "string", "maxLength": 128 },
+    "job_type": {
+      "type": "string",
+      "enum": ["ANALYSIS", "BINDER_EXPORT", "EMAIL_SEND", "RECONCILE_BACKFILL", "FILING", "OTHER"]
+    },
+    "status": {
+      "type": "string",
+      "enum": ["Success", "Failed", "Quarantined", "Escalated"]
+    },
+    "credits_total": { "type": "number", "minimum": 0 },
+    "credits_in": { "type": "number", "minimum": 0 },
+    "credits_out": { "type": "number", "minimum": 0 },
+    "model": { "type": "string", "maxLength": 120 },
+    "input_tokens": { "type": "integer", "minimum": 0 },
+    "output_tokens": { "type": "integer", "minimum": 0 },
+    "artifacts_link": {
+      "type": "string",
+      "format": "uri",
+      "description": "Link to run artifacts (Drive/Box/runs directory)"
+    },
+    "notion_case_id": {
+      "type": "string",
+      "description": "Relation to CASES database (Case_ID)"
+    },
+    "severity": {
+      "type": "string",
+      "enum": ["SEV0", "SEV1", "SEV2", "SEV3", "SEV4"]
+    },
+    "risk_flags": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Multi-select risk indicators"
+    },
+    "risk_summary": { "type": "string", "maxLength": 4000 },
+    "misconfig_likelihood": {
+      "type": "string",
+      "enum": ["High", "Medium", "Low"]
+    },
+    "baseline_expected_credits": { "type": "number", "minimum": 0 },
+    "variance_multiplier": { "type": "number", "minimum": 0 },
+    "owner": { "type": "string", "maxLength": 120 }
+  }
+}
