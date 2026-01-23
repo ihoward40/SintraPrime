@@ -120,7 +120,7 @@ Common issues and solutions:
 - **Slack alerts not sending**: Test webhook, check severity threshold
 - **High operations usage**: Review weekly report, adjust intervals
 
-See [OPERATOR_GUIDE.md](../automations/OPERATOR_GUIDE.md#monitoring-and-troubleshooting) for detailed troubleshooting.
+See [`../automations/OPERATOR_GUIDE.md`](../automations/OPERATOR_GUIDE.md#monitoring-and-troubleshooting) for detailed troubleshooting.
 
 ## Security & Privacy
 
@@ -232,4 +232,4 @@ Ensure the base system is deployed before activating Make.com scenarios.
 
 ---
 
-*This documentation is part of the SintraPrime credit forensics system. For governance and auditability, see [`../docs/governance/index.md`](../docs/governance/index.md).*
+*This documentation is part of the SintraPrime credit forensics system. For governance and auditability, see [`docs/governance/index.md`](../docs/governance/index.md).*

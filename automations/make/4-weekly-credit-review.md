@@ -91,7 +91,7 @@ From `fieldmap.manifest.v1.json`:
 
 #### Top 5 Scenarios by Operations
 
-See OPERATOR_GUIDE.md for instructions on extracting this data.
+See [`../OPERATOR_GUIDE.md`](../OPERATOR_GUIDE.md) for instructions on extracting this data.
 
 1. {{top_1_name}}: {{top_1_ops}} operations
 2. {{top_2_name}}: {{top_2_ops}} operations
@@ -136,7 +136,7 @@ See OPERATOR_GUIDE.md for instructions on extracting this data.
 
 If `ops_per_exec > expected_ops * 1.5`:
 
-```
+```text
 ⚠️ Scenario "{{name}}" is consuming {{actual}} ops/run (expected: {{expected}})
 💡 Recommendation: Review module configuration, consider optimizing data processing
 ```
@@ -145,7 +145,7 @@ If `ops_per_exec > expected_ops * 1.5`:
 
 If `success_rate < 95%`:
 
-```
+```text
 ⚠️ Scenario "{{name}}" has a {{success_rate}}% success rate
 💡 Recommendation: Review error logs, add error handling, verify external dependencies
 ```
@@ -154,7 +154,7 @@ If `success_rate < 95%`:
 
 If `executions = 0`:
 
-```
+```text
 ℹ️ Scenario "{{name}}" did not execute this week
 💡 Recommendation: Verify schedule, check if scenario is needed
 ```
