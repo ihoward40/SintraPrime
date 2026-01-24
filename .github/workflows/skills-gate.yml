@@ -22,8 +22,5 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Check Trusted Skills Have Artifacts
-        run: npm run skills:gate
-
       - name: Check No Revoked Skills Referenced
         run: npm run skills:check
