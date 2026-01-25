@@ -1,0 +1,137 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "sintraprime://schemas/sp_config_change_log.schema.json",
+  "title": "SP Config Change Log",
+  "description": "Configuration change log for tracking PROD-gating configuration changes with fingerprinting and canary validation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "change_id",
+    "timestamp",
+    "config_domain",
+    "environment",
+    "status",
+    "gates_prod_execute"
+  ],
+  "properties": {
+    "change_id": {
+      "type": "string",
+      "pattern": "^CFG-[0-9]{6,}$",
+      "description": "Unique identifier for this config change (e.g., CFG-000001)"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When this config change was recorded (UTC)"
+    },
+    "config_domain": {
+      "type": "string",
+      "enum": [
+        "ACTION_REGISTRY",
+        "PAE",
+        "RATE_LIMITS",
+        "SWITCHBOARD",
+        "PACK_PIPELINE",
+        "CONSENT_REGISTRY",
+        "DOCUMENTATION",
+        "OTHER"
+      ],
+      "description": "Which configuration domain this change affects"
+    },
+    "environment": {
+      "type": "string",
+      "enum": ["DEV", "STAGING", "PROD"],
+      "description": "Target environment for this change"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["PENDING", "APPROVED", "DEPLOYED", "FAILED", "ROLLED_BACK"],
+      "description": "Current status of this configuration change"
+    },
+    "gates_prod_execute": {
+      "type": "boolean",
+      "description": "True if this change should gate PROD execute actions. Computed as: Env=PROD AND Config_Domain in {ACTION_REGISTRY, PAE, RATE_LIMITS, SWITCHBOARD, PACK_PIPELINE}"
+    },
+    "config_fingerprint_sha256": {
+      "type": "string",
+      "pattern": "^[a-fA-F0-9]{64}$",
+      "description": "SHA-256 hash of the configuration snapshot at time of change. Used to prevent race-condition canaries."
+    },
+    "config_snapshot_b64": {
+      "type": "string",
+      "description": "Base64-encoded canonical JSON snapshot of configuration state. Alternative to config_snapshot_url."
+    },
+    "config_snapshot_url": {
+      "type": "string",
+      "format": "uri",
+      "maxLength": 2048,
+      "description": "URL to stored configuration snapshot (e.g., Drive blob). Alternative to config_snapshot_b64."
+    },
+    "fingerprint_matches_current": {
+      "type": "string",
+      "enum": ["PASS", "FAIL", "NOT_CHECKED"],
+      "description": "Whether the fingerprint used by canary matches current fingerprint at time of re-enable. PASS only if they match."
+    },
+    "cooldown_hours": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 168,
+      "description": "Hours to wait after change before allowing re-enable (default from Switchboard)"
+    },
+    "cooldown_expires_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when cooldown period expires (UTC)"
+    },
+    "reenable_attempted_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When re-enable was attempted after canary validation (UTC)"
+    },
+    "reenable_result": {
+      "type": "string",
+      "enum": ["PASS", "FAIL", "NOT_ATTEMPTED"],
+      "description": "Result of re-enable attempt. PASS only if canary validated and fingerprint matched."
+    },
+    "reenable_receipt_id": {
+      "type": "string",
+      "pattern": "^RCP-[0-9]{6,}$",
+      "description": "Receipt ID for the re-enable action (relation to Execution Receipts)"
+    },
+    "canary_pack_id": {
+      "type": "string",
+      "pattern": "^CAN-[0-9]{6,}$",
+      "description": "ID of canary pack generated for this change validation"
+    },
+    "change_description": {
+      "type": "string",
+      "maxLength": 2000,
+      "description": "Human-readable description of what changed"
+    },
+    "changed_by": {
+      "type": "string",
+      "maxLength": 240,
+      "description": "Person or system that made this change"
+    },
+    "approved_by": {
+      "type": "string",
+      "maxLength": 240,
+      "description": "Person who approved this change for PROD"
+    }
+  },
+  "oneOf": [
+    {
+      "required": ["config_snapshot_b64"]
+    },
+    {
+      "required": ["config_snapshot_url"]
+    },
+    {
+      "properties": {
+        "gates_prod_execute": {
+          "const": false
+        }
+      }
+    }
+  ]
+}
