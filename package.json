@@ -32,7 +32,11 @@
     "ci:detect-tiers": "node ./scripts/detect-tiers.mjs",
     "sign:manifest": "node ./scripts/signing/sign-manifest.mjs",
     "sign:run": "node ./scripts/signing/sign-run.mjs",
-    "ci:verify-signatures": "node ./scripts/ci/verify-signatures.mjs"
+    "ci:verify-signatures": "node ./scripts/ci/verify-signatures.mjs",
+    "monitor:log": "tsx src/cli/run-monitoring.ts log",
+    "monitor:weekly": "tsx src/cli/run-monitoring.ts weekly-review",
+    "monitor:baselines": "tsx src/cli/run-monitoring.ts update-baselines",
+    "monitor:test": "tsx tests/monitoring/severity-classifier.test.ts"
   },
   "dependencies": {
     "express": "^4.21.2",

@@ -1,0 +1,213 @@
+{
+  "name": "SintraPrime Run Logger",
+  "description": "Logs automation runs to credit monitoring system and creates incidents for spikes",
+  "version": "1.0.0",
+  "flow": [
+    {
+      "id": 1,
+      "module": "webhooks:trigger",
+      "version": 1,
+      "parameters": {
+        "hook": "run_logger_webhook",
+        "method": "POST"
+      },
+      "mapper": {},
+      "metadata": {
+        "designer": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    },
+    {
+      "id": 2,
+      "module": "util:ExecuteCommand",
+      "version": 1,
+      "parameters": {},
+      "mapper": {
+        "command": "tsx src/cli/run-monitoring.ts log --run-id {{1.run_id}} --credits {{1.credits_total}} --scenario {{1.scenario_id}} --scenario-name \"{{1.scenario_name}}\" --job-type {{1.job_type}} --status {{1.status}}",
+        "timeout": 60
+      },
+      "metadata": {
+        "designer": {
+          "x": 300,
+          "y": 0
+        },
+        "restore": {},
+        "expect": [
+          {
+            "name": "command",
+            "type": "text",
+            "label": "Command",
+            "required": true
+          },
+          {
+            "name": "timeout",
+            "type": "number",
+            "label": "Timeout (seconds)"
+          }
+        ]
+      }
+    },
+    {
+      "id": 3,
+      "module": "json:ParseJSON",
+      "version": 1,
+      "parameters": {},
+      "mapper": {
+        "json": "{{2.stdout}}"
+      },
+      "metadata": {
+        "designer": {
+          "x": 600,
+          "y": 0
+        }
+      }
+    },
+    {
+      "id": 4,
+      "module": "builtin:Router",
+      "version": 1,
+      "mapper": null,
+      "metadata": {
+        "designer": {
+          "x": 900,
+          "y": 0
+        }
+      },
+      "routes": [
+        {
+          "flow": [
+            {
+              "id": 5,
+              "module": "http:ActionSendData",
+              "version": 3,
+              "parameters": {},
+              "mapper": {
+                "url": "{{env.SLACK_WEBHOOK_URL_SEV0}}",
+                "method": "POST",
+                "headers": [],
+                "body": "{{3.slack_message}}",
+                "bodyType": "raw"
+              },
+              "metadata": {
+                "designer": {
+                  "x": 1200,
+                  "y": -150
+                },
+                "restore": {
+                  "expect": {
+                    "method": {
+                      "label": "POST"
+                    },
+                    "bodyType": {
+                      "label": "Raw"
+                    }
+                  }
+                }
+              }
+            }
+          ],
+          "filter": {
+            "name": "SEV0 Alert",
+            "conditions": [
+              [
+                {
+                  "a": "{{3.severity}}",
+                  "o": "equal",
+                  "b": "SEV0"
+                }
+              ]
+            ]
+          }
+        },
+        {
+          "flow": [
+            {
+              "id": 6,
+              "module": "http:ActionSendData",
+              "version": 3,
+              "parameters": {},
+              "mapper": {
+                "url": "{{env.SLACK_WEBHOOK_URL_SEV1}}",
+                "method": "POST",
+                "headers": [],
+                "body": "{{3.slack_message}}",
+                "bodyType": "raw"
+              },
+              "metadata": {
+                "designer": {
+                  "x": 1200,
+                  "y": 0
+                }
+              }
+            }
+          ],
+          "filter": {
+            "name": "SEV1 Alert",
+            "conditions": [
+              [
+                {
+                  "a": "{{3.severity}}",
+                  "o": "equal",
+                  "b": "SEV1"
+                }
+              ]
+            ]
+          }
+        },
+        {
+          "flow": [
+            {
+              "id": 7,
+              "module": "http:ActionSendData",
+              "version": 3,
+              "parameters": {},
+              "mapper": {
+                "url": "{{env.SLACK_WEBHOOK_URL_DEFAULT}}",
+                "method": "POST",
+                "headers": [],
+                "body": "{{3.slack_message}}",
+                "bodyType": "raw"
+              },
+              "metadata": {
+                "designer": {
+                  "x": 1200,
+                  "y": 150
+                }
+              }
+            }
+          ],
+          "filter": {
+            "name": "SEV2+ Alert",
+            "conditions": [
+              [
+                {
+                  "a": "{{3.severity}}",
+                  "o": "equal",
+                  "b": "SEV2"
+                }
+              ]
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "version": 1,
+    "scenario": {
+      "roundtrips": 1,
+      "maxErrors": 3,
+      "autoCommit": true,
+      "sequential": false,
+      "confidential": false,
+      "dataloss": false,
+      "dlq": false
+    },
+    "designer": {
+      "orphans": []
+    },
+    "zone": "us1.make.com"
+  }
+}
