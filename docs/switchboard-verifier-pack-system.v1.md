@@ -198,6 +198,11 @@ For existing receipts without Switchboard links:
 | `PDF_SHA256` | Text | Hash of PDF file |
 | `Chain_Prev_Pack_SHA256` | Text | Previous pack's chain hash |
 | `Chain_This_Pack_SHA256` | Text | This pack's chain hash |
+| `Verifier_JSON_URL` | URL | Link to verifier JSON file |
+| `Verifier_JSON_SHA256` | Text | Hash of verifier JSON |
+| `Verifier_JSON_Version` | Select | `packverifier.v1` |
+| `Receipt_Set_SHA256` | Text | Hash of canonical receipt set |
+| `Receipt_Count` | Number | Count of receipts included |
 | `Notes` | Text | Anomalies, incidents |
 
 **Chain_This_Pack_SHA256 Calculation:**
@@ -312,7 +317,414 @@ Chain_This_Pack_SHA256 = SHA256(
 
 ---
 
-## Part 6: Make.com Weekly Verifier Pack Automation
+## Part 6: Pack Verifier JSON (Independent Verification Artifact)
+
+### Purpose
+
+The Pack Verifier JSON is a machine-readable artifact that ships alongside the PDF and enables independent verification of:
+- The PDF file wasn't altered
+- Switchboard + PAE snapshots are exactly as claimed
+- Receipt set is complete per selection logic
+- Hash chain links to prior pack (tamper-evident continuity)
+- Optional: Digital signature for authenticity
+
+### File Naming Convention
+
+```
+VP-YYYY-WW.verifier.json
+```
+
+Example: `VP-2026-04.verifier.json`
+
+### Pack Verifier JSON Format (packverifier.v1)
+
+**Core Principle:** Everything hashed is based on canonical bytes, stored as base64 for exact reproducibility.
+
+**Complete Specification:**
+
+```json
+{
+  "pack_verifier_version": "packverifier.v1",
+  "pack_id": "VP-2026-04",
+  "generated_at": "2026-01-25T09:05:00-05:00",
+  "generated_by": "System",
+  
+  "week": {
+    "start": "2026-01-19T00:00:00-05:00",
+    "end": "2026-01-25T23:59:59-05:00",
+    "timezone": "America/New_York"
+  },
+
+  "artifacts": {
+    "pdf": {
+      "filename": "VP-2026-04.pdf",
+      "sha256": "a1b2c3d4e5f6...",
+      "url": "https://drive.google.com/...",
+      "size_bytes": 245678
+    },
+    "verifier_json": {
+      "filename": "VP-2026-04.verifier.json",
+      "sha256": "f1e2d3c4b5a6...",
+      "url": "https://drive.google.com/...",
+      "size_bytes": 12345
+    }
+  },
+
+  "snapshots": {
+    "switchboard": {
+      "snapshot_id": "CS-20260125-0905",
+      "canon_version": "canon.v1",
+      "canon_utf8_b64": "eyJzbmFwc2hvdF92ZXJzaW9uIjoiY2Fub24udjEi...",
+      "sha256": "abc123def456...",
+      "control_count": 5,
+      "captured_at": "2026-01-25T09:05:00-05:00"
+    },
+    "pae": {
+      "snapshot_id": "CS-20260125-0906",
+      "canon_version": "canon.v1",
+      "canon_utf8_b64": "eyJzbmFwc2hvdF92ZXJzaW9uIjoiY2Fub24udjEi...",
+      "sha256": "def456abc123...",
+      "timezone": "America/New_York",
+      "captured_at": "2026-01-25T09:05:00-05:00"
+    },
+    "rate_limits": {
+      "snapshot_id": "CS-20260125-0907",
+      "canon_version": "canon.v1",
+      "canon_utf8_b64": "eyJzbmFwc2hvdF92ZXJzaW9uIjoiY2Fub24udjEi...",
+      "sha256": "789ghi012jkl...",
+      "limit_count": 8,
+      "captured_at": "2026-01-25T09:05:00-05:00"
+    }
+  },
+
+  "receipts": {
+    "selection_logic": "All blocked + all high-risk + sample of success",
+    "total_in_week": 127,
+    "included_count": 43,
+    "receipt_hashes": [
+      {
+        "receipt_id": "RCP-001234",
+        "timestamp": "2026-01-19T10:15:00-05:00",
+        "mode": "EXECUTE",
+        "action_type": "VOICE_BOOKING",
+        "result": "SUCCESS",
+        "sha256": "aaa111bbb222..."
+      },
+      {
+        "receipt_id": "RCP-001235",
+        "timestamp": "2026-01-19T11:22:00-05:00",
+        "mode": "EXECUTE",
+        "action_type": "SMS_SEND",
+        "result": "BLOCKED",
+        "sha256": "bbb222ccc333..."
+      }
+    ],
+    "receipt_set_sha256": "xyz789abc456..."
+  },
+
+  "compliance": {
+    "score": 94,
+    "total_attempts": 127,
+    "blocked_attempts": 8,
+    "success_attempts": 115,
+    "failed_attempts": 4,
+    "high_risk_attempts": 12
+  },
+
+  "hash_chain": {
+    "prev_pack_sha256": "prev123pack456...",
+    "switchboard_snapshot_sha256": "abc123def456...",
+    "pae_snapshot_sha256": "def456abc123...",
+    "pdf_sha256": "a1b2c3d4e5f6...",
+    "this_pack_sha256": "chain123hash456...",
+    "computation": "SHA256(prev_pack_sha256 + switchboard_snapshot_sha256 + pae_snapshot_sha256 + pdf_sha256)"
+  },
+
+  "verification_instructions": {
+    "step_1": "Verify PDF hash: sha256sum VP-2026-04.pdf",
+    "step_2": "Verify verifier JSON hash: sha256sum VP-2026-04.verifier.json",
+    "step_3": "Decode snapshots: base64 -d snapshots.*.canon_utf8_b64 | sha256sum",
+    "step_4": "Verify chain: echo -n '{prev+sb+pae+pdf}' | sha256sum",
+    "step_5": "Optional: Verify signature with public key"
+  },
+
+  "signature": {
+    "algorithm": "Ed25519",
+    "public_key_fingerprint": "SHA256:abc123...",
+    "signature_b64": "optional_signature_here...",
+    "signed_at": "2026-01-25T09:05:30-05:00",
+    "signer": "system@sintraprime.local"
+  }
+}
+```
+
+### Receipt Set Hash Calculation
+
+**Purpose:** Prove the receipt set is complete and unaltered.
+
+**Method:**
+1. Sort receipts by `receipt_id` ascending
+2. For each receipt, compute canonical hash (includes: receipt_id, timestamp, mode, action_type, result, policy_id, external_ref)
+3. Concatenate all receipt hashes
+4. SHA256 the concatenated string
+
+**Pseudocode:**
+```python
+def compute_receipt_set_hash(receipts):
+    sorted_receipts = sorted(receipts, key=lambda r: r['receipt_id'])
+    hash_string = ""
+    for receipt in sorted_receipts:
+        canonical = json.dumps({
+            "receipt_id": receipt['receipt_id'],
+            "timestamp": receipt['timestamp'],
+            "mode": receipt['mode'],
+            "action_type": receipt['action_type'],
+            "result": receipt['result'],
+            "policy_id": receipt['policy_id'],
+            "external_ref": receipt['external_ref']
+        }, sort_keys=True, separators=(',', ':'))
+        receipt_hash = hashlib.sha256(canonical.encode('utf-8')).hexdigest()
+        hash_string += receipt_hash
+    
+    return hashlib.sha256(hash_string.encode('utf-8')).hexdigest()
+```
+
+### Verification Workflow
+
+**Manual Verification (Auditor/Third Party):**
+
+1. **Download artifacts:**
+   ```bash
+   # Download from Drive/storage
+   wget https://drive.google.com/.../VP-2026-04.pdf
+   wget https://drive.google.com/.../VP-2026-04.verifier.json
+   ```
+
+2. **Verify PDF hash:**
+   ```bash
+   sha256sum VP-2026-04.pdf
+   # Compare to artifacts.pdf.sha256 in verifier JSON
+   ```
+
+3. **Verify Verifier JSON hash:**
+   ```bash
+   sha256sum VP-2026-04.verifier.json
+   # Compare to Notion field Verifier_JSON_SHA256
+   ```
+
+4. **Verify snapshot hashes:**
+   ```bash
+   # Extract and decode Switchboard snapshot
+   jq -r '.snapshots.switchboard.canon_utf8_b64' VP-2026-04.verifier.json | base64 -d > sb_snapshot.json
+   sha256sum sb_snapshot.json
+   # Compare to snapshots.switchboard.sha256
+   
+   # Repeat for PAE
+   jq -r '.snapshots.pae.canon_utf8_b64' VP-2026-04.verifier.json | base64 -d > pae_snapshot.json
+   sha256sum pae_snapshot.json
+   # Compare to snapshots.pae.sha256
+   ```
+
+5. **Verify hash chain:**
+   ```bash
+   # Extract chain components
+   PREV=$(jq -r '.hash_chain.prev_pack_sha256' VP-2026-04.verifier.json)
+   SB=$(jq -r '.hash_chain.switchboard_snapshot_sha256' VP-2026-04.verifier.json)
+   PAE=$(jq -r '.hash_chain.pae_snapshot_sha256' VP-2026-04.verifier.json)
+   PDF=$(jq -r '.hash_chain.pdf_sha256' VP-2026-04.verifier.json)
+   
+   # Compute chain hash
+   echo -n "${PREV}${SB}${PAE}${PDF}" | sha256sum
+   # Compare to hash_chain.this_pack_sha256
+   ```
+
+6. **Verify receipt set (optional deep check):**
+   ```bash
+   # Extract receipt hashes from verifier JSON
+   jq -r '.receipts.receipt_hashes[].sha256' VP-2026-04.verifier.json | sort | sha256sum
+   # Should match receipts.receipt_set_sha256
+   ```
+
+7. **Verify signature (if present):**
+   ```bash
+   # Extract public key and verify signature
+   openssl dgst -sha256 -verify pubkey.pem -signature sig.bin VP-2026-04.verifier.json
+   ```
+
+**Automated Verification Script:**
+
+```bash
+#!/bin/bash
+# verify-pack.sh
+
+PACK_ID=$1
+VERIFIER_JSON="${PACK_ID}.verifier.json"
+
+echo "Verifying Pack: ${PACK_ID}"
+
+# 1. Verify PDF hash
+PDF_FILENAME=$(jq -r '.artifacts.pdf.filename' $VERIFIER_JSON)
+PDF_EXPECTED=$(jq -r '.artifacts.pdf.sha256' $VERIFIER_JSON)
+PDF_ACTUAL=$(sha256sum $PDF_FILENAME | awk '{print $1}')
+
+if [ "$PDF_EXPECTED" = "$PDF_ACTUAL" ]; then
+  echo "✓ PDF hash verified"
+else
+  echo "✗ PDF hash mismatch!"
+  exit 1
+fi
+
+# 2. Verify Verifier JSON hash
+VERIFIER_EXPECTED=$(jq -r '.artifacts.verifier_json.sha256' $VERIFIER_JSON)
+VERIFIER_ACTUAL=$(sha256sum $VERIFIER_JSON | awk '{print $1}')
+
+if [ "$VERIFIER_EXPECTED" = "$VERIFIER_ACTUAL" ]; then
+  echo "✓ Verifier JSON hash verified"
+else
+  echo "✗ Verifier JSON hash mismatch!"
+  exit 1
+fi
+
+# 3. Verify snapshot hashes
+jq -r '.snapshots.switchboard.canon_utf8_b64' $VERIFIER_JSON | base64 -d > /tmp/sb.json
+SB_EXPECTED=$(jq -r '.snapshots.switchboard.sha256' $VERIFIER_JSON)
+SB_ACTUAL=$(sha256sum /tmp/sb.json | awk '{print $1}')
+
+if [ "$SB_EXPECTED" = "$SB_ACTUAL" ]; then
+  echo "✓ Switchboard snapshot hash verified"
+else
+  echo "✗ Switchboard snapshot hash mismatch!"
+  exit 1
+fi
+
+# 4. Verify chain
+PREV=$(jq -r '.hash_chain.prev_pack_sha256' $VERIFIER_JSON)
+SB=$(jq -r '.hash_chain.switchboard_snapshot_sha256' $VERIFIER_JSON)
+PAE=$(jq -r '.hash_chain.pae_snapshot_sha256' $VERIFIER_JSON)
+PDF=$(jq -r '.hash_chain.pdf_sha256' $VERIFIER_JSON)
+EXPECTED_CHAIN=$(jq -r '.hash_chain.this_pack_sha256' $VERIFIER_JSON)
+
+ACTUAL_CHAIN=$(echo -n "${PREV}${SB}${PAE}${PDF}" | sha256sum | awk '{print $1}')
+
+if [ "$EXPECTED_CHAIN" = "$ACTUAL_CHAIN" ]; then
+  echo "✓ Hash chain verified"
+else
+  echo "✗ Hash chain mismatch!"
+  exit 1
+fi
+
+echo ""
+echo "✓✓✓ All verifications passed ✓✓✓"
+echo "Pack: ${PACK_ID}"
+echo "Compliance Score: $(jq -r '.compliance.score' $VERIFIER_JSON)"
+echo "Receipts: $(jq -r '.receipts.included_count' $VERIFIER_JSON) of $(jq -r '.receipts.total_in_week' $VERIFIER_JSON)"
+```
+
+### Integration with Make.com Automation
+
+Add these modules to the Weekly Verifier Pack scenario:
+
+#### New Module: Build Verifier JSON
+
+**After Module 15 (Hash PDF):**
+
+```
+Tools → Text Operations: Compose Verifier JSON
+- Build complete packverifier.v1 JSON structure
+- Include all hashes, snapshots (base64), receipts, chain
+- Store in variable: verifier_json
+```
+
+#### New Module: Hash Verifier JSON
+
+```
+Tools → Crypto
+- Algorithm: SHA-256
+- Input: verifier_json
+- Output: verifier_json_hash
+```
+
+#### New Module: Upload Verifier JSON
+
+```
+Google Drive → Upload File
+- File: verifier_json
+- Folder: "Verifier Packs / {{year}}"
+- Filename: "{{pack_id}}.verifier.json"
+- Get: verifier_json_url
+```
+
+#### Update Module 18 (Seal Pack)
+
+Add these properties:
+```
+- Verifier_JSON_URL = verifier_json_url
+- Verifier_JSON_SHA256 = verifier_json_hash
+- Verifier_JSON_Version = "packverifier.v1"
+- Receipt_Set_SHA256 = receipt_set_hash
+- Receipt_Count = receipt_count
+```
+
+### Benefits of Pack Verifier JSON
+
+**For Auditors:**
+- Independent verification without trusting Notion/Drive
+- Command-line tools work on any platform
+- Deterministic, reproducible checks
+- No special access required
+
+**For Compliance:**
+- Machine-readable audit trail
+- Automated compliance monitoring
+- Chain-of-custody proof
+- Tamper-evidence at multiple levels
+
+**For Operations:**
+- Catch data corruption early
+- Verify backup/restore integrity
+- Cross-environment validation
+- Export compliance data to external systems
+
+**For Security:**
+- Optional digital signatures
+- Public key infrastructure ready
+- Time-stamping support (RFC-3161)
+- Non-repudiation when signed
+
+### Optional: Digital Signatures
+
+**Generate signing key pair:**
+```bash
+# Ed25519 (recommended)
+ssh-keygen -t ed25519 -f sintraprime-packverifier-key
+
+# Or RSA
+openssl genrsa -out private.pem 4096
+openssl rsa -in private.pem -pubout -out public.pem
+```
+
+**Sign Verifier JSON:**
+```bash
+# Create signature
+openssl dgst -sha256 -sign private.pem -out VP-2026-04.sig VP-2026-04.verifier.json
+
+# Encode as base64 for JSON inclusion
+base64 VP-2026-04.sig
+```
+
+**Add to Make.com scenario:**
+1. After creating verifier JSON, call signing service (Cloud Function / VPS endpoint)
+2. Include signature in verifier JSON `signature` field
+3. Upload both signed verifier JSON and public key
+
+**Public key distribution:**
+- Store in repository: `docs/public-keys/packverifier.pub`
+- Include fingerprint in Notion Switchboard
+- Publish via HTTPS with TLS for TOFU (Trust On First Use)
+
+---
+
+## Part 7: Make.com Weekly Verifier Pack Automation
 
 ### Scenario: WEEKLY_VERIFIER_PACK_EXPORT
 
@@ -628,7 +1040,7 @@ Error Handler → On Any Error
 
 ---
 
-## Part 7: Make.com Scenario Enforcement Pattern
+## Part 8: Make.com Scenario Enforcement Pattern
 
 ### Pattern: Read Switchboard Before Every Execute
 
@@ -671,7 +1083,7 @@ Notion → Create Database Item (Execution Receipt)
 
 ---
 
-## Part 8: Config Cooldown + Canary Protection
+## Part 9: Config Cooldown + Canary Protection
 
 ### Add Canary Runs Database
 
@@ -714,7 +1126,7 @@ else
 
 ---
 
-## Part 9: Verifier Pack Index View
+## Part 10: Verifier Pack Index View
 
 ### Create Notion Page: Verifier Pack Index
 
@@ -740,7 +1152,7 @@ else
 
 ---
 
-## Part 10: Extra Security Features
+## Part 11: Extra Security Features
 
 ### 1. Snapshot Masking Rules
 
@@ -796,7 +1208,7 @@ For maximum audit-grade provenance:
 
 ---
 
-## Part 11: What You Just Built
+## Part 12: What You Just Built
 
 With this complete system, you now have:
 
@@ -804,41 +1216,47 @@ With this complete system, you now have:
 ✅ **Automatic Rollups** — Receipts always reflect current Switchboard state  
 ✅ **Config Snapshots** — Immutable record of what was allowed when  
 ✅ **Weekly Verifier Packs** — Audit-ready PDFs with embedded config proofs  
+✅ **Pack Verifier JSON** — Independent verification artifact with canonical snapshots  
 ✅ **Hash Chain** — Tamper-evident ledger linking all packs  
 ✅ **Slack Alerts** — Operational awareness  
 ✅ **Failure Handling** — Adult supervision  
 ✅ **Cooldown + Canary** — Protection against timezone disasters  
 ✅ **12-Pack Index** — Trend visibility  
+✅ **Independent Verification** — Command-line tools for auditors  
 
 This is **"agents are cool"** upgraded to **"agents are governed."**
 
 ---
 
-## Part 12: Quick Start Checklist
+## Part 13: Quick Start Checklist
 
 - [ ] Create Switchboard database with control rows
 - [ ] Update Execution Receipts with Switchboard relation + rollups
 - [ ] Update Gate_Status formula to check Switchboard
 - [ ] Create Config Snapshots database
-- [ ] Create Verifier Packs database
+- [ ] Create Verifier Packs database (include new verifier JSON fields)
 - [ ] Create Canary Runs database
-- [ ] Build Make.com Weekly Pack scenario (20 modules)
+- [ ] Build Make.com Weekly Pack scenario (add verifier JSON modules)
 - [ ] Build Make.com Canary scenario
 - [ ] Update all execute scenarios to read Switchboard first
 - [ ] Create Verifier Pack Index page
 - [ ] Test: Toggle QUARANTINE_MODE → Verify receipts blocked
-- [ ] Test: Generate weekly pack → Verify PDF + hashes
+- [ ] Test: Generate weekly pack → Verify PDF + verifier JSON + hashes
 - [ ] Test: Chain hash verifies against previous pack
+- [ ] Test: Run verification script on generated pack
 
 ---
 
 ## Next-Level Enhancements
 
-1. **Pack Verifier JSON** — Export verification file alongside PDF
-2. **Automated Compliance Reports** — Monthly rollup across packs
-3. **External Auditor Access** — Read-only Notion guest access to packs
-4. **Retention Policy** — Auto-archive packs after N months
-5. **Pack Comparison Tool** — Diff two weeks' config snapshots
+1. **Automated Compliance Reports** — Monthly rollup across packs
+2. **External Auditor Access** — Read-only Notion guest access to packs
+3. **Retention Policy** — Auto-archive packs after N months
+4. **Pack Comparison Tool** — Diff two weeks' config snapshots
+5. **Digital Signatures** — Sign verifier JSON with organizational key
+6. **TSA Timestamping** — RFC-3161 timestamps for legal-grade proof
+7. **Multi-Sig Approval** — Require 2-of-3 signatures for config changes
+8. **Compliance Dashboard** — Real-time monitoring with alerts
 
 ---
 
