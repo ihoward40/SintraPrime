@@ -69,3 +69,11 @@
 - **Switchboard & Verifier Pack System (v1)**  
   [`switchboard-verifier-pack-system.v1.md`](./switchboard-verifier-pack-system.v1.md)  
   Complete implementation guide for single-source-of-truth control toggles (Switchboard), automated weekly verifier packs with config snapshots, hash chaining, PDF generation, Pack Verifier JSON (packverifier.v1.2), independent verification workflows, example files, and Verifier Ritual printable sheet.
+
+- **Config Gate Logic & Race-Condition Prevention (v1)** ⭐ **NEW**  
+  [`config-gate-logic-race-prevention.v1.md`](./config-gate-logic-race-prevention.v1.md)  
+  Critical upgrades for race-condition safe configuration management: latest relevant change logic, config fingerprinting, canary validation, evidence JSON, snapshot hashes in receipts, and universal preflight enforcement. Makes the system self-governing, auditor-proof, and machine-verifiable.
+
+- **Config Management Schema Reference (v1)** ⭐ **NEW**  
+  [`config-management-schema-reference.v1.md`](./config-management-schema-reference.v1.md)  
+  Comprehensive reference for SP_Config_Change_Log, SP_Switchboard, SP_Execution_Receipts, and SP_Canary_Packs schemas. Includes relationships, workflows, integration guide, best practices, and migration paths.
