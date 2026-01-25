@@ -46,4 +46,20 @@
 
 - **ClawdBot Agent Policy Snippets (v1)**  
   [`policy/clawdbot-agent-policy-snippets.v1.md`](./policy/clawdbot-agent-policy-snippets.v1.md)  
-  Governance policies for adopting ClawdBot-style agent patterns (environment isolation, least privilege, two-mode operations, execute consent, skill governance).
+  Governance policies for adopting ClawdBot-style agent patterns (environment isolation, least privilege, two-mode operations, execute consent, skill governance, voice channel governance).
+
+- **Agent Governance Complete System (v1)**  
+  [`agent-governance-complete-system.v1.md`](./agent-governance-complete-system.v1.md)  
+  Production-ready architecture for audit-grade agent governance including Notion databases, formulas, policies, automation patterns, and compliance reporting (10+ policies, hash chain ledger, weekly verifier packs).
+
+- **Notion Formulas — Agent Governance Enforcement (v1)**  
+  [`notion-formulas-agent-governance.v1.md`](./notion-formulas-agent-governance.v1.md)  
+  Copy-paste ready Notion formulas for enforcing agent governance (Gate_Status, Receipt_Completeness, PAE checks, compliance scoring, execution blocking).
+
+- **Notion Policy Database Implementation (v1)**  
+  [`notion-policy-database-implementation.v1.md`](./notion-policy-database-implementation.v1.md)  
+  Step-by-step guide for implementing the complete policy database in Notion with auto-linked receipts, enforcement buttons, templates, and global safety nets.
+
+- **Switchboard & Verifier Pack System (v1)**  
+  [`switchboard-verifier-pack-system.v1.md`](./switchboard-verifier-pack-system.v1.md)  
+  Complete implementation guide for single-source-of-truth control toggles, automated weekly verifier packs with config snapshots, hash chaining, and PDF generation.
