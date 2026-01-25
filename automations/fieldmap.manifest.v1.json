@@ -1,0 +1,86 @@
+{
+  "schemaVersion": "1.0.0",
+  "manifestName": "SintraPrime Make.com Fieldmap",
+  "manifestDescription": "Environment variable mapping for Make.com scenario automation",
+  "lastUpdated": "2026-01-23",
+  "environmentVariables": {
+    "SINTRAPRIME_REPO_PATH": {
+      "description": "Absolute path to SintraPrime repository",
+      "required": true,
+      "example": "C:\\Users\\admin\\agent-mode-engine",
+      "makeVariableName": "repo_path"
+    },
+    "SINTRAPRIME_RUNS_DIR": {
+      "description": "Relative path to runs directory from repo root",
+      "required": true,
+      "default": "runs",
+      "makeVariableName": "runs_dir"
+    },
+    "SLACK_WEBHOOK_URL": {
+      "description": "Slack incoming webhook URL for alerts",
+      "required": true,
+      "sensitive": true,
+      "makeVariableName": "slack_webhook"
+    },
+    "SLACK_CHANNEL": {
+      "description": "Target Slack channel for notifications",
+      "required": false,
+      "default": "#sintraprime-alerts",
+      "makeVariableName": "slack_channel"
+    },
+    "SEVERITY_THRESHOLD": {
+      "description": "Minimum severity level for alerts (1-5, where 5 is critical)",
+      "required": false,
+      "default": "3",
+      "makeVariableName": "severity_threshold"
+    },
+    "NODE_PATH": {
+      "description": "Path to Node.js executable",
+      "required": true,
+      "example": "C:\\Program Files\\nodejs\\node.exe",
+      "makeVariableName": "node_path"
+    },
+    "VERIFY_SCRIPT_PATH": {
+      "description": "Path to verify-run.js script",
+      "required": true,
+      "default": "verify-run.js",
+      "makeVariableName": "verify_script"
+    }
+  },
+  "makeScenarios": [
+    {
+      "scenarioId": "1",
+      "scenarioName": "Runs Logger",
+      "description": "Monitors runs directory and logs new run artifacts",
+      "triggerType": "scheduled",
+      "scheduleInterval": "15min"
+    },
+    {
+      "scenarioId": "2",
+      "scenarioName": "Severity Classifier",
+      "description": "Analyzes run manifests and classifies severity",
+      "triggerType": "scheduled",
+      "scheduleInterval": "15min"
+    },
+    {
+      "scenarioId": "3",
+      "scenarioName": "Slack Alerts",
+      "description": "Sends alerts for high-severity runs to Slack",
+      "triggerType": "scheduled",
+      "scheduleInterval": "5min"
+    },
+    {
+      "scenarioId": "4",
+      "scenarioName": "Weekly Credit Review",
+      "description": "Generates weekly summary of Make.com operation usage",
+      "triggerType": "scheduled",
+      "scheduleInterval": "weekly"
+    }
+  ],
+  "notes": [
+    "All paths should be absolute or relative to repo root",
+    "Sensitive variables should be stored in Make.com's secure storage",
+    "Verify Node.js is accessible from Make.com's execution environment",
+    "Test each scenario individually before enabling all"
+  ]
+}

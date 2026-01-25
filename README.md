@@ -47,6 +47,20 @@ External reviewers can follow a read-only verification path in the **Public Veri
   Phase X Lock v1.4 — Read-Only Analysis Integration  
   [phaseX-lock-v1.4](https://github.com/ihoward40/SintraPrime/releases/tag/phaseX-lock-v1.4)
 
+## Monitoring & Forensics (Make.com Automation)
+
+SintraPrime includes a plug-and-play credit forensics system for Make.com, designed for non-coders to monitor runs, classify severity, and receive alerts.
+
+- **Operator Guide**: [`automations/OPERATOR_GUIDE.md`](automations/OPERATOR_GUIDE.md) — Step-by-step instructions for extracting top 5 scenarios from Make.com usage UI
+- **Environment Config**: [`automations/fieldmap.manifest.v1.json`](automations/fieldmap.manifest.v1.json) — Field mapping for Make.com scenarios
+- **Make.com Scenarios**:
+  - [`automations/make/1-runs-logger.md`](automations/make/1-runs-logger.md) — Monitors runs directory and logs new artifacts
+  - [`automations/make/2-severity-classifier.md`](automations/make/2-severity-classifier.md) — Analyzes and classifies run severity
+  - [`automations/make/3-slack-alerts.md`](automations/make/3-slack-alerts.md) — Sends high-severity alerts to Slack
+  - [`automations/make/4-weekly-credit-review.md`](automations/make/4-weekly-credit-review.md) — Generates weekly usage summaries
+
+For full documentation, see [`monitoring/README.md`](monitoring/README.md).
+
 ## Windows path note
 
 You may see the repo at both:
