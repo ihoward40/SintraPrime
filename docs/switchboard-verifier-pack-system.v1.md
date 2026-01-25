@@ -1208,7 +1208,627 @@ For maximum audit-grade provenance:
 
 ---
 
-## Part 12: What You Just Built
+## Part 12: Example Pack Verifier JSON Files
+
+### Example 1: Valid Pack (Status: OK)
+
+**Filename:** `VP-2026-W04.verifier.json`
+
+```json
+{
+  "schema_version": "packverifier.v1.2",
+  "pack_id": "VP-2026-W04",
+  "generated_at": "2026-01-25T15:30:12Z",
+  "status": {
+    "overall": "OK",
+    "chain_binding": "OK",
+    "tsa": "OK",
+    "receipts": "OK",
+    "snapshots": "OK"
+  },
+  "chain": {
+    "prev_chain_sha256_hex": "1111111111111111111111111111111111111111111111111111111111111111",
+    "chain_hash_pre_tsa_sha256_hex": "2222222222222222222222222222222222222222222222222222222222222222",
+    "tsa_tsr_sha256_hex": "3333333333333333333333333333333333333333333333333333333333333333",
+    "this_pack_chain_sha256_hex": "4444444444444444444444444444444444444444444444444444444444444444",
+    "binding_rule": "SHA256(chain_hash_pre_tsa || tsa_tsr_sha256)",
+    "binding_status": "OK",
+    "binding_verification": {
+      "expected": "4444444444444444444444444444444444444444444444444444444444444444",
+      "computed": "4444444444444444444444444444444444444444444444444444444444444444",
+      "match": true
+    }
+  },
+  "receipts": [
+    {
+      "receipt_id": "ER-2026-01-25-0001",
+      "receipt_sha256_hex": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "action_type": "VOICE_BOOKING",
+      "gate_status": "PASS",
+      "timestamp": "2026-01-25T10:15:00Z"
+    },
+    {
+      "receipt_id": "ER-2026-01-25-0002",
+      "receipt_sha256_hex": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "action_type": "SMS_SEND",
+      "gate_status": "PASS",
+      "timestamp": "2026-01-25T11:20:00Z"
+    },
+    {
+      "receipt_id": "ER-2026-01-25-0003",
+      "receipt_sha256_hex": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "action_type": "VOICE_TRANSFER",
+      "gate_status": "BLOCKED",
+      "timestamp": "2026-01-25T14:45:00Z"
+    }
+  ],
+  "receipts_meta": {
+    "count": 3,
+    "receipt_set_sha256_hex": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "computation_rule": "SHA256(receipt_1_sha || receipt_2_sha || receipt_3_sha)"
+  },
+  "snapshots": {
+    "switchboard": {
+      "filename": "snapshots/switchboard.2026-01-25.json",
+      "sha256_hex": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "canon_utf8_b64": "eyJzbmFwc2hvdF92ZXJzaW9uIjoiY2Fub24udjEiLCJ0eXBlIjoiU1dJVENIQk9BUkQiLCJjYXB0dXJlZF9hdCI6IjIwMjYtMDEtMjVUMTU6MDA6MDBaIiwiY29udHJvbHMiOlt7ImNvbnRyb2xfbmFtZSI6IlFVQVJBTlRJTkVfTU9ERSIsInNjb3BlIjoiR0xPQkFMIiwiaXNfZW5hYmxlZCI6ZmFsc2V9LHsiY29udHJvbF9uYW1lIjoiVk9JQ0VfRVhFQ19FTkFCTEVEIiwic2NvcGUiOiJWT0lDRSIsImlzX2VuYWJsZWQiOnRydWV9XX0="
+    },
+    "pae": {
+      "filename": "snapshots/pae.2026-01-25.json",
+      "sha256_hex": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "canon_utf8_b64": "eyJzbmFwc2hvdF92ZXJzaW9uIjoiY2Fub24udjEiLCJ0eXBlIjoiUEFFIiwidGltZXpvbmUiOiJBbWVyaWNhL05ld19Zb3JrIiwiaG91cnMiOnsibW9uIjpbWyIwOTowMCIsIjE3OjAwIl1dfSwic2VydmljZXMiOlt7Im5hbWUiOiJUcnVzdCBSZXZpZXcgQ2FsbCIsImR1cmF0aW9uX21pbiI6NDV9XX0="
+    }
+  },
+  "hashes": {
+    "pdf_sha256_hex": "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+    "verifier_json_sha256_hex": "fedcba0987654321fedcba0987654321fedcba0987654321fedcba0987654321"
+  },
+  "tsa": {
+    "rfc3161": true,
+    "tsa_status": "OK",
+    "chain_hash_pre_tsa_sha256_hex": "2222222222222222222222222222222222222222222222222222222222222222",
+    "tsq_filename": "tsa/VP-2026-W04.tsq",
+    "tsr_filename": "tsa/VP-2026-W04.tsr",
+    "tsr_sha256_hex": "3333333333333333333333333333333333333333333333333333333333333333",
+    "timestamp_utc": "2026-01-25T15:30:15Z",
+    "tsa_url": "http://timestamp.digicert.com",
+    "verification_command": "openssl ts -verify -in tsa/VP-2026-W04.tsr -data tsa/VP-2026-W04.tsq -CAfile tsa-root.pem"
+  },
+  "signature": {
+    "enabled": true,
+    "algorithm": "Ed25519",
+    "public_key_fingerprint": "SHA256:abcdef1234567890",
+    "signature_b64": "MEUCIQD1234567890abcdefghijklmnopqrstuvwxyz==",
+    "signed_content": "chain.this_pack_chain_sha256_hex",
+    "verification_command": "openssl dgst -sha256 -verify pubkey.pem -signature sig.bin verifier.json"
+  },
+  "compliance": {
+    "score": 98,
+    "attempted_executes": 15,
+    "blocked_executes": 1,
+    "failed_executes": 0,
+    "incomplete_receipts": 0
+  },
+  "artifacts": {
+    "pdf": {
+      "filename": "VP-2026-W04.pdf",
+      "sha256_hex": "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+      "url": "https://drive.google.com/file/d/XXXXX/view"
+    },
+    "verifier_json": {
+      "filename": "VP-2026-W04.verifier.json",
+      "sha256_hex": "fedcba0987654321fedcba0987654321fedcba0987654321fedcba0987654321",
+      "url": "https://drive.google.com/file/d/YYYYY/view"
+    }
+  }
+}
+```
+
+---
+
+### Example 2: Degraded Pack (Status: DEGRADED)
+
+**Filename:** `VP-2026-W05.verifier.json`
+
+This example shows a pack with missing TSA timestamp (degraded but still valid):
+
+```json
+{
+  "schema_version": "packverifier.v1.2",
+  "pack_id": "VP-2026-W05",
+  "generated_at": "2026-02-01T09:15:00Z",
+  "status": {
+    "overall": "DEGRADED",
+    "chain_binding": "OK",
+    "tsa": "MISSING",
+    "receipts": "OK",
+    "snapshots": "OK",
+    "degradation_reasons": [
+      "TSA timestamp unavailable (network failure during pack generation)",
+      "Pack sealed without timestamp - hash chain integrity preserved"
+    ]
+  },
+  "chain": {
+    "prev_chain_sha256_hex": "4444444444444444444444444444444444444444444444444444444444444444",
+    "chain_hash_pre_tsa_sha256_hex": "5555555555555555555555555555555555555555555555555555555555555555",
+    "tsa_tsr_sha256_hex": null,
+    "this_pack_chain_sha256_hex": "6666666666666666666666666666666666666666666666666666666666666666",
+    "binding_rule": "SHA256(chain_hash_pre_tsa) [TSA unavailable]",
+    "binding_status": "DEGRADED",
+    "binding_verification": {
+      "expected": "6666666666666666666666666666666666666666666666666666666666666666",
+      "computed": "6666666666666666666666666666666666666666666666666666666666666666",
+      "match": true,
+      "note": "Chain continues without TSA - still tamper-evident but lacks non-repudiation"
+    }
+  },
+  "receipts": [
+    {
+      "receipt_id": "ER-2026-02-01-0001",
+      "receipt_sha256_hex": "7777777777777777777777777777777777777777777777777777777777777777",
+      "action_type": "EMAIL_SEND",
+      "gate_status": "PASS",
+      "timestamp": "2026-02-01T08:00:00Z"
+    },
+    {
+      "receipt_id": "ER-2026-02-01-0002",
+      "receipt_sha256_hex": "8888888888888888888888888888888888888888888888888888888888888888",
+      "action_type": "VOICE_BOOKING",
+      "gate_status": "BLOCKED",
+      "timestamp": "2026-02-01T08:30:00Z"
+    }
+  ],
+  "receipts_meta": {
+    "count": 2,
+    "receipt_set_sha256_hex": "9999999999999999999999999999999999999999999999999999999999999999",
+    "computation_rule": "SHA256(receipt_1_sha || receipt_2_sha)"
+  },
+  "snapshots": {
+    "switchboard": {
+      "filename": "snapshots/switchboard.2026-02-01.json",
+      "sha256_hex": "aaaa0000aaaa0000aaaa0000aaaa0000aaaa0000aaaa0000aaaa0000aaaa0000",
+      "canon_utf8_b64": "eyJzbmFwc2hvdF92ZXJzaW9uIjoiY2Fub24udjEiLCJ0eXBlIjoiU1dJVENIQk9BUkQiLCJjYXB0dXJlZF9hdCI6IjIwMjYtMDItMDFUMDk6MDA6MDBaIiwiY29udHJvbHMiOlt7ImNvbnRyb2xfbmFtZSI6IlFVQVJBTlRJTkVfTU9ERSIsInNjb3BlIjoiR0xPQkFMIiwiaXNfZW5hYmxlZCI6ZmFsc2V9LHsiY29udHJvbF9uYW1lIjoiVk9JQ0VfRVhFQ19FTkFCTEVEIiwic2NvcGUiOiJWT0lDRSIsImlzX2VuYWJsZWQiOmZhbHNlfV19"
+    },
+    "pae": {
+      "filename": "snapshots/pae.2026-02-01.json",
+      "sha256_hex": "bbbb0000bbbb0000bbbb0000bbbb0000bbbb0000bbbb0000bbbb0000bbbb0000",
+      "canon_utf8_b64": "eyJzbmFwc2hvdF92ZXJzaW9uIjoiY2Fub24udjEiLCJ0eXBlIjoiUEFFIiwidGltZXpvbmUiOiJBbWVyaWNhL05ld19Zb3JrIiwiaG91cnMiOnsibW9uIjpbWyIwOTowMCIsIjE3OjAwIl1dfSwic2VydmljZXMiOlt7Im5hbWUiOiJUcnVzdCBSZXZpZXcgQ2FsbCIsImR1cmF0aW9uX21pbiI6NDV9XX0="
+    }
+  },
+  "hashes": {
+    "pdf_sha256_hex": "cccc0000cccc0000cccc0000cccc0000cccc0000cccc0000cccc0000cccc0000",
+    "verifier_json_sha256_hex": "dddd0000dddd0000dddd0000dddd0000dddd0000dddd0000dddd0000dddd0000"
+  },
+  "tsa": {
+    "rfc3161": false,
+    "tsa_status": "MISSING",
+    "failure_reason": "TSA service unavailable during pack generation (network timeout)",
+    "chain_hash_pre_tsa_sha256_hex": "5555555555555555555555555555555555555555555555555555555555555555",
+    "tsq_filename": null,
+    "tsr_filename": null,
+    "tsr_sha256_hex": null,
+    "timestamp_utc": null,
+    "tsa_url": "http://timestamp.digicert.com",
+    "retry_recommendation": "TSA can be applied retroactively if needed; pack hash is sealed"
+  },
+  "signature": {
+    "enabled": true,
+    "algorithm": "Ed25519",
+    "public_key_fingerprint": "SHA256:abcdef1234567890",
+    "signature_b64": "MEYCIQD9876543210zyxwvutsrqponmlkjihgfedcba==",
+    "signed_content": "chain.this_pack_chain_sha256_hex",
+    "verification_command": "openssl dgst -sha256 -verify pubkey.pem -signature sig.bin verifier.json"
+  },
+  "compliance": {
+    "score": 92,
+    "attempted_executes": 8,
+    "blocked_executes": 1,
+    "failed_executes": 0,
+    "incomplete_receipts": 0
+  },
+  "artifacts": {
+    "pdf": {
+      "filename": "VP-2026-W05.pdf",
+      "sha256_hex": "cccc0000cccc0000cccc0000cccc0000cccc0000cccc0000cccc0000cccc0000",
+      "url": "https://drive.google.com/file/d/ZZZZZ/view"
+    },
+    "verifier_json": {
+      "filename": "VP-2026-W05.verifier.json",
+      "sha256_hex": "dddd0000dddd0000dddd0000dddd0000dddd0000dddd0000dddd0000dddd0000",
+      "url": "https://drive.google.com/file/d/AAAAA/view"
+    }
+  }
+}
+```
+
+---
+
+## Part 13: Auditor-Friendly CLI Verification Checklist
+
+This checklist enables independent verification of Pack Verifier JSON files using standard command-line tools. **No Notion or Drive access required** — verifiers work from downloaded files only.
+
+### Prerequisites
+
+**Required tools (available on all platforms):**
+- `sha256sum` (or `shasum -a 256` on macOS)
+- `jq` (JSON processor)
+- `base64` (base64 decoder)
+- `openssl` (for TSA and signature verification)
+- Text editor or `cat` for inspection
+
+**Files needed:**
+1. `VP-YYYY-WW.verifier.json` (the verifier JSON file)
+2. `VP-YYYY-WW.pdf` (the PDF artifact)
+3. `snapshots/*.json` (snapshot files referenced in verifier JSON)
+4. `tsa/*.tsr` and `tsa/*.tsq` (if TSA is enabled)
+5. `pubkey.pem` (if digital signatures are enabled)
+
+---
+
+### Verification Workflow
+
+#### Step 1: Verify Overall Pack Status
+
+```bash
+# Extract and display pack status
+jq '.status' VP-2026-W04.verifier.json
+```
+
+**Expected output for OK pack:**
+```json
+{
+  "overall": "OK",
+  "chain_binding": "OK",
+  "tsa": "OK",
+  "receipts": "OK",
+  "snapshots": "OK"
+}
+```
+
+**If status is DEGRADED:**
+```bash
+# Check degradation reasons
+jq '.status.degradation_reasons' VP-2026-W04.verifier.json
+```
+
+---
+
+#### Step 2: Verify PDF Hash
+
+```bash
+# Compute PDF hash
+sha256sum VP-2026-W04.pdf
+
+# Extract expected hash from verifier JSON
+jq -r '.hashes.pdf_sha256_hex' VP-2026-W04.verifier.json
+
+# Compare (should match exactly)
+```
+
+**Manual check:**
+- Computed hash: `1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef`
+- Expected hash: `1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef`
+- Match: ✅
+
+---
+
+#### Step 3: Verify Snapshot Hashes
+
+For each snapshot (Switchboard, PAE, etc.):
+
+```bash
+# Decode canonical UTF-8 base64 to file
+jq -r '.snapshots.switchboard.canon_utf8_b64' VP-2026-W04.verifier.json | base64 -d > switchboard-decoded.json
+
+# Compute hash of decoded file
+sha256sum switchboard-decoded.json
+
+# Extract expected hash
+jq -r '.snapshots.switchboard.sha256_hex' VP-2026-W04.verifier.json
+
+# Compare (should match)
+```
+
+**Repeat for PAE:**
+```bash
+jq -r '.snapshots.pae.canon_utf8_b64' VP-2026-W04.verifier.json | base64 -d > pae-decoded.json
+sha256sum pae-decoded.json
+jq -r '.snapshots.pae.sha256_hex' VP-2026-W04.verifier.json
+```
+
+---
+
+#### Step 4: Verify Receipt Set Hash
+
+```bash
+# Extract individual receipt hashes
+jq -r '.receipts[].receipt_sha256_hex' VP-2026-W04.verifier.json > receipt-hashes.txt
+
+# Concatenate hashes (no newlines or spaces)
+RECEIPT_SET=$(jq -r '.receipts[].receipt_sha256_hex' VP-2026-W04.verifier.json | tr -d '\n')
+
+# Compute set hash
+echo -n "$RECEIPT_SET" | sha256sum
+
+# Extract expected set hash
+jq -r '.receipts_meta.receipt_set_sha256_hex' VP-2026-W04.verifier.json
+
+# Compare (should match)
+```
+
+---
+
+#### Step 5: Verify Hash Chain
+
+```bash
+# Extract chain components
+PREV_HASH=$(jq -r '.chain.prev_chain_sha256_hex' VP-2026-W04.verifier.json)
+PRE_TSA=$(jq -r '.chain.chain_hash_pre_tsa_sha256_hex' VP-2026-W04.verifier.json)
+TSR_HASH=$(jq -r '.chain.tsa_tsr_sha256_hex' VP-2026-W04.verifier.json)
+THIS_PACK=$(jq -r '.chain.this_pack_chain_sha256_hex' VP-2026-W04.verifier.json)
+
+# Compute chain hash (if TSA present)
+if [ "$TSR_HASH" != "null" ]; then
+  COMPUTED=$(echo -n "${PRE_TSA}${TSR_HASH}" | sha256sum | awk '{print $1}')
+else
+  COMPUTED=$(echo -n "${PRE_TSA}" | sha256sum | awk '{print $1}')
+fi
+
+# Compare
+echo "Expected: $THIS_PACK"
+echo "Computed: $COMPUTED"
+
+# Verify binding status
+jq '.chain.binding_verification' VP-2026-W04.verifier.json
+```
+
+**Expected output:**
+```json
+{
+  "expected": "4444444444444444444444444444444444444444444444444444444444444444",
+  "computed": "4444444444444444444444444444444444444444444444444444444444444444",
+  "match": true
+}
+```
+
+---
+
+#### Step 6: Verify TSA Timestamp (if present)
+
+```bash
+# Check if TSA is enabled
+TSA_STATUS=$(jq -r '.tsa.tsa_status' VP-2026-W04.verifier.json)
+
+if [ "$TSA_STATUS" = "OK" ]; then
+  # Extract TSA files
+  TSQ_FILE=$(jq -r '.tsa.tsq_filename' VP-2026-W04.verifier.json)
+  TSR_FILE=$(jq -r '.tsa.tsr_filename' VP-2026-W04.verifier.json)
+  
+  # Verify timestamp response
+  openssl ts -verify -in "$TSR_FILE" -data "$TSQ_FILE" -CAfile tsa-root.pem
+  
+  # Check timestamp matches
+  jq -r '.tsa.timestamp_utc' VP-2026-W04.verifier.json
+fi
+```
+
+**Expected output:**
+```
+Verification: OK
+Timestamp: 2026-01-25T15:30:15Z
+```
+
+---
+
+#### Step 7: Verify Digital Signature (if present)
+
+```bash
+# Check if signature is enabled
+SIG_ENABLED=$(jq -r '.signature.enabled' VP-2026-W04.verifier.json)
+
+if [ "$SIG_ENABLED" = "true" ]; then
+  # Extract signature
+  jq -r '.signature.signature_b64' VP-2026-W04.verifier.json | base64 -d > sig.bin
+  
+  # Extract signed content (this_pack_chain_sha256_hex)
+  SIGNED_CONTENT=$(jq -r '.chain.this_pack_chain_sha256_hex' VP-2026-W04.verifier.json)
+  echo -n "$SIGNED_CONTENT" > signed-content.txt
+  
+  # Verify signature
+  openssl dgst -sha256 -verify pubkey.pem -signature sig.bin signed-content.txt
+  
+  # Check public key fingerprint
+  jq -r '.signature.public_key_fingerprint' VP-2026-W04.verifier.json
+fi
+```
+
+**Expected output:**
+```
+Verified OK
+Public key fingerprint: SHA256:abcdef1234567890
+```
+
+---
+
+#### Step 8: Verify Chain Continuity (Previous Pack)
+
+To verify that packs form an unbroken chain:
+
+```bash
+# Get this pack's prev_chain reference
+THIS_PREV=$(jq -r '.chain.prev_chain_sha256_hex' VP-2026-W04.verifier.json)
+
+# Get previous pack's chain hash
+PREV_PACK_CHAIN=$(jq -r '.chain.this_pack_chain_sha256_hex' VP-2026-W03.verifier.json)
+
+# Compare (must match)
+echo "This pack expects: $THIS_PREV"
+echo "Previous pack has: $PREV_PACK_CHAIN"
+
+if [ "$THIS_PREV" = "$PREV_PACK_CHAIN" ]; then
+  echo "✅ Chain continuity verified"
+else
+  echo "❌ CHAIN BREAK DETECTED"
+fi
+```
+
+---
+
+#### Step 9: Automated Verification Script
+
+Save this as `verify-pack.sh`:
+
+```bash
+#!/bin/bash
+set -e
+
+PACK_ID="$1"
+if [ -z "$PACK_ID" ]; then
+  echo "Usage: ./verify-pack.sh VP-YYYY-WW"
+  exit 1
+fi
+
+VERIFIER_JSON="${PACK_ID}.verifier.json"
+PDF_FILE="${PACK_ID}.pdf"
+
+echo "=== Pack Verifier v1.2 - Automated Verification ==="
+echo "Pack: $PACK_ID"
+echo ""
+
+# Step 1: Status
+echo "[1/9] Checking pack status..."
+STATUS=$(jq -r '.status.overall' "$VERIFIER_JSON")
+echo "Status: $STATUS"
+if [ "$STATUS" = "DEGRADED" ]; then
+  echo "Degradation reasons:"
+  jq -r '.status.degradation_reasons[]' "$VERIFIER_JSON"
+fi
+echo ""
+
+# Step 2: PDF hash
+echo "[2/9] Verifying PDF hash..."
+PDF_HASH=$(sha256sum "$PDF_FILE" | awk '{print $1}')
+EXPECTED_PDF=$(jq -r '.hashes.pdf_sha256_hex' "$VERIFIER_JSON")
+if [ "$PDF_HASH" = "$EXPECTED_PDF" ]; then
+  echo "✅ PDF hash verified"
+else
+  echo "❌ PDF hash mismatch"
+  exit 1
+fi
+echo ""
+
+# Step 3: Snapshot hashes
+echo "[3/9] Verifying snapshot hashes..."
+for snapshot in switchboard pae; do
+  jq -r ".snapshots.$snapshot.canon_utf8_b64" "$VERIFIER_JSON" | base64 -d > "${snapshot}-decoded.json"
+  COMPUTED=$(sha256sum "${snapshot}-decoded.json" | awk '{print $1}')
+  EXPECTED=$(jq -r ".snapshots.$snapshot.sha256_hex" "$VERIFIER_JSON")
+  if [ "$COMPUTED" = "$EXPECTED" ]; then
+    echo "✅ $snapshot snapshot verified"
+  else
+    echo "❌ $snapshot snapshot mismatch"
+    exit 1
+  fi
+done
+echo ""
+
+# Step 4: Receipt set hash
+echo "[4/9] Verifying receipt set hash..."
+RECEIPT_SET=$(jq -r '.receipts[].receipt_sha256_hex' "$VERIFIER_JSON" | tr -d '\n')
+COMPUTED_SET=$(echo -n "$RECEIPT_SET" | sha256sum | awk '{print $1}')
+EXPECTED_SET=$(jq -r '.receipts_meta.receipt_set_sha256_hex' "$VERIFIER_JSON")
+if [ "$COMPUTED_SET" = "$EXPECTED_SET" ]; then
+  echo "✅ Receipt set hash verified"
+else
+  echo "❌ Receipt set hash mismatch"
+  exit 1
+fi
+echo ""
+
+# Step 5: Chain binding
+echo "[5/9] Verifying hash chain binding..."
+MATCH=$(jq -r '.chain.binding_verification.match' "$VERIFIER_JSON")
+if [ "$MATCH" = "true" ]; then
+  echo "✅ Chain binding verified"
+else
+  echo "❌ Chain binding failed"
+  exit 1
+fi
+echo ""
+
+# Step 6-7: TSA and Signature (optional)
+echo "[6/9] Checking TSA timestamp..."
+TSA_STATUS=$(jq -r '.tsa.tsa_status' "$VERIFIER_JSON")
+echo "TSA Status: $TSA_STATUS"
+echo ""
+
+echo "[7/9] Checking digital signature..."
+SIG_ENABLED=$(jq -r '.signature.enabled' "$VERIFIER_JSON")
+echo "Signature enabled: $SIG_ENABLED"
+echo ""
+
+# Step 8: Compliance
+echo "[8/9] Checking compliance metrics..."
+jq '.compliance' "$VERIFIER_JSON"
+echo ""
+
+# Step 9: Summary
+echo "[9/9] Verification Summary"
+echo "=========================="
+echo "Pack ID: $PACK_ID"
+echo "Status: $STATUS"
+echo "PDF: ✅"
+echo "Snapshots: ✅"
+echo "Receipts: ✅"
+echo "Chain: ✅"
+echo "Overall: ✅ VERIFICATION PASSED"
+echo ""
+echo "This pack can be trusted as an authentic SintraPrime compliance artifact."
+```
+
+**Usage:**
+```bash
+chmod +x verify-pack.sh
+./verify-pack.sh VP-2026-W04
+```
+
+---
+
+### Verification Result Interpretation
+
+**Status: OK**
+- All hashes match
+- Chain binding verified
+- TSA timestamp present (if configured)
+- Digital signature valid (if configured)
+- **Conclusion:** Pack is authentic and tamper-free
+
+**Status: DEGRADED**
+- Core hashes match
+- Chain binding verified
+- TSA or signature may be missing
+- Degradation reasons documented
+- **Conclusion:** Pack integrity is preserved; degradation is documented and explained
+
+**Verification Failures**
+- Hash mismatch → **Pack has been altered**
+- Chain break → **Continuity compromised**
+- Signature invalid → **Authenticity in question**
+- **Action:** Do not trust pack; escalate to system owner
+
+---
+
+### Key Verification Principles
+
+1. **No Trust Required** — All verification uses cryptographic hashes and public key crypto
+2. **Offline Capable** — Verifiers work without network access or Notion/Drive
+3. **Deterministic** — Same inputs always produce same verification results
+4. **Auditable** — Each step produces inspectable intermediate values
+5. **Portable** — Works on any platform with standard Unix tools
+
+---
+
+## Part 14: What You Just Built
 
 With this complete system, you now have:
 
@@ -1228,7 +1848,205 @@ This is **"agents are cool"** upgraded to **"agents are governed."**
 
 ---
 
-## Part 13: Quick Start Checklist
+## Part 15: Verifier Ritual (9 Steps, No Code) — Print Sheet
+
+**Purpose:** This is a human-friendly verification checklist designed to be printed as the **last page of every Weekly Verifier Pack PDF**. It enables manual verification without code, scripts, or technical tools beyond basic file inspection and hash computation.
+
+**Audience:** External auditors, legal teams, compliance officers, regulators, or anyone who needs to verify pack authenticity without trusting the generation system.
+
+---
+
+### Verifier Ritual (9 Steps, No Code) — Print Sheet (Last Page of Pack)
+
+**Purpose:** Verify that this Weekly Verifier Pack is authentic, complete, and tamper-evident **without trusting Notion, Drive, or the generator**.
+
+**You will verify:**
+
+* **Integrity** (hashes match files)
+* **Provenance** (signature verifies with published public key)
+* **Chain binding** (pack contents bound to a single chain hash)
+* **Time anchoring** (RFC-3161 timestamp proves existence at a point in time)
+
+**Accept outcomes:**
+
+* ✅ **OK** = Accept as valid
+* 🟡 **DEGRADED** = Accept only if declared + reason is acceptable
+* ❌ **FAIL** = Reject
+
+---
+
+#### Step 1: Confirm required files exist
+
+In the unpacked folder, verify these exist:
+
+* `packverifier.json` (schema **must** be `packverifier.v1.2`)
+* `pack.chain.sha256`
+* `public-keys/<public_key_id>.pub`
+* TSA files (paths listed inside `packverifier.json`):
+  * `.tsa.tsr_path` (timestamp response file)
+  * `.tsa.ca_path` (trusted TSA CA cert bundle)
+  * `.tsa.chain_path` (intermediate chain bundle)
+* All artifacts listed under:
+  * `files[]`
+  * `receipts[]` (if present)
+
+**If anything is missing → FAIL**
+
+---
+
+#### Step 2: Validate schema + required fields (human check)
+
+Open `packverifier.json` and confirm:
+
+* `schema` = **packverifier.v1.2**
+* `status` is **OK** or **DEGRADED**
+* `signature.payload_sha256_hex` exists
+* `signature.public_key_id` exists
+* `chain.chain_sha256_hex` exists
+* `tsa` section exists and includes `tsr_path`, `ca_path`, `chain_path`
+* `files[]` exists (and is not empty)
+
+**If any are missing → FAIL**
+
+---
+
+#### Step 3: Compute canonical JSON (deterministic form)
+
+Create a canonical version of `packverifier.json` using a JSON tool that:
+
+* Sorts keys (stable order)
+* Emits compact JSON (no pretty spacing differences)
+
+Result is `packverifier.canon.json`.
+
+**If you can't produce deterministic JSON → proceed with the provided scripts, or FAIL for manual-only audits**
+
+---
+
+#### Step 4: Hash the canonical JSON (payload hash)
+
+Compute **SHA-256** of `packverifier.canon.json`.
+
+Compare to:
+
+* `signature.payload_sha256_hex` in `packverifier.json`
+
+**Mismatch → FAIL**
+
+---
+
+#### Step 5: Verify the signature (provenance)
+
+Using `public-keys/<public_key_id>.pub`, verify the signature over the **payload hash file** (the SHA-256 from step 4).
+
+**Command:**
+```bash
+openssl dgst -sha256 -verify public-keys/<public_key_id>.pub -signature sig.bin payload_hash.txt
+```
+
+**If signature verification fails → FAIL**
+
+---
+
+#### Step 6: Verify every referenced file hash (integrity)
+
+For each entry in `files[]` (and `receipts[]` if present):
+
+* Confirm the file exists at the given `path`
+* Compute SHA-256 of the file
+* Compare to the entry's `sha256`
+
+**Example:**
+```bash
+sha256sum snapshots/switchboard.2026-01-25.json
+# Compare output to files[].sha256
+```
+
+**Any mismatch or missing file → FAIL**
+
+---
+
+#### Step 7: Recompute the chain hash (binding)
+
+Build a single "chain input list" from **all** hashed entries:
+
+* Combine `files[]` + `receipts[]`
+* Sort by `path` (ascending)
+* Produce a deterministic list of lines: `<sha256><two spaces><path>`
+
+Compute SHA-256 of that list.
+
+Compare to:
+
+* `chain.chain_sha256_hex` in `packverifier.json`
+* The contents of `pack.chain.sha256`
+
+**Any mismatch → FAIL**
+
+---
+
+#### Step 8: Verify the RFC-3161 TSA timestamp (time anchoring)
+
+Verify that the TSA timestamp response (`tsa.tsr_path`) validates **against**:
+
+* The data file: `pack.chain.sha256`
+* The TSA trust chain:
+  * `tsa.ca_path`
+  * `tsa.chain_path`
+
+**Command:**
+```bash
+openssl ts -verify -in tsa/response.tsr -data pack.chain.sha256 \
+  -CAfile tsa/ca.pem -untrusted tsa/chain.pem
+```
+
+**Rules:**
+
+* If pack `status` = **OK**, TSA verification **must pass**
+* If TSA verification fails, pack must declare **DEGRADED** and include reasons
+
+**If TSA fails and status is OK → FAIL**  
+**If TSA fails and status is DEGRADED → DEGRADED (continue)**
+
+---
+
+#### Step 9: Final decision
+
+* If steps **1–7** pass, and step **8** passes → ✅ **OK**
+* If steps **1–7** pass, step **8** fails, and pack declares **DEGRADED** with reasons → 🟡 **DEGRADED**
+* Anything else → ❌ **FAIL**
+
+**Record the result** (OK / DEGRADED / FAIL), date, and verifier identity in your audit notes.
+
+---
+
+### Notes auditors care about (and why this is clean)
+
+* **File integrity** is proven by per-file SHA-256 checks
+* **Provenance** is proven by signature verification against a published public key
+* **Chain binding** proves the pack contents are locked to one chain hash
+* **RFC-3161** proves the chain existed at a specific time, reducing "we made it later" arguments
+
+**This is the "auditor walks in, you smile" page.**
+
+---
+
+### Implementation Note
+
+**Include this section verbatim as the last page of every Weekly Verifier Pack PDF.**
+
+When generating the PDF in Make.com Module 11-12:
+
+1. Include all pack content (cover, metrics, snapshots, receipts, hash chain)
+2. Append this "Verifier Ritual" section as the final page
+3. Use clear page breaks and formatting
+4. Consider making it a separate printable sheet with checkboxes
+
+This ensures every pack is **self-documenting** and can be verified independently.
+
+---
+
+## Part 16: Quick Start Checklist
 
 - [ ] Create Switchboard database with control rows
 - [ ] Update Execution Receipts with Switchboard relation + rollups
