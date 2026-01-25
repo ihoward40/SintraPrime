@@ -40,6 +40,12 @@
 
 ## External Tool Patterns & References
 
+### Agent Governance Operating System
+
+- **📋 Executive Summary — Agent Governance System**  
+  [`AGENT_GOVERNANCE_EXECUTIVE_SUMMARY.md`](./AGENT_GOVERNANCE_EXECUTIVE_SUMMARY.md)  
+  **START HERE** — Complete repo-level summary of the agent governance operating system. Explains what was implemented, why it matters, how it works end-to-end, and implementation roadmap. Written in plain English for stakeholders, auditors, and implementers.
+
 - **ClawdBot Pattern Brief (v1)**  
   [`external-notes/clawdbot-pattern-brief.v1.md`](./external-notes/clawdbot-pattern-brief.v1.md)  
   Structured analysis of ClawdBot architecture patterns applicable to SintraPrime (messaging-first control, persistent memory, skills ecosystem, multi-agent isolation).
@@ -50,7 +56,7 @@
 
 - **Agent Governance Complete System (v1)**  
   [`agent-governance-complete-system.v1.md`](./agent-governance-complete-system.v1.md)  
-  Production-ready architecture for audit-grade agent governance including Notion databases, formulas, policies, automation patterns, and compliance reporting (10+ policies, hash chain ledger, weekly verifier packs).
+  Production-ready architecture for audit-grade agent governance including Notion databases, formulas, policies, automation patterns, and compliance reporting (22 policies, hash chain ledger, weekly verifier packs).
 
 - **Notion Formulas — Agent Governance Enforcement (v1)**  
   [`notion-formulas-agent-governance.v1.md`](./notion-formulas-agent-governance.v1.md)  
@@ -62,4 +68,4 @@
 
 - **Switchboard & Verifier Pack System (v1)**  
   [`switchboard-verifier-pack-system.v1.md`](./switchboard-verifier-pack-system.v1.md)  
-  Complete implementation guide for single-source-of-truth control toggles, automated weekly verifier packs with config snapshots, hash chaining, and PDF generation.
+  Complete implementation guide for single-source-of-truth control toggles (Switchboard), automated weekly verifier packs with config snapshots, hash chaining, PDF generation, Pack Verifier JSON (packverifier.v1.2), independent verification workflows, example files, and Verifier Ritual printable sheet.
