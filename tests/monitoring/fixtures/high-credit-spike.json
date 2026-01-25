@@ -1,0 +1,20 @@
+{
+  "run_id": "TEST-SEV1-CREDIT-SPIKE",
+  "timestamp": "2026-01-23T09:00:00.000Z",
+  "scenario_name": "FOIA Request Analysis",
+  "scenario_id": "FOIA_ANALYSIS_001",
+  "job_type": "ANALYSIS",
+  "status": "Success",
+  "credits_total": 2500,
+  "baseline_expected_credits": 500,
+  "variance_multiplier": 5.0,
+  "credits_in": 1200,
+  "credits_out": 1300,
+  "model": "claude-3-sonnet",
+  "input_tokens": 120000,
+  "output_tokens": 130000,
+  "severity": "SEV1",
+  "risk_flags": [],
+  "misconfig_likelihood": "Low",
+  "owner": "automation@sintraprime.local"
+}

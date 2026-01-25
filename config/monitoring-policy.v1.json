@@ -1,0 +1,64 @@
+{
+  "version": "1.0.0",
+  "severity_policy": {
+    "sev0": {
+      "triggers": {
+        "credit_multiplier": 10,
+        "pii_exposure": true,
+        "regulatory_filing_ungated": true
+      },
+      "actions": ["quarantine", "block_dispatch", "create_case", "slack_escalate"],
+      "exposure_band": "Regulatory"
+    },
+    "sev1": {
+      "triggers": {
+        "credit_multiplier": 5,
+        "retry_loop": true,
+        "external_send_missing_exhibits": true
+      },
+      "actions": ["create_case", "slack_alert", "require_ack_before_rerun"],
+      "exposure_band": "Financial"
+    },
+    "sev2": {
+      "triggers": {
+        "credit_multiplier": 2,
+        "data_integrity_gap": true
+      },
+      "actions": ["log_case_optional", "weekly_review"],
+      "exposure_band": "Operational"
+    },
+    "sev3": {
+      "triggers": {
+        "credit_multiplier": 1.5,
+        "single_anomaly": true
+      },
+      "actions": ["ledger_only", "weekly_review_optional"],
+      "exposure_band": "Operational"
+    },
+    "sev4": {
+      "triggers": {},
+      "actions": ["ledger_only"],
+      "exposure_band": "None"
+    }
+  },
+  "risk_flags": {
+    "retry_loop": { "misconfig_weight": 3 },
+    "unbounded_iterator": { "misconfig_weight": 4 },
+    "missing_idempotency": { "misconfig_weight": 4 },
+    "sudden_prompt_growth": { "misconfig_weight": 2 },
+    "deployment_spike": { "misconfig_weight": 3 },
+    "batch_job": { "legit_weight": 3 },
+    "backfill_mode": { "legit_weight": 4 },
+    "linear_scaling": { "legit_weight": 2 }
+  },
+  "review_windows": {
+    "credit_review_days": 7,
+    "baseline_window_days": 30,
+    "healthy_run_statuses": ["Success"]
+  },
+  "thresholds": {
+    "max_retries": 5,
+    "quarantine_credit_multiplier": 10,
+    "high_misconfig_score": 8
+  }
+}

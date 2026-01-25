@@ -1,0 +1,20 @@
+{
+  "run_id": "TEST-SEV4-BACKFILL",
+  "timestamp": "2026-01-23T11:00:00.000Z",
+  "scenario_name": "Monthly Reconciliation Backfill",
+  "scenario_id": "RECONCILE_001",
+  "job_type": "RECONCILE_BACKFILL",
+  "status": "Success",
+  "credits_total": 500,
+  "baseline_expected_credits": 500,
+  "variance_multiplier": 1.0,
+  "credits_in": 250,
+  "credits_out": 250,
+  "model": "claude-3-haiku",
+  "input_tokens": 50000,
+  "output_tokens": 50000,
+  "severity": "SEV4",
+  "risk_flags": ["backfill_mode"],
+  "misconfig_likelihood": "Low",
+  "owner": "automation@sintraprime.local"
+}
