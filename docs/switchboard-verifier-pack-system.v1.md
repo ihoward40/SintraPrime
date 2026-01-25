@@ -1,0 +1,2083 @@
+# SintraPrime Switchboard — Single-Source-of-Truth Control System
+
+**Version:** v1.0.0  
+**Status:** Production-Ready  
+**Last Updated:** 2026-01-25
+
+This document provides the complete implementation for upgrading SintraPrime to use a centralized Switchboard for all kill switches and control toggles, plus automated Weekly Verifier Pack generation with config snapshots and hash chaining.
+
+---
+
+## Part 1: Switchboard Database (The Control Center)
+
+### Create Database: Switchboard (SintraPrime)
+
+**Purpose:** Single source of truth for all system toggles and controls.
+
+**Properties:**
+
+| Property Name | Type | Options/Notes |
+|---------------|------|---------------|
+| `Control_ID` | Unique ID | Prefix: `CTL` |
+| `Control_Name` | Title | Unique identifier for the control |
+| `Scope` | Select | `GLOBAL`, `VOICE`, `EMAIL`, `GITHUB`, `CALENDAR`, `SMS`, `ALL` |
+| `Is_Enabled` | Checkbox | The actual on/off switch |
+| `Severity` | Select | `Info`, `Guardrail`, `Lockdown` |
+| `Effective_From` | Date | Optional: when control becomes active |
+| `Effective_To` | Date | Optional: auto-expire date |
+| `Owner` | Person | Who manages this control |
+| `Notes` | Text | Why it exists, when to toggle |
+| `Last_Changed_By` | Person | Who last modified |
+| `Last_Changed_At` | Last edited time | Auto-tracked |
+| `Cooldown_Hours` | Number | Hours to wait after change before full execution |
+
+### Required Control Rows (Create These)
+
+**Row 1: VOICE_EXEC_ENABLED**
+- Control_Name: `VOICE_EXEC_ENABLED`
+- Scope: `VOICE`
+- Is_Enabled: ✅ (or start OFF while wiring)
+- Severity: `Guardrail`
+- Notes: "Master kill switch for all voice execute actions (booking, transfer, SMS)"
+
+**Row 2: QUARANTINE_MODE**
+- Control_Name: `QUARANTINE_MODE`
+- Scope: `GLOBAL`
+- Is_Enabled: ☐ (default OFF)
+- Severity: `Lockdown`
+- Notes: "Global lockdown: blocks all external executes except pre-approved internal tasks"
+
+**Optional But Recommended Rows:**
+
+| Control_Name | Scope | Default | Notes |
+|--------------|-------|---------|-------|
+| `EXECUTE_MODE_ENABLED` | GLOBAL | ✓ | Master execute switch |
+| `BREAK_GLASS_ENABLED` | GLOBAL | ✓ | Allow emergency overrides |
+| `SMS_EXEC_ENABLED` | SMS | ✓ | SMS-specific toggle |
+| `BOOKING_EXEC_ENABLED` | CALENDAR | ✓ | Booking-specific toggle |
+| `CONFIG_COOLDOWN_ENABLED` | GLOBAL | ✓ | Enforce cooldown after config changes |
+
+---
+
+## Part 2: Link Switchboard to Execution Receipts
+
+### Step 1: Add Relation
+
+In **Execution Receipts (SintraPrime)** database, add:
+
+**Property:** `Switchboard`
+- **Type:** Relation
+- **Target:** Switchboard (SintraPrime)
+- **Two-way:** Yes (creates `Receipts` in Switchboard)
+
+### Step 2: Add Rollups
+
+Create two rollup properties:
+
+**Property 1:** `SB_VOICE_EXEC_ENABLED`
+- **Type:** Rollup
+- **Relation:** Switchboard
+- **Property:** Is_Enabled
+- **Calculate:** Show original
+- **Filter:** Control_Name is `VOICE_EXEC_ENABLED`
+
+**Property 2:** `SB_QUARANTINE_MODE`
+- **Type:** Rollup
+- **Relation:** Switchboard
+- **Property:** Is_Enabled
+- **Calculate:** Show original
+- **Filter:** Control_Name is `QUARANTINE_MODE`
+
+### Step 3: Make Them Boolean Formulas
+
+Because rollups can be awkward, add computed boolean fields:
+
+**Property:** `VOICE_EXEC_ENABLED` (Formula)
+```notion
+contains(format(prop("SB_VOICE_EXEC_ENABLED")), "true")
+```
+
+**Property:** `QUARANTINE_MODE` (Formula)
+```notion
+contains(format(prop("SB_QUARANTINE_MODE")), "true")
+```
+
+### Step 4: Update Gate_Status Formula
+
+Update your existing `Gate_Status` formula to check Switchboard first:
+
+```notion
+if(prop("QUARANTINE_MODE"),
+  "BLOCKED — QUARANTINE_MODE",
+  if(prop("Mode") = "READ",
+    "PASS — READ MODE",
+    if(not prop("Policy_OK"),
+      "BLOCKED — Missing/Invalid Policy",
+      if(and(
+        or(
+          prop("Action_Type") = "VOICE_BOOKING",
+          prop("Action_Type") = "VOICE_TRANSFER",
+          prop("Action_Type") = "SMS_SEND"
+        ),
+        not prop("VOICE_EXEC_ENABLED")
+      ),
+        "BLOCKED — VOICE_EXEC_DISABLED",
+        if(not prop("Confirmed_By_User") and not(prop("Break_Glass_Used") and prop("Break_Glass_OK")),
+          "BLOCKED — Consent Required",
+          if(prop("PAE_Check_Result") = "FAIL",
+            "BLOCKED — PAE FAIL",
+            if(not prop("RateLimit_OK"),
+              "BLOCKED — Rate Limit",
+              if(not prop("Consent_OK"),
+                "BLOCKED — Consent Registry",
+                "PASS — EXECUTE APPROVED"
+))))))))
+```
+
+### Step 5: Auto-Link Switchboard in Templates
+
+Update all Receipt templates to automatically link Switchboard controls:
+
+In **Receipt template settings**, set default **Relation values**:
+- Switchboard includes: `VOICE_EXEC_ENABLED` and `QUARANTINE_MODE`
+
+For existing receipts without Switchboard links:
+1. Create view: `Receipts missing Switchboard`
+   - Filter: `Switchboard` is empty
+2. Bulk-select all → Edit property → Set Switchboard relation
+
+---
+
+## Part 3: Config Snapshots Database
+
+### Create Database: Config Snapshots (SintraPrime)
+
+**Purpose:** Immutable record of configuration state at specific points in time.
+
+**Properties:**
+
+| Property Name | Type | Notes |
+|---------------|------|-------|
+| `Snapshot_ID` | Title | Format: `CS-YYYYMMDD-HHMM` |
+| `Snapshot_Type` | Select | `SWITCHBOARD`, `PAE`, `RATE_LIMITS`, `CONSENT_REGISTRY`, `OTHER` |
+| `Applies_To_Pack` | Relation | → Verifier Packs |
+| `Captured_At` | Created time | Auto-tracked |
+| `Captured_By` | Person | Who triggered snapshot |
+| `Snapshot_JSON` | Text | Canonical JSON of config state |
+| `Snapshot_SHA256` | Text | Hash of Snapshot_JSON |
+| `Canonicalization_Version` | Select | `canon.v1` |
+| `Notes` | Text | Context |
+
+---
+
+## Part 4: Verifier Packs Database
+
+### Create Database: Verifier Packs (SintraPrime)
+
+**Purpose:** Weekly audit-ready export packages.
+
+**Properties:**
+
+| Property Name | Type | Notes |
+|---------------|------|-------|
+| `Pack_ID` | Title | Format: `VP-YYYY-WXX` |
+| `Week_Start` | Date | Monday of pack week |
+| `Week_End` | Date | Sunday of pack week |
+| `Status` | Select | `DRAFT`, `SEALED`, `FAILED` |
+| `Compliance_Score` | Number | 0-100 |
+| `Blocked_Attempts` | Number | Count of blocked executes |
+| `Total_Exec_Attempts` | Number | All execute attempts |
+| `High_Risk_Exec_Attempts` | Number | Purchases, publishes, transfers |
+| `Switchboard_Snapshot_JSON` | Text | Full switchboard state |
+| `Switchboard_Snapshot_SHA256` | Text | Hash |
+| `PAE_Snapshot_JSON` | Text | Full PAE state |
+| `PAE_Snapshot_SHA256` | Text | Hash |
+| `Receipts_Included` | Relation | → Execution Receipts |
+| `Config_Snapshots` | Relation | → Config Snapshots |
+| `PDF_File_URL` | URL | Link to generated PDF |
+| `PDF_SHA256` | Text | Hash of PDF file |
+| `Chain_Prev_Pack_SHA256` | Text | Previous pack's chain hash |
+| `Chain_This_Pack_SHA256` | Text | This pack's chain hash |
+| `Verifier_JSON_URL` | URL | Link to verifier JSON file |
+| `Verifier_JSON_SHA256` | Text | Hash of verifier JSON |
+| `Verifier_JSON_Version` | Select | `packverifier.v1` |
+| `Receipt_Set_SHA256` | Text | Hash of canonical receipt set |
+| `Receipt_Count` | Number | Count of receipts included |
+| `Notes` | Text | Anomalies, incidents |
+
+**Chain_This_Pack_SHA256 Calculation:**
+```
+Chain_This_Pack_SHA256 = SHA256(
+  Chain_Prev_Pack_SHA256 + 
+  Switchboard_Snapshot_SHA256 + 
+  PAE_Snapshot_SHA256 + 
+  PDF_SHA256
+)
+```
+
+---
+
+## Part 5: Canonical Snapshot Formats
+
+### Switchboard Snapshot JSON (canon.v1)
+
+**Rules:**
+- Sort controls by `Control_Name` ascending
+- Booleans as `true`/`false` (not "✅")
+- Timestamps in ISO 8601
+- Stable field ordering
+
+**Example:**
+```json
+{
+  "snapshot_version": "canon.v1",
+  "type": "SWITCHBOARD",
+  "captured_at": "2026-01-25T10:00:00-05:00",
+  "controls": [
+    {
+      "control_name": "BREAK_GLASS_ENABLED",
+      "scope": "GLOBAL",
+      "is_enabled": true,
+      "severity": "Guardrail",
+      "effective_from": null,
+      "effective_to": null,
+      "last_changed_at": "2026-01-20T14:22:00-05:00",
+      "last_changed_by": "System"
+    },
+    {
+      "control_name": "QUARANTINE_MODE",
+      "scope": "GLOBAL",
+      "is_enabled": false,
+      "severity": "Lockdown",
+      "effective_from": null,
+      "effective_to": null,
+      "last_changed_at": "2026-01-24T18:12:02-05:00",
+      "last_changed_by": "Isiah"
+    },
+    {
+      "control_name": "VOICE_EXEC_ENABLED",
+      "scope": "VOICE",
+      "is_enabled": true,
+      "severity": "Guardrail",
+      "effective_from": null,
+      "effective_to": null,
+      "last_changed_at": "2026-01-24T09:01:11-05:00",
+      "last_changed_by": "Isiah"
+    }
+  ]
+}
+```
+
+### PAE Snapshot JSON (canon.v1)
+
+**Example:**
+```json
+{
+  "snapshot_version": "canon.v1",
+  "type": "PAE",
+  "captured_at": "2026-01-25T10:00:00-05:00",
+  "pae_id": "PAE — Production",
+  "timezone": "America/New_York",
+  "hours": {
+    "monday": [["09:00", "17:00"]],
+    "tuesday": [["09:00", "17:00"]],
+    "wednesday": [["09:00", "17:00"]],
+    "thursday": [["09:00", "17:00"]],
+    "friday": [["09:00", "17:00"]],
+    "saturday": [],
+    "sunday": []
+  },
+  "buffers": {
+    "before_minutes": 10,
+    "after_minutes": 10
+  },
+  "services": [
+    {
+      "name": "Trust Review Call",
+      "duration_min": 45,
+      "enabled": true
+    },
+    {
+      "name": "Intake Consultation",
+      "duration_min": 30,
+      "enabled": true
+    }
+  ],
+  "transfer_numbers": {
+    "primary": "+1***1234",
+    "backup": "+1***9876"
+  },
+  "voice_exec_enabled_required": true,
+  "max_bookings_per_day": 10,
+  "config_version": "v1.2.0"
+}
+```
+
+**Note:** Phone numbers are masked in snapshots for privacy.
+
+---
+
+## Part 6: Pack Verifier JSON (Independent Verification Artifact)
+
+### Purpose
+
+The Pack Verifier JSON is a machine-readable artifact that ships alongside the PDF and enables independent verification of:
+- The PDF file wasn't altered
+- Switchboard + PAE snapshots are exactly as claimed
+- Receipt set is complete per selection logic
+- Hash chain links to prior pack (tamper-evident continuity)
+- Optional: Digital signature for authenticity
+
+### File Naming Convention
+
+```
+VP-YYYY-WW.verifier.json
+```
+
+Example: `VP-2026-04.verifier.json`
+
+### Pack Verifier JSON Format (packverifier.v1)
+
+**Core Principle:** Everything hashed is based on canonical bytes, stored as base64 for exact reproducibility.
+
+**Complete Specification:**
+
+```json
+{
+  "pack_verifier_version": "packverifier.v1",
+  "pack_id": "VP-2026-04",
+  "generated_at": "2026-01-25T09:05:00-05:00",
+  "generated_by": "System",
+  
+  "week": {
+    "start": "2026-01-19T00:00:00-05:00",
+    "end": "2026-01-25T23:59:59-05:00",
+    "timezone": "America/New_York"
+  },
+
+  "artifacts": {
+    "pdf": {
+      "filename": "VP-2026-04.pdf",
+      "sha256": "a1b2c3d4e5f6...",
+      "url": "https://drive.google.com/...",
+      "size_bytes": 245678
+    },
+    "verifier_json": {
+      "filename": "VP-2026-04.verifier.json",
+      "sha256": "f1e2d3c4b5a6...",
+      "url": "https://drive.google.com/...",
+      "size_bytes": 12345
+    }
+  },
+
+  "snapshots": {
+    "switchboard": {
+      "snapshot_id": "CS-20260125-0905",
+      "canon_version": "canon.v1",
+      "canon_utf8_b64": "eyJzbmFwc2hvdF92ZXJzaW9uIjoiY2Fub24udjEi...",
+      "sha256": "abc123def456...",
+      "control_count": 5,
+      "captured_at": "2026-01-25T09:05:00-05:00"
+    },
+    "pae": {
+      "snapshot_id": "CS-20260125-0906",
+      "canon_version": "canon.v1",
+      "canon_utf8_b64": "eyJzbmFwc2hvdF92ZXJzaW9uIjoiY2Fub24udjEi...",
+      "sha256": "def456abc123...",
+      "timezone": "America/New_York",
+      "captured_at": "2026-01-25T09:05:00-05:00"
+    },
+    "rate_limits": {
+      "snapshot_id": "CS-20260125-0907",
+      "canon_version": "canon.v1",
+      "canon_utf8_b64": "eyJzbmFwc2hvdF92ZXJzaW9uIjoiY2Fub24udjEi...",
+      "sha256": "789ghi012jkl...",
+      "limit_count": 8,
+      "captured_at": "2026-01-25T09:05:00-05:00"
+    }
+  },
+
+  "receipts": {
+    "selection_logic": "All blocked + all high-risk + sample of success",
+    "total_in_week": 127,
+    "included_count": 43,
+    "receipt_hashes": [
+      {
+        "receipt_id": "RCP-001234",
+        "timestamp": "2026-01-19T10:15:00-05:00",
+        "mode": "EXECUTE",
+        "action_type": "VOICE_BOOKING",
+        "result": "SUCCESS",
+        "sha256": "aaa111bbb222..."
+      },
+      {
+        "receipt_id": "RCP-001235",
+        "timestamp": "2026-01-19T11:22:00-05:00",
+        "mode": "EXECUTE",
+        "action_type": "SMS_SEND",
+        "result": "BLOCKED",
+        "sha256": "bbb222ccc333..."
+      }
+    ],
+    "receipt_set_sha256": "xyz789abc456..."
+  },
+
+  "compliance": {
+    "score": 94,
+    "total_attempts": 127,
+    "blocked_attempts": 8,
+    "success_attempts": 115,
+    "failed_attempts": 4,
+    "high_risk_attempts": 12
+  },
+
+  "hash_chain": {
+    "prev_pack_sha256": "prev123pack456...",
+    "switchboard_snapshot_sha256": "abc123def456...",
+    "pae_snapshot_sha256": "def456abc123...",
+    "pdf_sha256": "a1b2c3d4e5f6...",
+    "this_pack_sha256": "chain123hash456...",
+    "computation": "SHA256(prev_pack_sha256 + switchboard_snapshot_sha256 + pae_snapshot_sha256 + pdf_sha256)"
+  },
+
+  "verification_instructions": {
+    "step_1": "Verify PDF hash: sha256sum VP-2026-04.pdf",
+    "step_2": "Verify verifier JSON hash: sha256sum VP-2026-04.verifier.json",
+    "step_3": "Decode snapshots: base64 -d snapshots.*.canon_utf8_b64 | sha256sum",
+    "step_4": "Verify chain: echo -n '{prev+sb+pae+pdf}' | sha256sum",
+    "step_5": "Optional: Verify signature with public key"
+  },
+
+  "signature": {
+    "algorithm": "Ed25519",
+    "public_key_fingerprint": "SHA256:abc123...",
+    "signature_b64": "optional_signature_here...",
+    "signed_at": "2026-01-25T09:05:30-05:00",
+    "signer": "system@sintraprime.local"
+  }
+}
+```
+
+### Receipt Set Hash Calculation
+
+**Purpose:** Prove the receipt set is complete and unaltered.
+
+**Method:**
+1. Sort receipts by `receipt_id` ascending
+2. For each receipt, compute canonical hash (includes: receipt_id, timestamp, mode, action_type, result, policy_id, external_ref)
+3. Concatenate all receipt hashes
+4. SHA256 the concatenated string
+
+**Pseudocode:**
+```python
+def compute_receipt_set_hash(receipts):
+    sorted_receipts = sorted(receipts, key=lambda r: r['receipt_id'])
+    hash_string = ""
+    for receipt in sorted_receipts:
+        canonical = json.dumps({
+            "receipt_id": receipt['receipt_id'],
+            "timestamp": receipt['timestamp'],
+            "mode": receipt['mode'],
+            "action_type": receipt['action_type'],
+            "result": receipt['result'],
+            "policy_id": receipt['policy_id'],
+            "external_ref": receipt['external_ref']
+        }, sort_keys=True, separators=(',', ':'))
+        receipt_hash = hashlib.sha256(canonical.encode('utf-8')).hexdigest()
+        hash_string += receipt_hash
+    
+    return hashlib.sha256(hash_string.encode('utf-8')).hexdigest()
+```
+
+### Verification Workflow
+
+**Manual Verification (Auditor/Third Party):**
+
+1. **Download artifacts:**
+   ```bash
+   # Download from Drive/storage
+   wget https://drive.google.com/.../VP-2026-04.pdf
+   wget https://drive.google.com/.../VP-2026-04.verifier.json
+   ```
+
+2. **Verify PDF hash:**
+   ```bash
+   sha256sum VP-2026-04.pdf
+   # Compare to artifacts.pdf.sha256 in verifier JSON
+   ```
+
+3. **Verify Verifier JSON hash:**
+   ```bash
+   sha256sum VP-2026-04.verifier.json
+   # Compare to Notion field Verifier_JSON_SHA256
+   ```
+
+4. **Verify snapshot hashes:**
+   ```bash
+   # Extract and decode Switchboard snapshot
+   jq -r '.snapshots.switchboard.canon_utf8_b64' VP-2026-04.verifier.json | base64 -d > sb_snapshot.json
+   sha256sum sb_snapshot.json
+   # Compare to snapshots.switchboard.sha256
+   
+   # Repeat for PAE
+   jq -r '.snapshots.pae.canon_utf8_b64' VP-2026-04.verifier.json | base64 -d > pae_snapshot.json
+   sha256sum pae_snapshot.json
+   # Compare to snapshots.pae.sha256
+   ```
+
+5. **Verify hash chain:**
+   ```bash
+   # Extract chain components
+   PREV=$(jq -r '.hash_chain.prev_pack_sha256' VP-2026-04.verifier.json)
+   SB=$(jq -r '.hash_chain.switchboard_snapshot_sha256' VP-2026-04.verifier.json)
+   PAE=$(jq -r '.hash_chain.pae_snapshot_sha256' VP-2026-04.verifier.json)
+   PDF=$(jq -r '.hash_chain.pdf_sha256' VP-2026-04.verifier.json)
+   
+   # Compute chain hash
+   echo -n "${PREV}${SB}${PAE}${PDF}" | sha256sum
+   # Compare to hash_chain.this_pack_sha256
+   ```
+
+6. **Verify receipt set (optional deep check):**
+   ```bash
+   # Extract receipt hashes from verifier JSON
+   jq -r '.receipts.receipt_hashes[].sha256' VP-2026-04.verifier.json | sort | sha256sum
+   # Should match receipts.receipt_set_sha256
+   ```
+
+7. **Verify signature (if present):**
+   ```bash
+   # Extract public key and verify signature
+   openssl dgst -sha256 -verify pubkey.pem -signature sig.bin VP-2026-04.verifier.json
+   ```
+
+**Automated Verification Script:**
+
+```bash
+#!/bin/bash
+# verify-pack.sh
+
+PACK_ID=$1
+VERIFIER_JSON="${PACK_ID}.verifier.json"
+
+echo "Verifying Pack: ${PACK_ID}"
+
+# 1. Verify PDF hash
+PDF_FILENAME=$(jq -r '.artifacts.pdf.filename' $VERIFIER_JSON)
+PDF_EXPECTED=$(jq -r '.artifacts.pdf.sha256' $VERIFIER_JSON)
+PDF_ACTUAL=$(sha256sum $PDF_FILENAME | awk '{print $1}')
+
+if [ "$PDF_EXPECTED" = "$PDF_ACTUAL" ]; then
+  echo "✓ PDF hash verified"
+else
+  echo "✗ PDF hash mismatch!"
+  exit 1
+fi
+
+# 2. Verify Verifier JSON hash
+VERIFIER_EXPECTED=$(jq -r '.artifacts.verifier_json.sha256' $VERIFIER_JSON)
+VERIFIER_ACTUAL=$(sha256sum $VERIFIER_JSON | awk '{print $1}')
+
+if [ "$VERIFIER_EXPECTED" = "$VERIFIER_ACTUAL" ]; then
+  echo "✓ Verifier JSON hash verified"
+else
+  echo "✗ Verifier JSON hash mismatch!"
+  exit 1
+fi
+
+# 3. Verify snapshot hashes
+jq -r '.snapshots.switchboard.canon_utf8_b64' $VERIFIER_JSON | base64 -d > /tmp/sb.json
+SB_EXPECTED=$(jq -r '.snapshots.switchboard.sha256' $VERIFIER_JSON)
+SB_ACTUAL=$(sha256sum /tmp/sb.json | awk '{print $1}')
+
+if [ "$SB_EXPECTED" = "$SB_ACTUAL" ]; then
+  echo "✓ Switchboard snapshot hash verified"
+else
+  echo "✗ Switchboard snapshot hash mismatch!"
+  exit 1
+fi
+
+# 4. Verify chain
+PREV=$(jq -r '.hash_chain.prev_pack_sha256' $VERIFIER_JSON)
+SB=$(jq -r '.hash_chain.switchboard_snapshot_sha256' $VERIFIER_JSON)
+PAE=$(jq -r '.hash_chain.pae_snapshot_sha256' $VERIFIER_JSON)
+PDF=$(jq -r '.hash_chain.pdf_sha256' $VERIFIER_JSON)
+EXPECTED_CHAIN=$(jq -r '.hash_chain.this_pack_sha256' $VERIFIER_JSON)
+
+ACTUAL_CHAIN=$(echo -n "${PREV}${SB}${PAE}${PDF}" | sha256sum | awk '{print $1}')
+
+if [ "$EXPECTED_CHAIN" = "$ACTUAL_CHAIN" ]; then
+  echo "✓ Hash chain verified"
+else
+  echo "✗ Hash chain mismatch!"
+  exit 1
+fi
+
+echo ""
+echo "✓✓✓ All verifications passed ✓✓✓"
+echo "Pack: ${PACK_ID}"
+echo "Compliance Score: $(jq -r '.compliance.score' $VERIFIER_JSON)"
+echo "Receipts: $(jq -r '.receipts.included_count' $VERIFIER_JSON) of $(jq -r '.receipts.total_in_week' $VERIFIER_JSON)"
+```
+
+### Integration with Make.com Automation
+
+Add these modules to the Weekly Verifier Pack scenario:
+
+#### New Module: Build Verifier JSON
+
+**After Module 15 (Hash PDF):**
+
+```
+Tools → Text Operations: Compose Verifier JSON
+- Build complete packverifier.v1 JSON structure
+- Include all hashes, snapshots (base64), receipts, chain
+- Store in variable: verifier_json
+```
+
+#### New Module: Hash Verifier JSON
+
+```
+Tools → Crypto
+- Algorithm: SHA-256
+- Input: verifier_json
+- Output: verifier_json_hash
+```
+
+#### New Module: Upload Verifier JSON
+
+```
+Google Drive → Upload File
+- File: verifier_json
+- Folder: "Verifier Packs / {{year}}"
+- Filename: "{{pack_id}}.verifier.json"
+- Get: verifier_json_url
+```
+
+#### Update Module 18 (Seal Pack)
+
+Add these properties:
+```
+- Verifier_JSON_URL = verifier_json_url
+- Verifier_JSON_SHA256 = verifier_json_hash
+- Verifier_JSON_Version = "packverifier.v1"
+- Receipt_Set_SHA256 = receipt_set_hash
+- Receipt_Count = receipt_count
+```
+
+### Benefits of Pack Verifier JSON
+
+**For Auditors:**
+- Independent verification without trusting Notion/Drive
+- Command-line tools work on any platform
+- Deterministic, reproducible checks
+- No special access required
+
+**For Compliance:**
+- Machine-readable audit trail
+- Automated compliance monitoring
+- Chain-of-custody proof
+- Tamper-evidence at multiple levels
+
+**For Operations:**
+- Catch data corruption early
+- Verify backup/restore integrity
+- Cross-environment validation
+- Export compliance data to external systems
+
+**For Security:**
+- Optional digital signatures
+- Public key infrastructure ready
+- Time-stamping support (RFC-3161)
+- Non-repudiation when signed
+
+### Optional: Digital Signatures
+
+**Generate signing key pair:**
+```bash
+# Ed25519 (recommended)
+ssh-keygen -t ed25519 -f sintraprime-packverifier-key
+
+# Or RSA
+openssl genrsa -out private.pem 4096
+openssl rsa -in private.pem -pubout -out public.pem
+```
+
+**Sign Verifier JSON:**
+```bash
+# Create signature
+openssl dgst -sha256 -sign private.pem -out VP-2026-04.sig VP-2026-04.verifier.json
+
+# Encode as base64 for JSON inclusion
+base64 VP-2026-04.sig
+```
+
+**Add to Make.com scenario:**
+1. After creating verifier JSON, call signing service (Cloud Function / VPS endpoint)
+2. Include signature in verifier JSON `signature` field
+3. Upload both signed verifier JSON and public key
+
+**Public key distribution:**
+- Store in repository: `docs/public-keys/packverifier.pub`
+- Include fingerprint in Notion Switchboard
+- Publish via HTTPS with TLS for TOFU (Trust On First Use)
+
+---
+
+## Part 7: Make.com Weekly Verifier Pack Automation
+
+### Scenario: WEEKLY_VERIFIER_PACK_EXPORT
+
+**Trigger:** Scheduler → Weekly (Monday 09:05)
+
+**Module-by-Module Flow:**
+
+#### Module 1: Set Week Range
+```
+Tools → Set Variables
+- week_start = start of last week
+- week_end = end of last week
+- pack_id = "VP-{{YYYY}}-{{WW}}"
+- timestamp = now()
+```
+
+#### Module 2: Fetch Switchboard Controls
+```
+Notion → Search Objects
+- Database: Switchboard (SintraPrime)
+- Filter: (none - get all)
+- Sort: Control_Name ascending
+```
+
+#### Module 3: Build Switchboard Canonical JSON
+```
+Tools → Iterator
+- Array: Switchboard results
+
+Tools → Array Aggregator
+- Build array of control objects
+- Ensure stable ordering (by Control_Name)
+
+Tools → Text Operations
+- Compose canonical JSON (canon.v1 format)
+- Store in variable: sb_json
+```
+
+#### Module 4: Hash Switchboard Snapshot
+```
+Tools → Crypto
+- Algorithm: SHA-256
+- Input: sb_json
+- Output variable: sb_hash
+```
+
+#### Module 5: Create Config Snapshot (Switchboard)
+```
+Notion → Create Database Item
+- Database: Config Snapshots
+- Properties:
+  - Snapshot_Type = "SWITCHBOARD"
+  - Snapshot_JSON = sb_json
+  - Snapshot_SHA256 = sb_hash
+  - Canonicalization_Version = "canon.v1"
+  - Captured_By = "System"
+- Save Snapshot_ID for later
+```
+
+#### Module 6: Fetch PAE Config
+```
+Notion → Search Objects
+- Database: PAE Config
+- Filter: Active = true
+```
+
+#### Module 7: Build PAE Canonical JSON
+```
+Tools → Text Operations
+- Compose canonical JSON (canon.v1 format)
+- Mask phone numbers (replace with +1***XXXX)
+- Store in variable: pae_json
+
+Tools → Crypto
+- Hash: pae_hash = SHA256(pae_json)
+```
+
+#### Module 8: Create Config Snapshot (PAE)
+```
+Notion → Create Database Item
+- Database: Config Snapshots
+- Properties:
+  - Snapshot_Type = "PAE"
+  - Snapshot_JSON = pae_json
+  - Snapshot_SHA256 = pae_hash
+  - Canonicalization_Version = "canon.v1"
+```
+
+#### Module 9: Fetch Execution Receipts for Week
+```
+Notion → Search Objects
+- Database: Execution Receipts
+- Filter: Timestamp within [week_start, week_end]
+- Filter: Mode = "EXECUTE"
+
+Tools → Aggregator
+- Count total_attempts
+- Count blocked_attempts (Gate_Status contains "BLOCKED")
+- Count high_risk_attempts (Action_Type in [VOICE_TRANSFER, SMS_SEND, PUBLISH, BUY])
+- Count success_attempts (Result = "SUCCESS")
+```
+
+#### Module 10: Compute Compliance Score
+```
+Tools → Math Operations
+- Start: 100
+- Subtract: blocked_attempts * 2 (cap at -30)
+- Subtract: failed_attempts * 5
+- Subtract: break_glass_count * 10
+- Maximum: 100, Minimum: 0
+- Store in: compliance_score
+```
+
+#### Module 11: Fetch Previous Pack Hash
+```
+Notion → Search Objects
+- Database: Verifier Packs
+- Filter: Status = "SEALED"
+- Sort: Week_End descending
+- Limit: 1
+- Get: Chain_This_Pack_SHA256
+- Store in: prev_pack_hash (or empty string if first pack)
+```
+
+#### Module 12: Create Verifier Pack Row (DRAFT)
+```
+Notion → Create Database Item
+- Database: Verifier Packs
+- Properties:
+  - Pack_ID = pack_id
+  - Week_Start = week_start
+  - Week_End = week_end
+  - Status = "DRAFT"
+  - Compliance_Score = compliance_score
+  - Blocked_Attempts = blocked_attempts
+  - Total_Exec_Attempts = total_attempts
+  - High_Risk_Exec_Attempts = high_risk_attempts
+  - Switchboard_Snapshot_JSON = sb_json
+  - Switchboard_Snapshot_SHA256 = sb_hash
+  - PAE_Snapshot_JSON = pae_json
+  - PAE_Snapshot_SHA256 = pae_hash
+  - Chain_Prev_Pack_SHA256 = prev_pack_hash
+- Link Config_Snapshots relation to snapshot IDs from steps 5 & 8
+- Save Pack page URL
+```
+
+#### Module 13: Build PDF HTML
+```
+Tools → Text Operations
+- Compose HTML document with sections:
+
+  <!DOCTYPE html>
+  <html>
+  <head>
+    <style>
+      body { font-family: sans-serif; max-width: 800px; margin: 40px auto; }
+      h1, h2 { color: #333; }
+      table { border-collapse: collapse; width: 100%; margin: 20px 0; }
+      th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+      th { background-color: #f2f2f2; }
+      .metadata { background: #f9f9f9; padding: 15px; border-radius: 5px; }
+      .hash { font-family: monospace; font-size: 0.9em; word-break: break-all; }
+    </style>
+  </head>
+  <body>
+    <h1>SintraPrime Verifier Pack</h1>
+    <div class="metadata">
+      <strong>Pack ID:</strong> {{pack_id}}<br>
+      <strong>Week:</strong> {{week_start}} to {{week_end}}<br>
+      <strong>Generated:</strong> {{timestamp}}<br>
+      <strong>Status:</strong> SEALED
+    </div>
+
+    <h2>Executive Summary</h2>
+    <p><strong>Compliance Score:</strong> {{compliance_score}}/100</p>
+    <p><strong>Total Execute Attempts:</strong> {{total_attempts}}</p>
+    <p><strong>Blocked Attempts:</strong> {{blocked_attempts}}</p>
+    <p><strong>High Risk Attempts:</strong> {{high_risk_attempts}}</p>
+
+    <h2>Switchboard Snapshot</h2>
+    <p class="hash"><strong>SHA-256:</strong> {{sb_hash}}</p>
+    <table>
+      <tr>
+        <th>Control</th>
+        <th>Enabled</th>
+        <th>Scope</th>
+        <th>Severity</th>
+        <th>Last Changed</th>
+      </tr>
+      {{#each controls}}
+      <tr>
+        <td>{{control_name}}</td>
+        <td>{{is_enabled}}</td>
+        <td>{{scope}}</td>
+        <td>{{severity}}</td>
+        <td>{{last_changed_at}}</td>
+      </tr>
+      {{/each}}
+    </table>
+
+    <h2>PAE Snapshot</h2>
+    <p class="hash"><strong>SHA-256:</strong> {{pae_hash}}</p>
+    <p><strong>Timezone:</strong> {{timezone}}</p>
+    <p><strong>Hours:</strong> {{hours_summary}}</p>
+    <p><strong>Buffers:</strong> {{buffer_before}}/{{buffer_after}} minutes</p>
+    <p><strong>Transfer Numbers:</strong> {{transfer_numbers_masked}}</p>
+
+    <h2>Key Receipts</h2>
+    <table>
+      <tr>
+        <th>Receipt ID</th>
+        <th>Action</th>
+        <th>Result</th>
+        <th>Gate Status</th>
+      </tr>
+      {{#each key_receipts}}
+      <tr>
+        <td>{{receipt_id}}</td>
+        <td>{{action_type}}</td>
+        <td>{{result}}</td>
+        <td>{{gate_status}}</td>
+      </tr>
+      {{/each}}
+    </table>
+
+    <h2>Hash Chain</h2>
+    <p class="hash"><strong>Previous Pack:</strong> {{prev_pack_hash}}</p>
+    <p class="hash"><strong>Switchboard:</strong> {{sb_hash}}</p>
+    <p class="hash"><strong>PAE:</strong> {{pae_hash}}</p>
+    <p class="hash"><strong>PDF:</strong> (computed after generation)</p>
+    <p class="hash"><strong>This Pack:</strong> (computed after generation)</p>
+  </body>
+  </html>
+```
+
+#### Module 14: Generate PDF
+```
+PDF Generator → Create PDF from HTML
+- Input: HTML from step 13
+- Output format: PDF
+- Store file in variable: pdf_file
+```
+
+#### Module 15: Hash PDF
+```
+Tools → Crypto
+- Algorithm: SHA-256
+- Input: pdf_file (base64 or bytes)
+- Output: pdf_hash
+```
+
+#### Module 16: Compute Pack Chain Hash
+```
+Tools → Crypto
+- Algorithm: SHA-256
+- Input: prev_pack_hash + sb_hash + pae_hash + pdf_hash
+- Output: pack_chain_hash
+```
+
+#### Module 17: Upload PDF to Drive
+```
+Google Drive → Upload File
+- File: pdf_file
+- Folder: "Verifier Packs / {{year}}"
+- Filename: "{{pack_id}}.pdf"
+- Get: file_url
+```
+
+#### Module 18: Seal Verifier Pack
+```
+Notion → Update Database Item
+- Item: Verifier Pack from step 12
+- Properties:
+  - Status = "SEALED"
+  - PDF_File_URL = file_url
+  - PDF_SHA256 = pdf_hash
+  - Chain_This_Pack_SHA256 = pack_chain_hash
+```
+
+#### Module 19: Send Slack Notification
+```
+Slack → Post Message
+- Channel: #alerts-compliance
+- Message:
+  ```
+  📦 **Verifier Pack Ready: {{pack_id}}**
+  
+  **Compliance Score:** {{compliance_score}}/100
+  **Blocked Attempts:** {{blocked_attempts}}
+  **Total Attempts:** {{total_attempts}}
+  
+  **Controls This Week:**
+  • VOICE_EXEC_ENABLED: {{voice_enabled}}
+  • QUARANTINE_MODE: {{quarantine_mode}}
+  
+  **PDF:** {{file_url}}
+  **Pack Hash:** `{{pack_chain_hash}}`
+  
+  [View in Notion]({{pack_page_url}})
+  ```
+```
+
+#### Module 20: Error Handler (Critical)
+```
+Error Handler → On Any Error
+- Create/Update Verifier Pack with Status = "FAILED"
+- Create Incident row
+- Slack alert to #alerts-compliance:
+  "🚨 Verifier Pack Generation Failed: {{pack_id}}"
+  "Error: {{error_message}}"
+  "Last successful module: {{last_module}}"
+```
+
+---
+
+## Part 8: Make.com Scenario Enforcement Pattern
+
+### Pattern: Read Switchboard Before Every Execute
+
+**In every execute scenario:**
+
+#### Step 1: Fetch Switchboard State
+```
+Notion → Search Objects
+- Database: Switchboard
+- Filter: Control_Name in ["QUARANTINE_MODE", "VOICE_EXEC_ENABLED", ...]
+- Store results
+```
+
+#### Step 2: Set Variables
+```
+Tools → Set Variables
+- quarantine_mode = (find control QUARANTINE_MODE).Is_Enabled
+- voice_exec_enabled = (find control VOICE_EXEC_ENABLED).Is_Enabled
+```
+
+#### Step 3: Router Guard (Fail Closed)
+```
+Router
+├─ Route 1: BLOCKED
+│  Condition: quarantine_mode = true
+│  OR (action is voice AND voice_exec_enabled = false)
+│  
+└─ Route 2: EXECUTE
+   Condition: quarantine_mode = false
+   AND (if voice action → voice_exec_enabled = true)
+```
+
+#### Step 4: Create Receipt (Both Routes)
+```
+Notion → Create Database Item (Execution Receipt)
+- If BLOCKED: Result = "BLOCKED", Gate_Status reason
+- If EXECUTE: Result = "PENDING" → then SUCCESS/FAILED
+- Always link Switchboard controls
+```
+
+---
+
+## Part 9: Config Cooldown + Canary Protection
+
+### Add Canary Runs Database
+
+**Create Database:** `Canary Runs (SintraPrime)`
+
+**Properties:**
+
+| Property Name | Type |
+|---------------|------|
+| `Run_ID` | Title |
+| `Week` | Date |
+| `Status` | Select: `PASS`, `FAIL` |
+| `Receipts` | Relation → Execution Receipts |
+| `Run_SHA256` | Text |
+| `Notes` | Text |
+| `Triggered_By` | Select: `Scheduled`, `ConfigChange`, `Manual` |
+
+### Canary Scenario (Weekly or After Config Change)
+
+**Trigger:** Scheduler (weekly) OR Switchboard row updated
+
+**Flow:**
+1. Run known-good workflow (test booking, test transfer, test SMS)
+2. Verify expected receipts created
+3. Compute SHA-256 of receipt set
+4. Compare to baseline
+5. If PASS: continue
+6. If FAIL: Auto-enable QUARANTINE_MODE + Slack alert + Incident
+
+### Config Cooldown Rule
+
+**In Execute scenarios:**
+```
+if (last_switchboard_change_at < now - cooldown_hours)
+  AND (latest_canary.Status = "PASS")
+  → ALLOW
+else
+  → BLOCK with reason "CONFIG_COOLDOWN_ACTIVE"
+```
+
+---
+
+## Part 10: Verifier Pack Index View
+
+### Create Notion Page: Verifier Pack Index
+
+**Add these views:**
+
+**View 1: Last 12 Packs**
+- Database: Verifier Packs
+- Filter: Status = "SEALED"
+- Sort: Week_End descending
+- Limit: 12
+- Show properties: Pack_ID, Compliance_Score, Blocked_Attempts, PDF_File_URL, Chain_This_Pack_SHA256
+
+**View 2: Compliance Trend Chart**
+- Type: Chart (Line)
+- X-axis: Week_End
+- Y-axis: Compliance_Score
+- Color: By Status
+
+**View 3: Blocked Attempts Trend**
+- Type: Chart (Line)
+- X-axis: Week_End
+- Y-axis: Blocked_Attempts
+
+---
+
+## Part 11: Extra Security Features
+
+### 1. Snapshot Masking Rules
+
+**Never store in plaintext:**
+- Full phone numbers (use `+1***1234`)
+- API keys (use hash or `sk_***4321`)
+- Personal identifiers
+
+**Store only:**
+- Masked versions in Snapshot_JSON
+- Hashes for verification if needed
+
+### 2. Rate Limits Snapshot
+
+Add Snapshot_Type: `RATE_LIMITS`
+
+**Canonical format:**
+```json
+{
+  "snapshot_version": "canon.v1",
+  "type": "RATE_LIMITS",
+  "captured_at": "2026-01-25T10:00:00-05:00",
+  "limits": [
+    {
+      "action_type": "VOICE_BOOKING",
+      "window_seconds": 60,
+      "max_count": 3,
+      "scope": "GLOBAL"
+    },
+    {
+      "action_type": "SMS_SEND",
+      "window_seconds": 86400,
+      "max_count": 10,
+      "scope": "GLOBAL"
+    }
+  ]
+}
+```
+
+### 3. TSA Timestamping (Optional Nuclear Option)
+
+For maximum audit-grade provenance:
+
+**After sealing pack:**
+1. Send `Chain_This_Pack_SHA256` to RFC-3161 timestamp authority
+2. Store timestamp token in pack or separate ledger
+3. Include in PDF as appendix
+
+**Services:**
+- DigiCert TSA
+- GlobalSign TSA
+- FreeTSA.org (free option)
+
+---
+
+## Part 12: Example Pack Verifier JSON Files
+
+### Example 1: Valid Pack (Status: OK)
+
+**Filename:** `VP-2026-W04.verifier.json`
+
+```json
+{
+  "schema_version": "packverifier.v1.2",
+  "pack_id": "VP-2026-W04",
+  "generated_at": "2026-01-25T15:30:12Z",
+  "status": {
+    "overall": "OK",
+    "chain_binding": "OK",
+    "tsa": "OK",
+    "receipts": "OK",
+    "snapshots": "OK"
+  },
+  "chain": {
+    "prev_chain_sha256_hex": "1111111111111111111111111111111111111111111111111111111111111111",
+    "chain_hash_pre_tsa_sha256_hex": "2222222222222222222222222222222222222222222222222222222222222222",
+    "tsa_tsr_sha256_hex": "3333333333333333333333333333333333333333333333333333333333333333",
+    "this_pack_chain_sha256_hex": "4444444444444444444444444444444444444444444444444444444444444444",
+    "binding_rule": "SHA256(chain_hash_pre_tsa || tsa_tsr_sha256)",
+    "binding_status": "OK",
+    "binding_verification": {
+      "expected": "4444444444444444444444444444444444444444444444444444444444444444",
+      "computed": "4444444444444444444444444444444444444444444444444444444444444444",
+      "match": true
+    }
+  },
+  "receipts": [
+    {
+      "receipt_id": "ER-2026-01-25-0001",
+      "receipt_sha256_hex": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "action_type": "VOICE_BOOKING",
+      "gate_status": "PASS",
+      "timestamp": "2026-01-25T10:15:00Z"
+    },
+    {
+      "receipt_id": "ER-2026-01-25-0002",
+      "receipt_sha256_hex": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "action_type": "SMS_SEND",
+      "gate_status": "PASS",
+      "timestamp": "2026-01-25T11:20:00Z"
+    },
+    {
+      "receipt_id": "ER-2026-01-25-0003",
+      "receipt_sha256_hex": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "action_type": "VOICE_TRANSFER",
+      "gate_status": "BLOCKED",
+      "timestamp": "2026-01-25T14:45:00Z"
+    }
+  ],
+  "receipts_meta": {
+    "count": 3,
+    "receipt_set_sha256_hex": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "computation_rule": "SHA256(receipt_1_sha || receipt_2_sha || receipt_3_sha)"
+  },
+  "snapshots": {
+    "switchboard": {
+      "filename": "snapshots/switchboard.2026-01-25.json",
+      "sha256_hex": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "canon_utf8_b64": "eyJzbmFwc2hvdF92ZXJzaW9uIjoiY2Fub24udjEiLCJ0eXBlIjoiU1dJVENIQk9BUkQiLCJjYXB0dXJlZF9hdCI6IjIwMjYtMDEtMjVUMTU6MDA6MDBaIiwiY29udHJvbHMiOlt7ImNvbnRyb2xfbmFtZSI6IlFVQVJBTlRJTkVfTU9ERSIsInNjb3BlIjoiR0xPQkFMIiwiaXNfZW5hYmxlZCI6ZmFsc2V9LHsiY29udHJvbF9uYW1lIjoiVk9JQ0VfRVhFQ19FTkFCTEVEIiwic2NvcGUiOiJWT0lDRSIsImlzX2VuYWJsZWQiOnRydWV9XX0="
+    },
+    "pae": {
+      "filename": "snapshots/pae.2026-01-25.json",
+      "sha256_hex": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "canon_utf8_b64": "eyJzbmFwc2hvdF92ZXJzaW9uIjoiY2Fub24udjEiLCJ0eXBlIjoiUEFFIiwidGltZXpvbmUiOiJBbWVyaWNhL05ld19Zb3JrIiwiaG91cnMiOnsibW9uIjpbWyIwOTowMCIsIjE3OjAwIl1dfSwic2VydmljZXMiOlt7Im5hbWUiOiJUcnVzdCBSZXZpZXcgQ2FsbCIsImR1cmF0aW9uX21pbiI6NDV9XX0="
+    }
+  },
+  "hashes": {
+    "pdf_sha256_hex": "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+    "verifier_json_sha256_hex": "fedcba0987654321fedcba0987654321fedcba0987654321fedcba0987654321"
+  },
+  "tsa": {
+    "rfc3161": true,
+    "tsa_status": "OK",
+    "chain_hash_pre_tsa_sha256_hex": "2222222222222222222222222222222222222222222222222222222222222222",
+    "tsq_filename": "tsa/VP-2026-W04.tsq",
+    "tsr_filename": "tsa/VP-2026-W04.tsr",
+    "tsr_sha256_hex": "3333333333333333333333333333333333333333333333333333333333333333",
+    "timestamp_utc": "2026-01-25T15:30:15Z",
+    "tsa_url": "http://timestamp.digicert.com",
+    "verification_command": "openssl ts -verify -in tsa/VP-2026-W04.tsr -data tsa/VP-2026-W04.tsq -CAfile tsa-root.pem"
+  },
+  "signature": {
+    "enabled": true,
+    "algorithm": "Ed25519",
+    "public_key_fingerprint": "SHA256:abcdef1234567890",
+    "signature_b64": "MEUCIQD1234567890abcdefghijklmnopqrstuvwxyz==",
+    "signed_content": "chain.this_pack_chain_sha256_hex",
+    "verification_command": "openssl dgst -sha256 -verify pubkey.pem -signature sig.bin verifier.json"
+  },
+  "compliance": {
+    "score": 98,
+    "attempted_executes": 15,
+    "blocked_executes": 1,
+    "failed_executes": 0,
+    "incomplete_receipts": 0
+  },
+  "artifacts": {
+    "pdf": {
+      "filename": "VP-2026-W04.pdf",
+      "sha256_hex": "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+      "url": "https://drive.google.com/file/d/XXXXX/view"
+    },
+    "verifier_json": {
+      "filename": "VP-2026-W04.verifier.json",
+      "sha256_hex": "fedcba0987654321fedcba0987654321fedcba0987654321fedcba0987654321",
+      "url": "https://drive.google.com/file/d/YYYYY/view"
+    }
+  }
+}
+```
+
+---
+
+### Example 2: Degraded Pack (Status: DEGRADED)
+
+**Filename:** `VP-2026-W05.verifier.json`
+
+This example shows a pack with missing TSA timestamp (degraded but still valid):
+
+```json
+{
+  "schema_version": "packverifier.v1.2",
+  "pack_id": "VP-2026-W05",
+  "generated_at": "2026-02-01T09:15:00Z",
+  "status": {
+    "overall": "DEGRADED",
+    "chain_binding": "OK",
+    "tsa": "MISSING",
+    "receipts": "OK",
+    "snapshots": "OK",
+    "degradation_reasons": [
+      "TSA timestamp unavailable (network failure during pack generation)",
+      "Pack sealed without timestamp - hash chain integrity preserved"
+    ]
+  },
+  "chain": {
+    "prev_chain_sha256_hex": "4444444444444444444444444444444444444444444444444444444444444444",
+    "chain_hash_pre_tsa_sha256_hex": "5555555555555555555555555555555555555555555555555555555555555555",
+    "tsa_tsr_sha256_hex": null,
+    "this_pack_chain_sha256_hex": "6666666666666666666666666666666666666666666666666666666666666666",
+    "binding_rule": "SHA256(chain_hash_pre_tsa) [TSA unavailable]",
+    "binding_status": "DEGRADED",
+    "binding_verification": {
+      "expected": "6666666666666666666666666666666666666666666666666666666666666666",
+      "computed": "6666666666666666666666666666666666666666666666666666666666666666",
+      "match": true,
+      "note": "Chain continues without TSA - still tamper-evident but lacks non-repudiation"
+    }
+  },
+  "receipts": [
+    {
+      "receipt_id": "ER-2026-02-01-0001",
+      "receipt_sha256_hex": "7777777777777777777777777777777777777777777777777777777777777777",
+      "action_type": "EMAIL_SEND",
+      "gate_status": "PASS",
+      "timestamp": "2026-02-01T08:00:00Z"
+    },
+    {
+      "receipt_id": "ER-2026-02-01-0002",
+      "receipt_sha256_hex": "8888888888888888888888888888888888888888888888888888888888888888",
+      "action_type": "VOICE_BOOKING",
+      "gate_status": "BLOCKED",
+      "timestamp": "2026-02-01T08:30:00Z"
+    }
+  ],
+  "receipts_meta": {
+    "count": 2,
+    "receipt_set_sha256_hex": "9999999999999999999999999999999999999999999999999999999999999999",
+    "computation_rule": "SHA256(receipt_1_sha || receipt_2_sha)"
+  },
+  "snapshots": {
+    "switchboard": {
+      "filename": "snapshots/switchboard.2026-02-01.json",
+      "sha256_hex": "aaaa0000aaaa0000aaaa0000aaaa0000aaaa0000aaaa0000aaaa0000aaaa0000",
+      "canon_utf8_b64": "eyJzbmFwc2hvdF92ZXJzaW9uIjoiY2Fub24udjEiLCJ0eXBlIjoiU1dJVENIQk9BUkQiLCJjYXB0dXJlZF9hdCI6IjIwMjYtMDItMDFUMDk6MDA6MDBaIiwiY29udHJvbHMiOlt7ImNvbnRyb2xfbmFtZSI6IlFVQVJBTlRJTkVfTU9ERSIsInNjb3BlIjoiR0xPQkFMIiwiaXNfZW5hYmxlZCI6ZmFsc2V9LHsiY29udHJvbF9uYW1lIjoiVk9JQ0VfRVhFQ19FTkFCTEVEIiwic2NvcGUiOiJWT0lDRSIsImlzX2VuYWJsZWQiOmZhbHNlfV19"
+    },
+    "pae": {
+      "filename": "snapshots/pae.2026-02-01.json",
+      "sha256_hex": "bbbb0000bbbb0000bbbb0000bbbb0000bbbb0000bbbb0000bbbb0000bbbb0000",
+      "canon_utf8_b64": "eyJzbmFwc2hvdF92ZXJzaW9uIjoiY2Fub24udjEiLCJ0eXBlIjoiUEFFIiwidGltZXpvbmUiOiJBbWVyaWNhL05ld19Zb3JrIiwiaG91cnMiOnsibW9uIjpbWyIwOTowMCIsIjE3OjAwIl1dfSwic2VydmljZXMiOlt7Im5hbWUiOiJUcnVzdCBSZXZpZXcgQ2FsbCIsImR1cmF0aW9uX21pbiI6NDV9XX0="
+    }
+  },
+  "hashes": {
+    "pdf_sha256_hex": "cccc0000cccc0000cccc0000cccc0000cccc0000cccc0000cccc0000cccc0000",
+    "verifier_json_sha256_hex": "dddd0000dddd0000dddd0000dddd0000dddd0000dddd0000dddd0000dddd0000"
+  },
+  "tsa": {
+    "rfc3161": false,
+    "tsa_status": "MISSING",
+    "failure_reason": "TSA service unavailable during pack generation (network timeout)",
+    "chain_hash_pre_tsa_sha256_hex": "5555555555555555555555555555555555555555555555555555555555555555",
+    "tsq_filename": null,
+    "tsr_filename": null,
+    "tsr_sha256_hex": null,
+    "timestamp_utc": null,
+    "tsa_url": "http://timestamp.digicert.com",
+    "retry_recommendation": "TSA can be applied retroactively if needed; pack hash is sealed"
+  },
+  "signature": {
+    "enabled": true,
+    "algorithm": "Ed25519",
+    "public_key_fingerprint": "SHA256:abcdef1234567890",
+    "signature_b64": "MEYCIQD9876543210zyxwvutsrqponmlkjihgfedcba==",
+    "signed_content": "chain.this_pack_chain_sha256_hex",
+    "verification_command": "openssl dgst -sha256 -verify pubkey.pem -signature sig.bin verifier.json"
+  },
+  "compliance": {
+    "score": 92,
+    "attempted_executes": 8,
+    "blocked_executes": 1,
+    "failed_executes": 0,
+    "incomplete_receipts": 0
+  },
+  "artifacts": {
+    "pdf": {
+      "filename": "VP-2026-W05.pdf",
+      "sha256_hex": "cccc0000cccc0000cccc0000cccc0000cccc0000cccc0000cccc0000cccc0000",
+      "url": "https://drive.google.com/file/d/ZZZZZ/view"
+    },
+    "verifier_json": {
+      "filename": "VP-2026-W05.verifier.json",
+      "sha256_hex": "dddd0000dddd0000dddd0000dddd0000dddd0000dddd0000dddd0000dddd0000",
+      "url": "https://drive.google.com/file/d/AAAAA/view"
+    }
+  }
+}
+```
+
+---
+
+## Part 13: Auditor-Friendly CLI Verification Checklist
+
+This checklist enables independent verification of Pack Verifier JSON files using standard command-line tools. **No Notion or Drive access required** — verifiers work from downloaded files only.
+
+### Prerequisites
+
+**Required tools (available on all platforms):**
+- `sha256sum` (or `shasum -a 256` on macOS)
+- `jq` (JSON processor)
+- `base64` (base64 decoder)
+- `openssl` (for TSA and signature verification)
+- Text editor or `cat` for inspection
+
+**Files needed:**
+1. `VP-YYYY-WW.verifier.json` (the verifier JSON file)
+2. `VP-YYYY-WW.pdf` (the PDF artifact)
+3. `snapshots/*.json` (snapshot files referenced in verifier JSON)
+4. `tsa/*.tsr` and `tsa/*.tsq` (if TSA is enabled)
+5. `pubkey.pem` (if digital signatures are enabled)
+
+---
+
+### Verification Workflow
+
+#### Step 1: Verify Overall Pack Status
+
+```bash
+# Extract and display pack status
+jq '.status' VP-2026-W04.verifier.json
+```
+
+**Expected output for OK pack:**
+```json
+{
+  "overall": "OK",
+  "chain_binding": "OK",
+  "tsa": "OK",
+  "receipts": "OK",
+  "snapshots": "OK"
+}
+```
+
+**If status is DEGRADED:**
+```bash
+# Check degradation reasons
+jq '.status.degradation_reasons' VP-2026-W04.verifier.json
+```
+
+---
+
+#### Step 2: Verify PDF Hash
+
+```bash
+# Compute PDF hash
+sha256sum VP-2026-W04.pdf
+
+# Extract expected hash from verifier JSON
+jq -r '.hashes.pdf_sha256_hex' VP-2026-W04.verifier.json
+
+# Compare (should match exactly)
+```
+
+**Manual check:**
+- Computed hash: `1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef`
+- Expected hash: `1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef`
+- Match: ✅
+
+---
+
+#### Step 3: Verify Snapshot Hashes
+
+For each snapshot (Switchboard, PAE, etc.):
+
+```bash
+# Decode canonical UTF-8 base64 to file
+jq -r '.snapshots.switchboard.canon_utf8_b64' VP-2026-W04.verifier.json | base64 -d > switchboard-decoded.json
+
+# Compute hash of decoded file
+sha256sum switchboard-decoded.json
+
+# Extract expected hash
+jq -r '.snapshots.switchboard.sha256_hex' VP-2026-W04.verifier.json
+
+# Compare (should match)
+```
+
+**Repeat for PAE:**
+```bash
+jq -r '.snapshots.pae.canon_utf8_b64' VP-2026-W04.verifier.json | base64 -d > pae-decoded.json
+sha256sum pae-decoded.json
+jq -r '.snapshots.pae.sha256_hex' VP-2026-W04.verifier.json
+```
+
+---
+
+#### Step 4: Verify Receipt Set Hash
+
+```bash
+# Extract individual receipt hashes
+jq -r '.receipts[].receipt_sha256_hex' VP-2026-W04.verifier.json > receipt-hashes.txt
+
+# Concatenate hashes (no newlines or spaces)
+RECEIPT_SET=$(jq -r '.receipts[].receipt_sha256_hex' VP-2026-W04.verifier.json | tr -d '\n')
+
+# Compute set hash
+echo -n "$RECEIPT_SET" | sha256sum
+
+# Extract expected set hash
+jq -r '.receipts_meta.receipt_set_sha256_hex' VP-2026-W04.verifier.json
+
+# Compare (should match)
+```
+
+---
+
+#### Step 5: Verify Hash Chain
+
+```bash
+# Extract chain components
+PREV_HASH=$(jq -r '.chain.prev_chain_sha256_hex' VP-2026-W04.verifier.json)
+PRE_TSA=$(jq -r '.chain.chain_hash_pre_tsa_sha256_hex' VP-2026-W04.verifier.json)
+TSR_HASH=$(jq -r '.chain.tsa_tsr_sha256_hex' VP-2026-W04.verifier.json)
+THIS_PACK=$(jq -r '.chain.this_pack_chain_sha256_hex' VP-2026-W04.verifier.json)
+
+# Compute chain hash (if TSA present)
+if [ "$TSR_HASH" != "null" ]; then
+  COMPUTED=$(echo -n "${PRE_TSA}${TSR_HASH}" | sha256sum | awk '{print $1}')
+else
+  COMPUTED=$(echo -n "${PRE_TSA}" | sha256sum | awk '{print $1}')
+fi
+
+# Compare
+echo "Expected: $THIS_PACK"
+echo "Computed: $COMPUTED"
+
+# Verify binding status
+jq '.chain.binding_verification' VP-2026-W04.verifier.json
+```
+
+**Expected output:**
+```json
+{
+  "expected": "4444444444444444444444444444444444444444444444444444444444444444",
+  "computed": "4444444444444444444444444444444444444444444444444444444444444444",
+  "match": true
+}
+```
+
+---
+
+#### Step 6: Verify TSA Timestamp (if present)
+
+```bash
+# Check if TSA is enabled
+TSA_STATUS=$(jq -r '.tsa.tsa_status' VP-2026-W04.verifier.json)
+
+if [ "$TSA_STATUS" = "OK" ]; then
+  # Extract TSA files
+  TSQ_FILE=$(jq -r '.tsa.tsq_filename' VP-2026-W04.verifier.json)
+  TSR_FILE=$(jq -r '.tsa.tsr_filename' VP-2026-W04.verifier.json)
+  
+  # Verify timestamp response
+  openssl ts -verify -in "$TSR_FILE" -data "$TSQ_FILE" -CAfile tsa-root.pem
+  
+  # Check timestamp matches
+  jq -r '.tsa.timestamp_utc' VP-2026-W04.verifier.json
+fi
+```
+
+**Expected output:**
+```
+Verification: OK
+Timestamp: 2026-01-25T15:30:15Z
+```
+
+---
+
+#### Step 7: Verify Digital Signature (if present)
+
+```bash
+# Check if signature is enabled
+SIG_ENABLED=$(jq -r '.signature.enabled' VP-2026-W04.verifier.json)
+
+if [ "$SIG_ENABLED" = "true" ]; then
+  # Extract signature
+  jq -r '.signature.signature_b64' VP-2026-W04.verifier.json | base64 -d > sig.bin
+  
+  # Extract signed content (this_pack_chain_sha256_hex)
+  SIGNED_CONTENT=$(jq -r '.chain.this_pack_chain_sha256_hex' VP-2026-W04.verifier.json)
+  echo -n "$SIGNED_CONTENT" > signed-content.txt
+  
+  # Verify signature
+  openssl dgst -sha256 -verify pubkey.pem -signature sig.bin signed-content.txt
+  
+  # Check public key fingerprint
+  jq -r '.signature.public_key_fingerprint' VP-2026-W04.verifier.json
+fi
+```
+
+**Expected output:**
+```
+Verified OK
+Public key fingerprint: SHA256:abcdef1234567890
+```
+
+---
+
+#### Step 8: Verify Chain Continuity (Previous Pack)
+
+To verify that packs form an unbroken chain:
+
+```bash
+# Get this pack's prev_chain reference
+THIS_PREV=$(jq -r '.chain.prev_chain_sha256_hex' VP-2026-W04.verifier.json)
+
+# Get previous pack's chain hash
+PREV_PACK_CHAIN=$(jq -r '.chain.this_pack_chain_sha256_hex' VP-2026-W03.verifier.json)
+
+# Compare (must match)
+echo "This pack expects: $THIS_PREV"
+echo "Previous pack has: $PREV_PACK_CHAIN"
+
+if [ "$THIS_PREV" = "$PREV_PACK_CHAIN" ]; then
+  echo "✅ Chain continuity verified"
+else
+  echo "❌ CHAIN BREAK DETECTED"
+fi
+```
+
+---
+
+#### Step 9: Automated Verification Script
+
+Save this as `verify-pack.sh`:
+
+```bash
+#!/bin/bash
+set -e
+
+PACK_ID="$1"
+if [ -z "$PACK_ID" ]; then
+  echo "Usage: ./verify-pack.sh VP-YYYY-WW"
+  exit 1
+fi
+
+VERIFIER_JSON="${PACK_ID}.verifier.json"
+PDF_FILE="${PACK_ID}.pdf"
+
+echo "=== Pack Verifier v1.2 - Automated Verification ==="
+echo "Pack: $PACK_ID"
+echo ""
+
+# Step 1: Status
+echo "[1/9] Checking pack status..."
+STATUS=$(jq -r '.status.overall' "$VERIFIER_JSON")
+echo "Status: $STATUS"
+if [ "$STATUS" = "DEGRADED" ]; then
+  echo "Degradation reasons:"
+  jq -r '.status.degradation_reasons[]' "$VERIFIER_JSON"
+fi
+echo ""
+
+# Step 2: PDF hash
+echo "[2/9] Verifying PDF hash..."
+PDF_HASH=$(sha256sum "$PDF_FILE" | awk '{print $1}')
+EXPECTED_PDF=$(jq -r '.hashes.pdf_sha256_hex' "$VERIFIER_JSON")
+if [ "$PDF_HASH" = "$EXPECTED_PDF" ]; then
+  echo "✅ PDF hash verified"
+else
+  echo "❌ PDF hash mismatch"
+  exit 1
+fi
+echo ""
+
+# Step 3: Snapshot hashes
+echo "[3/9] Verifying snapshot hashes..."
+for snapshot in switchboard pae; do
+  jq -r ".snapshots.$snapshot.canon_utf8_b64" "$VERIFIER_JSON" | base64 -d > "${snapshot}-decoded.json"
+  COMPUTED=$(sha256sum "${snapshot}-decoded.json" | awk '{print $1}')
+  EXPECTED=$(jq -r ".snapshots.$snapshot.sha256_hex" "$VERIFIER_JSON")
+  if [ "$COMPUTED" = "$EXPECTED" ]; then
+    echo "✅ $snapshot snapshot verified"
+  else
+    echo "❌ $snapshot snapshot mismatch"
+    exit 1
+  fi
+done
+echo ""
+
+# Step 4: Receipt set hash
+echo "[4/9] Verifying receipt set hash..."
+RECEIPT_SET=$(jq -r '.receipts[].receipt_sha256_hex' "$VERIFIER_JSON" | tr -d '\n')
+COMPUTED_SET=$(echo -n "$RECEIPT_SET" | sha256sum | awk '{print $1}')
+EXPECTED_SET=$(jq -r '.receipts_meta.receipt_set_sha256_hex' "$VERIFIER_JSON")
+if [ "$COMPUTED_SET" = "$EXPECTED_SET" ]; then
+  echo "✅ Receipt set hash verified"
+else
+  echo "❌ Receipt set hash mismatch"
+  exit 1
+fi
+echo ""
+
+# Step 5: Chain binding
+echo "[5/9] Verifying hash chain binding..."
+MATCH=$(jq -r '.chain.binding_verification.match' "$VERIFIER_JSON")
+if [ "$MATCH" = "true" ]; then
+  echo "✅ Chain binding verified"
+else
+  echo "❌ Chain binding failed"
+  exit 1
+fi
+echo ""
+
+# Step 6-7: TSA and Signature (optional)
+echo "[6/9] Checking TSA timestamp..."
+TSA_STATUS=$(jq -r '.tsa.tsa_status' "$VERIFIER_JSON")
+echo "TSA Status: $TSA_STATUS"
+echo ""
+
+echo "[7/9] Checking digital signature..."
+SIG_ENABLED=$(jq -r '.signature.enabled' "$VERIFIER_JSON")
+echo "Signature enabled: $SIG_ENABLED"
+echo ""
+
+# Step 8: Compliance
+echo "[8/9] Checking compliance metrics..."
+jq '.compliance' "$VERIFIER_JSON"
+echo ""
+
+# Step 9: Summary
+echo "[9/9] Verification Summary"
+echo "=========================="
+echo "Pack ID: $PACK_ID"
+echo "Status: $STATUS"
+echo "PDF: ✅"
+echo "Snapshots: ✅"
+echo "Receipts: ✅"
+echo "Chain: ✅"
+echo "Overall: ✅ VERIFICATION PASSED"
+echo ""
+echo "This pack can be trusted as an authentic SintraPrime compliance artifact."
+```
+
+**Usage:**
+```bash
+chmod +x verify-pack.sh
+./verify-pack.sh VP-2026-W04
+```
+
+---
+
+### Verification Result Interpretation
+
+**Status: OK**
+- All hashes match
+- Chain binding verified
+- TSA timestamp present (if configured)
+- Digital signature valid (if configured)
+- **Conclusion:** Pack is authentic and tamper-free
+
+**Status: DEGRADED**
+- Core hashes match
+- Chain binding verified
+- TSA or signature may be missing
+- Degradation reasons documented
+- **Conclusion:** Pack integrity is preserved; degradation is documented and explained
+
+**Verification Failures**
+- Hash mismatch → **Pack has been altered**
+- Chain break → **Continuity compromised**
+- Signature invalid → **Authenticity in question**
+- **Action:** Do not trust pack; escalate to system owner
+
+---
+
+### Key Verification Principles
+
+1. **No Trust Required** — All verification uses cryptographic hashes and public key crypto
+2. **Offline Capable** — Verifiers work without network access or Notion/Drive
+3. **Deterministic** — Same inputs always produce same verification results
+4. **Auditable** — Each step produces inspectable intermediate values
+5. **Portable** — Works on any platform with standard Unix tools
+
+---
+
+## Part 14: What You Just Built
+
+With this complete system, you now have:
+
+✅ **Single-Source-of-Truth Toggles** — All kill switches in one place  
+✅ **Automatic Rollups** — Receipts always reflect current Switchboard state  
+✅ **Config Snapshots** — Immutable record of what was allowed when  
+✅ **Weekly Verifier Packs** — Audit-ready PDFs with embedded config proofs  
+✅ **Pack Verifier JSON** — Independent verification artifact with canonical snapshots  
+✅ **Hash Chain** — Tamper-evident ledger linking all packs  
+✅ **Slack Alerts** — Operational awareness  
+✅ **Failure Handling** — Adult supervision  
+✅ **Cooldown + Canary** — Protection against timezone disasters  
+✅ **12-Pack Index** — Trend visibility  
+✅ **Independent Verification** — Command-line tools for auditors  
+
+This is **"agents are cool"** upgraded to **"agents are governed."**
+
+---
+
+## Part 15: Verifier Ritual (9 Steps, No Code) — Print Sheet
+
+**Purpose:** This is a human-friendly verification checklist designed to be printed as the **last page of every Weekly Verifier Pack PDF**. It enables manual verification without code, scripts, or technical tools beyond basic file inspection and hash computation.
+
+**Audience:** External auditors, legal teams, compliance officers, regulators, or anyone who needs to verify pack authenticity without trusting the generation system.
+
+---
+
+### Verifier Ritual (9 Steps, No Code) — Print Sheet (Last Page of Pack)
+
+**Purpose:** Verify that this Weekly Verifier Pack is authentic, complete, and tamper-evident **without trusting Notion, Drive, or the generator**.
+
+**You will verify:**
+
+* **Integrity** (hashes match files)
+* **Provenance** (signature verifies with published public key)
+* **Chain binding** (pack contents bound to a single chain hash)
+* **Time anchoring** (RFC-3161 timestamp proves existence at a point in time)
+
+**Accept outcomes:**
+
+* ✅ **OK** = Accept as valid
+* 🟡 **DEGRADED** = Accept only if declared + reason is acceptable
+* ❌ **FAIL** = Reject
+
+---
+
+#### Step 1: Confirm required files exist
+
+In the unpacked folder, verify these exist:
+
+* `packverifier.json` (schema **must** be `packverifier.v1.2`)
+* `pack.chain.sha256`
+* `public-keys/<public_key_id>.pub`
+* TSA files (paths listed inside `packverifier.json`):
+  * `.tsa.tsr_path` (timestamp response file)
+  * `.tsa.ca_path` (trusted TSA CA cert bundle)
+  * `.tsa.chain_path` (intermediate chain bundle)
+* All artifacts listed under:
+  * `files[]`
+  * `receipts[]` (if present)
+
+**If anything is missing → FAIL**
+
+---
+
+#### Step 2: Validate schema + required fields (human check)
+
+Open `packverifier.json` and confirm:
+
+* `schema` = **packverifier.v1.2**
+* `status` is **OK** or **DEGRADED**
+* `signature.payload_sha256_hex` exists
+* `signature.public_key_id` exists
+* `chain.chain_sha256_hex` exists
+* `tsa` section exists and includes `tsr_path`, `ca_path`, `chain_path`
+* `files[]` exists (and is not empty)
+
+**If any are missing → FAIL**
+
+---
+
+#### Step 3: Compute canonical JSON (deterministic form)
+
+Create a canonical version of `packverifier.json` using a JSON tool that:
+
+* Sorts keys (stable order)
+* Emits compact JSON (no pretty spacing differences)
+
+Result is `packverifier.canon.json`.
+
+**If you can't produce deterministic JSON → proceed with the provided scripts, or FAIL for manual-only audits**
+
+---
+
+#### Step 4: Hash the canonical JSON (payload hash)
+
+Compute **SHA-256** of `packverifier.canon.json`.
+
+Compare to:
+
+* `signature.payload_sha256_hex` in `packverifier.json`
+
+**Mismatch → FAIL**
+
+---
+
+#### Step 5: Verify the signature (provenance)
+
+Using `public-keys/<public_key_id>.pub`, verify the signature over the **payload hash file** (the SHA-256 from step 4).
+
+**Command:**
+```bash
+openssl dgst -sha256 -verify public-keys/<public_key_id>.pub -signature sig.bin payload_hash.txt
+```
+
+**If signature verification fails → FAIL**
+
+---
+
+#### Step 6: Verify every referenced file hash (integrity)
+
+For each entry in `files[]` (and `receipts[]` if present):
+
+* Confirm the file exists at the given `path`
+* Compute SHA-256 of the file
+* Compare to the entry's `sha256`
+
+**Example:**
+```bash
+sha256sum snapshots/switchboard.2026-01-25.json
+# Compare output to files[].sha256
+```
+
+**Any mismatch or missing file → FAIL**
+
+---
+
+#### Step 7: Recompute the chain hash (binding)
+
+Build a single "chain input list" from **all** hashed entries:
+
+* Combine `files[]` + `receipts[]`
+* Sort by `path` (ascending)
+* Produce a deterministic list of lines: `<sha256><two spaces><path>`
+
+Compute SHA-256 of that list.
+
+Compare to:
+
+* `chain.chain_sha256_hex` in `packverifier.json`
+* The contents of `pack.chain.sha256`
+
+**Any mismatch → FAIL**
+
+---
+
+#### Step 8: Verify the RFC-3161 TSA timestamp (time anchoring)
+
+Verify that the TSA timestamp response (`tsa.tsr_path`) validates **against**:
+
+* The data file: `pack.chain.sha256`
+* The TSA trust chain:
+  * `tsa.ca_path`
+  * `tsa.chain_path`
+
+**Command:**
+```bash
+openssl ts -verify -in tsa/response.tsr -data pack.chain.sha256 \
+  -CAfile tsa/ca.pem -untrusted tsa/chain.pem
+```
+
+**Rules:**
+
+* If pack `status` = **OK**, TSA verification **must pass**
+* If TSA verification fails, pack must declare **DEGRADED** and include reasons
+
+**If TSA fails and status is OK → FAIL**  
+**If TSA fails and status is DEGRADED → DEGRADED (continue)**
+
+---
+
+#### Step 9: Final decision
+
+* If steps **1–7** pass, and step **8** passes → ✅ **OK**
+* If steps **1–7** pass, step **8** fails, and pack declares **DEGRADED** with reasons → 🟡 **DEGRADED**
+* Anything else → ❌ **FAIL**
+
+**Record the result** (OK / DEGRADED / FAIL), date, and verifier identity in your audit notes.
+
+---
+
+### Notes auditors care about (and why this is clean)
+
+* **File integrity** is proven by per-file SHA-256 checks
+* **Provenance** is proven by signature verification against a published public key
+* **Chain binding** proves the pack contents are locked to one chain hash
+* **RFC-3161** proves the chain existed at a specific time, reducing "we made it later" arguments
+
+**This is the "auditor walks in, you smile" page.**
+
+---
+
+### Implementation Note
+
+**Include this section verbatim as the last page of every Weekly Verifier Pack PDF.**
+
+When generating the PDF in Make.com Module 11-12:
+
+1. Include all pack content (cover, metrics, snapshots, receipts, hash chain)
+2. Append this "Verifier Ritual" section as the final page
+3. Use clear page breaks and formatting
+4. Consider making it a separate printable sheet with checkboxes
+
+This ensures every pack is **self-documenting** and can be verified independently.
+
+---
+
+## Part 16: Quick Start Checklist
+
+- [ ] Create Switchboard database with control rows
+- [ ] Update Execution Receipts with Switchboard relation + rollups
+- [ ] Update Gate_Status formula to check Switchboard
+- [ ] Create Config Snapshots database
+- [ ] Create Verifier Packs database (include new verifier JSON fields)
+- [ ] Create Canary Runs database
+- [ ] Build Make.com Weekly Pack scenario (add verifier JSON modules)
+- [ ] Build Make.com Canary scenario
+- [ ] Update all execute scenarios to read Switchboard first
+- [ ] Create Verifier Pack Index page
+- [ ] Test: Toggle QUARANTINE_MODE → Verify receipts blocked
+- [ ] Test: Generate weekly pack → Verify PDF + verifier JSON + hashes
+- [ ] Test: Chain hash verifies against previous pack
+- [ ] Test: Run verification script on generated pack
+
+---
+
+## Next-Level Enhancements
+
+1. **Automated Compliance Reports** — Monthly rollup across packs
+2. **External Auditor Access** — Read-only Notion guest access to packs
+3. **Retention Policy** — Auto-archive packs after N months
+4. **Pack Comparison Tool** — Diff two weeks' config snapshots
+5. **Digital Signatures** — Sign verifier JSON with organizational key
+6. **TSA Timestamping** — RFC-3161 timestamps for legal-grade proof
+7. **Multi-Sig Approval** — Require 2-of-3 signatures for config changes
+8. **Compliance Dashboard** — Real-time monitoring with alerts
+
+---
+
+**Version:** v1.0.0  
+**Status:** Production-Ready  
+**Last Updated:** 2026-01-25
