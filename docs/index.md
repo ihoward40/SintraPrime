@@ -37,3 +37,13 @@
 
 - **DeepThink — Spec → Implementation Map (v1)**  
   [`specs/deepthink.spec-to-implementation-map.v1.md`](./specs/deepthink.spec-to-implementation-map.v1.md)
+
+## External Tool Patterns & References
+
+- **ClawdBot Pattern Brief (v1)**  
+  [`external-notes/clawdbot-pattern-brief.v1.md`](./external-notes/clawdbot-pattern-brief.v1.md)  
+  Structured analysis of ClawdBot architecture patterns applicable to SintraPrime (messaging-first control, persistent memory, skills ecosystem, multi-agent isolation).
+
+- **ClawdBot Agent Policy Snippets (v1)**  
+  [`policy/clawdbot-agent-policy-snippets.v1.md`](./policy/clawdbot-agent-policy-snippets.v1.md)  
+  Governance policies for adopting ClawdBot-style agent patterns (environment isolation, least privilege, two-mode operations, execute consent, skill governance).
