@@ -37,5 +37,11 @@ releases/policy-appendix/watch-mode/v1.0.1/
 releases/policy-appendix/watch-mode/v1.0.0/SintraPrime_Policy_Appendix_Watch_Mode_with_Diagram.pdf
 releases/policy-appendix/watch-mode/v1.0.0/SintraPrime_Policy_Appendix_Watch_Mode_with_Diagram.pdf.sha256
 
+# Airlock server runtime files
+airlock_server/tmp/
+airlock_server/.env
+airlock_server/node_modules/
+airlock_server/package-lock.json
+
 # OS / tooling noise
 Thumbs.db
