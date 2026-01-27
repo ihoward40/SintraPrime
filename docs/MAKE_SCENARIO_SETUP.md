@@ -73,35 +73,29 @@ Plus HMAC headers:
 
 1. **Add** a "Tools → Set variable" module after webhook
 2. **Variable name**: `hmac_verified`
-3. **Variable value**: Use this formula:
+3. **Variable value**: Use this formula (adjust based on Make's HMAC function):
 
-```javascript
-{{if(
-  sha256(
-    get("AIRLOCK_SHARED_SECRET") + "." + get("x-airlock-timestamp") + "." + toString(webhook.body),
-    "hex",
-    "hex"
-  ) = get("x-airlock-signature");
-  "verified";
-  "quarantine"
-)}}
-```
-
-**Important**: Replace `get("AIRLOCK_SHARED_SECRET")` with your actual secret if Make doesn't support environment variables. Otherwise, store the secret in Make's "Data stores" for reusability.
-
-**Alternative** (using text functions):
+**Option 1** (if Make has HMAC function):
 ```javascript
 {{if(
   hmac(
-    get("AIRLOCK_SHARED_SECRET");
-    get("x-airlock-timestamp") + "." + toString(webhook.body);
-    "sha256";
+    get("AIRLOCK_SHARED_SECRET"),
+    get("x-airlock-timestamp") + "." + toString(webhook.body),
+    "sha256",
     "hex"
   ) = get("x-airlock-signature");
   "verified";
   "quarantine"
 )}}
 ```
+
+**Option 2** (if Make requires manual HMAC-SHA256):
+Note: Make.com's actual crypto functions may vary. The signature is computed as:
+`HMAC-SHA256(secret, "${timestamp}.${json_body}")`
+
+Consult Make.com documentation for the correct crypto module syntax.
+
+**Important**: Store `AIRLOCK_SHARED_SECRET` securely in Make's Data Store or environment variables, never hardcode it in the scenario.
 
 ## Step 4: Add Router
 

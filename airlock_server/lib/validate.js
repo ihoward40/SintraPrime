@@ -8,7 +8,7 @@ function sha256Hex(buf) {
   return crypto.createHash("sha256").update(buf).digest("hex");
 }
 
-export function validatePayload(payload) {
+export function validatePayload(payload, maxFiles = 10) {
   if (!payload || typeof payload !== "object") throw new Error("Payload must be an object");
   
   // Guardrail: must explicitly confirm no submit/pay actions
@@ -18,7 +18,7 @@ export function validatePayload(payload) {
   if (typeof payload.task_title !== "string") payload.task_title = "Untitled Task";
   
   const files = Array.isArray(payload.files) ? payload.files : [];
-  if (files.length > 10) throw new Error("Too many files (max 10)");
+  if (files.length > maxFiles) throw new Error(`Too many files (max ${maxFiles})`);
   
   for (const [i, f] of files.entries()) {
     if (!f || typeof f !== "object") throw new Error(`files[${i}] invalid`);

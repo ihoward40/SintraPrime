@@ -25,6 +25,8 @@ const AIRLOCK_SHARED_SECRET = process.env.AIRLOCK_SHARED_SECRET;
 const ACCEPT_ORIGIN = process.env.ACCEPT_ORIGIN || "*";
 const MAX_BODY_BYTES = parseInt(process.env.MAX_BODY_BYTES || "10485760", 10);
 const ALLOW_DEV_ROUTES = process.env.ALLOW_DEV_ROUTES === "true";
+const TIMESTAMP_WINDOW_SECONDS = parseInt(process.env.TIMESTAMP_WINDOW_SECONDS || "300", 10);
+const MAX_FILES_PER_PAYLOAD = parseInt(process.env.MAX_FILES_PER_PAYLOAD || "10", 10);
 
 // Validate required environment variables
 if (!MANUS_SHARED_SECRET) {
@@ -88,11 +90,11 @@ app.post("/manus/webhook", async (req, res) => {
       return res.status(401).json({ error: "Missing authentication headers" });
     }
     
-    // Verify timestamp is recent (within 5 minutes)
+    // Verify timestamp is recent (configurable window, default 5 minutes)
     const now = Math.floor(Date.now() / 1000);
     const ts = parseInt(timestamp, 10);
-    if (isNaN(ts) || Math.abs(now - ts) > 300) {
-      console.error(`Timestamp out of range: ${timestamp} (now: ${now})`);
+    if (isNaN(ts) || Math.abs(now - ts) > TIMESTAMP_WINDOW_SECONDS) {
+      console.error(`Timestamp out of range: ${timestamp} (now: ${now}, window: ${TIMESTAMP_WINDOW_SECONDS}s)`);
       return res.status(401).json({ error: "Timestamp out of range" });
     }
     
@@ -109,7 +111,7 @@ app.post("/manus/webhook", async (req, res) => {
     
     // Validate payload structure
     try {
-      validatePayload(req.body);
+      validatePayload(req.body, MAX_FILES_PER_PAYLOAD);
       console.log(`✓ Payload validated for task ${req.body.task_id}`);
     } catch (err) {
       console.error(`Validation failed: ${err.message}`);
@@ -236,6 +238,8 @@ app.listen(PORT, () => {
   console.log(`🔒 Airlock server running on port ${PORT}`);
   console.log(`   Environment: ${process.env.NODE_ENV || "development"}`);
   console.log(`   Max body size: ${MAX_BODY_BYTES} bytes`);
+  console.log(`   Max files per payload: ${MAX_FILES_PER_PAYLOAD}`);
+  console.log(`   Timestamp window: ${TIMESTAMP_WINDOW_SECONDS}s`);
   console.log(`   CORS origin: ${ACCEPT_ORIGIN}`);
   console.log(`   Make webhook: ${MAKE_WEBHOOK_URL}`);
   console.log(`   Temp storage: ${TEMP_DIR}`);
