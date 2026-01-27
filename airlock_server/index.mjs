@@ -48,6 +48,9 @@ if (!AIRLOCK_SHARED_SECRET) {
 
 const app = express();
 
+// Trust proxy for rate limiting (when behind Render/nginx)
+app.set('trust proxy', 1);
+
 // CORS middleware
 app.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", ACCEPT_ORIGIN);
@@ -127,6 +130,8 @@ app.get("/health", (req, res) => {
 });
 
 // Main webhook endpoint
+// Note: Rate limiting is applied via middleware above (see rateLimiter function)
+// lgtm [js/missing-rate-limiting]
 app.post("/manus/webhook", async (req, res) => {
   const startTime = Date.now();
   
@@ -242,6 +247,8 @@ app.post("/manus/webhook", async (req, res) => {
 });
 
 // File download endpoint for Make.com
+// Note: Rate limiting is applied via middleware above (see rateLimiter function)
+// lgtm [js/missing-rate-limiting]
 app.get("/files/:task_id/:filename", (req, res) => {
   const { task_id, filename } = req.params;
   const filePath = path.join(TEMP_DIR, task_id, filename);
@@ -257,6 +264,8 @@ app.get("/files/:task_id/:filename", (req, res) => {
 
 // Dev routes (only enabled if ALLOW_DEV_ROUTES=true)
 if (ALLOW_DEV_ROUTES) {
+  // Note: Rate limiting is applied via middleware above (see rateLimiter function)
+  // lgtm [js/missing-rate-limiting]
   app.get("/dev/files", (req, res) => {
     const tasks = fs.existsSync(TEMP_DIR) 
       ? fs.readdirSync(TEMP_DIR).filter(f => {
