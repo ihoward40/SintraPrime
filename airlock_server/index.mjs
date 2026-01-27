@@ -27,6 +27,8 @@ const MAX_BODY_BYTES = parseInt(process.env.MAX_BODY_BYTES || "10485760", 10);
 const ALLOW_DEV_ROUTES = process.env.ALLOW_DEV_ROUTES === "true";
 const TIMESTAMP_WINDOW_SECONDS = parseInt(process.env.TIMESTAMP_WINDOW_SECONDS || "300", 10);
 const MAX_FILES_PER_PAYLOAD = parseInt(process.env.MAX_FILES_PER_PAYLOAD || "10", 10);
+const RATE_LIMIT_WINDOW_MS = parseInt(process.env.RATE_LIMIT_WINDOW_MS || "60000", 10);
+const RATE_LIMIT_MAX_REQUESTS = parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || "60", 10);
 
 // Validate required environment variables
 if (!MANUS_SHARED_SECRET) {
@@ -61,6 +63,54 @@ app.use((req, res, next) => {
 
 // Body parser with size limit
 app.use(express.json({ limit: MAX_BODY_BYTES }));
+
+// Simple in-memory rate limiter (production should use Redis or similar)
+const rateLimitMap = new Map();
+
+function rateLimiter(req, res, next) {
+  const ip = req.ip || req.connection.remoteAddress;
+  const now = Date.now();
+  
+  if (!rateLimitMap.has(ip)) {
+    rateLimitMap.set(ip, []);
+  }
+  
+  const requests = rateLimitMap.get(ip);
+  
+  // Remove old requests outside the window
+  const validRequests = requests.filter(timestamp => now - timestamp < RATE_LIMIT_WINDOW_MS);
+  
+  if (validRequests.length >= RATE_LIMIT_MAX_REQUESTS) {
+    console.warn(`Rate limit exceeded for IP: ${ip}`);
+    return res.status(429).json({ error: "Too many requests, please try again later" });
+  }
+  
+  validRequests.push(now);
+  rateLimitMap.set(ip, validRequests);
+  
+  next();
+}
+
+// Apply rate limiting to all routes except health check
+app.use((req, res, next) => {
+  if (req.path === "/health") {
+    return next();
+  }
+  rateLimiter(req, res, next);
+});
+
+// Cleanup old rate limit entries every 5 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, requests] of rateLimitMap.entries()) {
+    const validRequests = requests.filter(timestamp => now - timestamp < RATE_LIMIT_WINDOW_MS);
+    if (validRequests.length === 0) {
+      rateLimitMap.delete(ip);
+    } else {
+      rateLimitMap.set(ip, validRequests);
+    }
+  }
+}, 300000);
 
 // Temporary file storage directory
 const TEMP_DIR = path.join(__dirname, "tmp", "files");
@@ -240,6 +290,7 @@ app.listen(PORT, () => {
   console.log(`   Max body size: ${MAX_BODY_BYTES} bytes`);
   console.log(`   Max files per payload: ${MAX_FILES_PER_PAYLOAD}`);
   console.log(`   Timestamp window: ${TIMESTAMP_WINDOW_SECONDS}s`);
+  console.log(`   Rate limit: ${RATE_LIMIT_MAX_REQUESTS} req/${RATE_LIMIT_WINDOW_MS}ms`);
   console.log(`   CORS origin: ${ACCEPT_ORIGIN}`);
   console.log(`   Make webhook: ${MAKE_WEBHOOK_URL}`);
   console.log(`   Temp storage: ${TEMP_DIR}`);
