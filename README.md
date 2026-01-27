@@ -61,6 +61,32 @@ SintraPrime includes a plug-and-play credit forensics system for Make.com, desig
 
 For full documentation, see [`monitoring/README.md`](monitoring/README.md).
 
+## Airlock Server (ManusLite Gateway)
+
+SintraPrime Airlock is a production-ready HMAC-verified gateway that replaces paid Manus credits with owned infrastructure. It securely receives portal automation payloads, validates signatures and file integrity, and forwards sanitized receipts to Make.com workflows.
+
+**Key Features:**
+- HMAC-SHA256 signature verification (sender → Airlock → Make)
+- SHA-256 file hash validation
+- Temporary file storage for Make.com downloads
+- Security guardrails (no_submit_pay flag, size limits)
+- Health check endpoint for monitoring
+
+**Quick Start:**
+```bash
+cd airlock_server
+npm install
+cp .env.example .env
+# Configure environment variables
+npm start
+```
+
+**Documentation:**
+- **Server README**: [`airlock_server/README.md`](airlock_server/README.md) — Architecture and API reference
+- **Deployment Guide**: [`docs/AIRLOCK_DEPLOYMENT.md`](docs/AIRLOCK_DEPLOYMENT.md) — Step-by-step Render.com deployment
+- **Make.com Setup**: [`docs/MAKE_SCENARIO_SETUP.md`](docs/MAKE_SCENARIO_SETUP.md) — Configure Make.com scenario with HMAC verification
+- **Test Script**: [`scripts/send_to_airlock.mjs`](scripts/send_to_airlock.mjs) — Send test PDFs through Airlock
+
 ## Windows path note
 
 You may see the repo at both:
