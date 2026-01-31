@@ -55,10 +55,11 @@ function copyFile(src: string, dst: string) {
   fs.copyFileSync(src, dst);
 }
 
-function listMatchingFiles(dirAbs: string, predicate: (name: string) => boolean): string[] {
+async function listMatchingFiles(dirAbs: string, predicate: (name: string) => boolean): Promise<string[]> {
   if (!fs.existsSync(dirAbs)) return [];
   const out: string[] = [];
-  for (const ent of fs.readdirSync(dirAbs, { withFileTypes: true })) {
+  const entries = await fs.promises.readdir(dirAbs, { withFileTypes: true });
+  for (const ent of entries) {
     if (!ent.isFile()) continue;
     if (predicate(ent.name)) out.push(path.join(dirAbs, ent.name));
   }
@@ -179,16 +180,16 @@ async function main() {
   const auditBase = path.join(process.cwd(), "exports", "audit_exec");
   const zipMatches = zipArg
     ? [path.resolve(zipArg)]
-    : listMatchingFiles(auditBase, (n) => n.startsWith(`audit_${execution_id}`) && isZipLikeFileName(n));
+    : await listMatchingFiles(auditBase, (n) => n.startsWith(`audit_${execution_id}`) && isZipLikeFileName(n));
 
   const zipAbs = findSingleMatchOrThrow("audit bundle zip", zipMatches);
 
   const exportDirMatches = exportDirArg
     ? [path.resolve(exportDirArg)]
-    : (() => {
+    : await (async () => {
         if (!fs.existsSync(auditBase)) return [];
-        const dirs = fs
-          .readdirSync(auditBase, { withFileTypes: true })
+        const entries = await fs.promises.readdir(auditBase, { withFileTypes: true });
+        const dirs = entries
           .filter((e) => e.isDirectory() && e.name.startsWith(`audit_${execution_id}`))
           .map((e) => path.join(auditBase, e.name))
           .sort((a, b) => a.localeCompare(b));
