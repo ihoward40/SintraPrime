@@ -5,6 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import { sendMessage } from "../sendMessage.js";
+import { getLastNLines } from "./streaming.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -156,24 +157,18 @@ app.get("/api/approvals", async (_req, res) => {
   res.json(items);
 });
 
-app.get("/api/receipts", (req, res) => {
+app.get("/api/receipts", async (req, res) => {
   const limit = Math.min(500, Math.max(0, Number(req.query.limit || 100)));
   const cacheKey = `receipts:${limit}`;
-  const out = withCache(cacheKey, 5000, () => {
+  const out = await withCacheAsync(cacheKey, 5000, async () => {
     const file = path.join(RUNS_DIR, "receipts.jsonl");
-    if (!fs.existsSync(file)) return [];
-    const raw = fs.readFileSync(file, "utf8").trim();
-    if (!raw) return [];
-    const lines = raw.split("\n").filter(Boolean);
-    const results = [];
-    for (const l of lines.slice(-limit)) {
-      try {
-        results.push(JSON.parse(l));
-      } catch {
-        // ignore malformed
-      }
+    try {
+      await fsp.access(file);
+      // Use memory-efficient streaming for large JSONL files
+      return await getLastNLines(file, limit);
+    } catch {
+      return [];
     }
-    return results;
   });
   res.json(out);
 });
