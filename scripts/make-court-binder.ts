@@ -203,8 +203,7 @@ async function main() {
   const exportDirMatches = bundleDirArg
     ? [path.resolve(bundleDirArg)]
     : fs.existsSync(auditBase)
-      ? fs
-          .readdirSync(auditBase, { withFileTypes: true })
+      ? (await fs.promises.readdir(auditBase, { withFileTypes: true }))
           .filter((e) => e.isDirectory() && e.name.startsWith(`audit_${execution_id}`))
           .map((e) => path.join(auditBase, e.name))
           .sort((a, b) => a.localeCompare(b))
@@ -333,10 +332,15 @@ async function main() {
     },
   ];
 
-  for (const spec of legalPdfSpecs) {
-    if (!fs.existsSync(spec.srcAbs)) throw new Error(`Missing source doc: ${normalizePath(spec.srcAbs)}`);
-    renderMarkdownPdf({ inPath: spec.srcAbs, outPath: spec.dstAbs });
-  }
+  // Parallelize PDF generation from markdown files
+  await Promise.all(
+    legalPdfSpecs.map(async (spec) => {
+      if (!fs.existsSync(spec.srcAbs)) {
+        throw new Error(`Missing source doc: ${normalizePath(spec.srcAbs)}`);
+      }
+      renderMarkdownPdf({ inPath: spec.srcAbs, outPath: spec.dstAbs });
+    })
+  );
 
   // Binder top-level PDFs
   const started = String(receipt?.started_at || receipt?.created_at || "");
@@ -344,57 +348,55 @@ async function main() {
   const status = String(receipt?.status || "");
   const policy = String(receipt?.policy_code || "");
 
-  await writeSimplePdf(path.join(binderRoot, "00_COVER_PAGE.pdf"), "Court Packet Cover Page", [
-    `Execution ID: ${execution_id}`,
-    `Run type: ${run_type.toUpperCase()} (read-only)` ,
-    `Target: ${target_id}`,
-    "",
-    "Court: ______________________________",
-    "Case No.: ___________________________",
-    "Date: _______________________________",
-  ]);
-
-  await writeSimplePdf(path.join(binderRoot, "01_EXECUTIVE_SUMMARY.pdf"), "Executive Summary", [
-    "This packet is a presentation binder for a single execution.",
-    "Underlying integrity is proven by the exhibits and their hashes.",
-    "",
-    `Execution: ${execution_id}`,
-    `Operation: Notion live ${run_type} snapshot (intended read-only)` ,
-    `Target: ${target_id}`,
-  ]);
-
-  await writeSimplePdf(path.join(binderRoot, "02_SYSTEM_AUTHORITY.pdf"), "System Authority", [
-    "Authority and invariants are defined by:",
-    "- docs/CONSTITUTION.v1.md (supreme invariants)",
-    "- docs/tier6-live-accounts-safety.md (live-account read-only contract)",
-    "",
-    "This binder does not grant authority. It documents the outputs of an execution.",
-  ]);
-
-  await writeSimplePdf(path.join(binderRoot, "03_EXECUTION_TIMELINE.pdf"), "Execution Timeline", [
-    `Execution ID: ${execution_id}`,
-    started ? `Started: ${started}` : "Started: (unknown)",
-    finished ? `Finished: ${finished}` : "Finished: (unknown)",
-    status ? `Status: ${status}` : "Status: (unknown)",
-    policy ? `Policy code: ${policy}` : "Policy code: (none)",
-  ]);
-
-  await writeSimplePdf(path.join(binderRoot, "04_EVIDENCE_LOGS.pdf"), "Evidence Logs", [
-    "Exhibits included:",
-    "- A_notionsnapshot.json (snapshot or index)",
-    "- B_receipts.jsonl (receipt line)",
-    "- C_manifest.json (audit execution manifest)",
-    "- D_hashes.sha256 (SHA-256 for exhibits)",
-    "- E_verify.js (verifier script)",
-    "",
-    "All exhibits are stored under the EXHIBITS/ directory.",
-  ]);
-
-  await writeSimplePdf(path.join(binderRoot, "05_VERIFY_INSTRUCTIONS.pdf"), "Verify Instructions", [
-    "1) Open a terminal in the binder root folder (the folder containing EXHIBITS/).",
-    "2) Run:",
-    "   node EXHIBITS/E_verify.js",
-    "3) Verification outputs JSON and exits 0 on success.",
+  // Parallelize simple PDF generation
+  await Promise.all([
+    writeSimplePdf(path.join(binderRoot, "00_COVER_PAGE.pdf"), "Court Packet Cover Page", [
+      `Execution ID: ${execution_id}`,
+      `Run type: ${run_type.toUpperCase()} (read-only)` ,
+      `Target: ${target_id}`,
+      "",
+      "Court: ______________________________",
+      "Case No.: ___________________________",
+      "Date: _______________________________",
+    ]),
+    writeSimplePdf(path.join(binderRoot, "01_EXECUTIVE_SUMMARY.pdf"), "Executive Summary", [
+      "This packet is a presentation binder for a single execution.",
+      "Underlying integrity is proven by the exhibits and their hashes.",
+      "",
+      `Execution: ${execution_id}`,
+      `Operation: Notion live ${run_type} snapshot (intended read-only)` ,
+      `Target: ${target_id}`,
+    ]),
+    writeSimplePdf(path.join(binderRoot, "02_SYSTEM_AUTHORITY.pdf"), "System Authority", [
+      "Authority and invariants are defined by:",
+      "- docs/CONSTITUTION.v1.md (supreme invariants)",
+      "- docs/tier6-live-accounts-safety.md (live-account read-only contract)",
+      "",
+      "This binder does not grant authority. It documents the outputs of an execution.",
+    ]),
+    writeSimplePdf(path.join(binderRoot, "03_EXECUTION_TIMELINE.pdf"), "Execution Timeline", [
+      `Execution ID: ${execution_id}`,
+      started ? `Started: ${started}` : "Started: (unknown)",
+      finished ? `Finished: ${finished}` : "Finished: (unknown)",
+      status ? `Status: ${status}` : "Status: (unknown)",
+      policy ? `Policy code: ${policy}` : "Policy code: (none)",
+    ]),
+    writeSimplePdf(path.join(binderRoot, "04_EVIDENCE_LOGS.pdf"), "Evidence Logs", [
+      "Exhibits included:",
+      "- A_notionsnapshot.json (snapshot or index)",
+      "- B_receipts.jsonl (receipt line)",
+      "- C_manifest.json (audit execution manifest)",
+      "- D_hashes.sha256 (SHA-256 for exhibits)",
+      "- E_verify.js (verifier script)",
+      "",
+      "All exhibits are stored under the EXHIBITS/ directory.",
+    ]),
+    writeSimplePdf(path.join(binderRoot, "05_VERIFY_INSTRUCTIONS.pdf"), "Verify Instructions", [
+      "1) Open a terminal in the binder root folder (the folder containing EXHIBITS/).",
+      "2) Run:",
+      "   node EXHIBITS/E_verify.js",
+      "3) Verification outputs JSON and exits 0 on success.",
+    ]),
   ]);
 
   process.stdout.write(

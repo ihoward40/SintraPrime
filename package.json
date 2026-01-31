@@ -7,7 +7,9 @@
   },
   "scripts": {
     "clean": "rimraf dist",
-    "build": "npm run clean && tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json --incremental",
+    "build:clean": "npm run clean && tsc -p tsconfig.json",
+    "build:watch": "tsc -p tsconfig.json --incremental --watch",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "dev": "tsx src/cli/run-command.ts",
     "start": "node dist/cli/run-command.js",
