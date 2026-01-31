@@ -1,0 +1,100 @@
+{
+  "schema_version": "1.1",
+  "paths": {
+    "allowed_roots": [
+      "C:\\SintraPrime\\CASES\\{project}",
+      "C:\\SintraPrime\\RESEARCH",
+      "C:\\Users\\{username}\\Documents\\SintraPrime"
+    ],
+    "prohibited_paths": [
+      "C:\\Windows",
+      "C:\\Program Files",
+      "C:\\Program Files (x86)",
+      "C:\\ProgramData",
+      "C:\\Users\\{username}\\AppData",
+      "C:\\SintraPrime\\_GOVERNANCE",
+      "C:\\SintraPrime\\keys"
+    ]
+  },
+  "commands": {
+    "allowlist_regex": [
+      "(?i)^\\s*(git\\s+(status|diff|log|show)\\b)",
+      "(?i)^\\s*(ls|dir|pwd|cd)\\b",
+      "(?i)^\\s*(rg|findstr|where)\\b",
+      "(?i)^\\s*(python\\b.*\\s+-c\\b)",
+      "(?i)^\\s*(node\\b.*\\s+-e\\b)",
+      "(?i)^\\s*(opencode\\b)",
+      "(?i)^\\s*(open\\s+code\\b)"
+    ],
+    "denylist_regex": [
+      "(?i)\\brm\\s+-rf\\b",
+      "(?i)\\bdel\\b.*\\b/s\\b",
+      "(?i)\\brmdir\\b.*\\b/s\\b.*\\b/q\\b",
+      "(?i)\\bformat\\b",
+      "(?i)\\bdiskpart\\b",
+      "(?i)\\bbcdedit\\b",
+      "(?i)\\breg\\s+(add|delete)\\b",
+      "(?i)\\btakeown\\b",
+      "(?i)\\bicacls\\b.*\\b/grant\\b",
+      "(?i)\\bchmod\\b.*\\b-R\\b",
+      "(?i)\\bchown\\b.*\\b-R\\b"
+    ],
+    "require_approval_regex": [
+      "(?i)\\bgit\\s+push\\b",
+      "(?i)\\bgit\\s+reset\\b",
+      "(?i)\\bgit\\s+clean\\b",
+      "(?i)\\bnpm\\s+(install|ci)\\b",
+      "(?i)\\bpip\\s+install\\b"
+    ]
+  },
+  "network": {
+    "domain_allowlist": [
+      "opencode.ai",
+      "github.com",
+      "docs.github.com",
+      "developer.chrome.com",
+      "stackoverflow.com",
+      "docs.microsoft.com"
+    ],
+    "domain_denylist": [
+      "pastebin.com",
+      "anonfiles.com",
+      "transfer.sh"
+    ]
+  },
+  "mcp": {
+    "opencode_config_paths": [
+      "$HOME/.config/opencode/opencode.json",
+      "$HOME/.config/opencode/opencode.jsonc",
+      "%USERPROFILE%/.config/opencode/opencode.json",
+      "%USERPROFILE%/.config/opencode/opencode.jsonc"
+    ],
+    "allowlisted_servers": [
+      "chrome-devtools"
+    ],
+    "allowed_types": [
+      "local"
+    ],
+    "block_if_unknown_enabled": true
+  },
+  "integrity": {
+    "enforce_opencode_config_seal": true,
+    "opencode_config_path": "%USERPROFILE%\\.config\\opencode\\opencode.json",
+    "seal": {
+      "backend": "openssh",
+      "seal_dir": "C:\\SintraPrime\\_GOVERNANCE\\SEALS\\OpenCode",
+      "hash_filename": "opencode.json.sha256",
+      "sig_filename": "opencode.json.sha256.sig",
+      "namespace": "sintraprime-opencode-config",
+      "signer_identity": "sintraprime-opencode-config",
+      "allowed_signers_path": "C:\\SintraPrime\\keys\\allowed_signers",
+      "revocation_file_path": ""
+    }
+  },
+  "audit": {
+    "log_to_windows_event_log": true,
+    "event_log_source": "SintraPrime-OpenCode",
+    "log_dir": "C:\\SintraPrime\\_GOVERNANCE\\AUDIT\\OpenCode",
+    "retain_days": 730
+  }
+}

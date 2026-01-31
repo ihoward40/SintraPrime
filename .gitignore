@@ -48,3 +48,10 @@ airlock_server/package-lock.json
 
 # OS / tooling noise
 Thumbs.db
+
+# OpenCodeSafe - Private keys and seal artifacts
+*.ed25519
+!*.ed25519.pub
+governance/keys/*.ed25519
+tools/OpenCodeSafe/test-seals/
+_GOVERNANCE/
