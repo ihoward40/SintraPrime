@@ -4,6 +4,7 @@ import path from 'path';
 
 export class WorkerPool {
   private workers: Worker[] = [];
+  private availableWorkers: Worker[] = [];
   private queue: Array<{ data: any; resolve: (value: any) => void; reject: (err: any) => void }> = [];
   
   constructor(private workerScript: string, poolSize = cpus().length) {
@@ -19,16 +20,22 @@ export class WorkerPool {
       const task = this.queue.shift();
       if (task) {
         task.resolve(result);
-        this.processQueue();
       }
+      // Mark worker as available again
+      this.availableWorkers.push(worker);
+      this.processQueue();
     });
     
     worker.on('error', (err) => {
       const task = this.queue.shift();
       if (task) task.reject(err);
+      // Mark worker as available again even on error
+      this.availableWorkers.push(worker);
+      this.processQueue();
     });
     
     this.workers.push(worker);
+    this.availableWorkers.push(worker);
   }
   
   async execute<T>(data: any): Promise<T> {
@@ -39,12 +46,14 @@ export class WorkerPool {
   }
   
   private processQueue() {
-    if (this.queue.length === 0) return;
+    if (this.queue.length === 0 || this.availableWorkers.length === 0) return;
     
-    const availableWorker = this.workers.find(w => !w.threadId);
-    if (availableWorker && this.queue.length > 0) {
-      const task = this.queue[0];
-      availableWorker.postMessage(task.data);
+    const worker = this.availableWorkers.shift();
+    if (worker) {
+      const task = this.queue.shift();
+      if (task) {
+        worker.postMessage(task.data);
+      }
     }
   }
   

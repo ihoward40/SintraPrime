@@ -72,6 +72,16 @@ function isZipLikeFileName(name: string): boolean {
   return /\.zip(?:[._-]\d+)?$/i.test(name);
 }
 
+async function findExportDirs(auditBase: string, executionId: string): Promise<string[]> {
+  if (!fs.existsSync(auditBase)) return [];
+  const entries = await fs.promises.readdir(auditBase, { withFileTypes: true });
+  const dirs = entries
+    .filter((e) => e.isDirectory() && e.name.startsWith(`audit_${executionId}`))
+    .map((e) => path.join(auditBase, e.name))
+    .sort((a, b) => a.localeCompare(b));
+  return dirs;
+}
+
 function readReceiptForExecutionId(executionId: string): any | null {
   const receiptsPath = path.join(process.cwd(), "runs", "receipts.jsonl");
   if (!fs.existsSync(receiptsPath)) return null;
@@ -186,15 +196,7 @@ async function main() {
 
   const exportDirMatches = exportDirArg
     ? [path.resolve(exportDirArg)]
-    : await (async () => {
-        if (!fs.existsSync(auditBase)) return [];
-        const entries = await fs.promises.readdir(auditBase, { withFileTypes: true });
-        const dirs = entries
-          .filter((e) => e.isDirectory() && e.name.startsWith(`audit_${execution_id}`))
-          .map((e) => path.join(auditBase, e.name))
-          .sort((a, b) => a.localeCompare(b));
-        return dirs;
-      })();
+    : await findExportDirs(auditBase, execution_id);
 
   const exportDirAbs = findSingleMatchOrThrow("audit bundle directory", exportDirMatches);
   const verifyAbs = path.join(exportDirAbs, "verify.js");

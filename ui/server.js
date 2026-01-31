@@ -22,16 +22,6 @@ app.use(express.json({ limit: "100kb" }));
 // Simple in-memory cache with TTL
 const cache = new Map();
 
-function withCache(key, ttlMs, fn) {
-  const cached = cache.get(key);
-  if (cached && Date.now() - cached.timestamp < ttlMs) {
-    return cached.data;
-  }
-  const data = fn();
-  cache.set(key, { data, timestamp: Date.now() });
-  return data;
-}
-
 async function withCacheAsync(key, ttlMs, fn) {
   const cached = cache.get(key);
   if (cached && Date.now() - cached.timestamp < ttlMs) {
