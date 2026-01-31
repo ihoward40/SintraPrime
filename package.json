@@ -35,7 +35,10 @@
     "ci:detect-tiers": "node ./scripts/detect-tiers.mjs",
     "sign:manifest": "node ./scripts/signing/sign-manifest.mjs",
     "sign:run": "node ./scripts/signing/sign-run.mjs",
-    "ci:verify-signatures": "node ./scripts/ci/verify-signatures.mjs"
+    "ci:verify-signatures": "node ./scripts/ci/verify-signatures.mjs",
+    "skills:revoke": "node scripts/skills-revoke-one.mjs",
+    "skills:check": "node scripts/skills-check-revoked.mjs",
+    "skills:status": "node scripts/skills-status.mjs"
   },
   "dependencies": {
     "express": "^4.21.2",
