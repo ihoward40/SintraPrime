@@ -1,5 +1,6 @@
 import express from "express";
 import fs from "node:fs";
+import fsp from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
@@ -17,9 +18,41 @@ const LEGACY_PUBLIC = path.join(__dirname, "public");
 
 app.use(express.json({ limit: "100kb" }));
 
+// Simple in-memory cache with TTL
+const cache = new Map();
+
+function withCache(key, ttlMs, fn) {
+  const cached = cache.get(key);
+  if (cached && Date.now() - cached.timestamp < ttlMs) {
+    return cached.data;
+  }
+  const data = fn();
+  cache.set(key, { data, timestamp: Date.now() });
+  return data;
+}
+
+async function withCacheAsync(key, ttlMs, fn) {
+  const cached = cache.get(key);
+  if (cached && Date.now() - cached.timestamp < ttlMs) {
+    return cached.data;
+  }
+  const data = await fn();
+  cache.set(key, { data, timestamp: Date.now() });
+  return data;
+}
+
 function safeReadJson(absPath) {
   try {
     return JSON.parse(fs.readFileSync(absPath, "utf8"));
+  } catch {
+    return null;
+  }
+}
+
+async function safeReadJsonAsync(absPath) {
+  try {
+    const content = await fsp.readFile(absPath, "utf8");
+    return JSON.parse(content);
   } catch {
     return null;
   }
@@ -105,36 +138,47 @@ function findLatestAuditZipForExecution(executionId) {
 
 // ---- READ-ONLY APIs ----
 
-app.get("/api/approvals", (_req, res) => {
-  const dir = path.join(RUNS_DIR, "approvals");
-  if (!fs.existsSync(dir)) return res.json([]);
-  const items = fs
-    .readdirSync(dir)
-    .filter((f) => f.endsWith(".json"))
-    .map((f) => safeReadJson(path.join(dir, f)))
-    .filter(Boolean);
+app.get("/api/approvals", async (_req, res) => {
+  const items = await withCacheAsync("approvals", 5000, async () => {
+    const dir = path.join(RUNS_DIR, "approvals");
+    try {
+      await fsp.access(dir);
+    } catch {
+      return [];
+    }
+    const files = await fsp.readdir(dir);
+    const jsonFiles = files.filter((f) => f.endsWith(".json"));
+    const results = await Promise.all(
+      jsonFiles.map((f) => safeReadJsonAsync(path.join(dir, f)))
+    );
+    return results.filter(Boolean);
+  });
   res.json(items);
 });
 
 app.get("/api/receipts", (req, res) => {
   const limit = Math.min(500, Math.max(0, Number(req.query.limit || 100)));
-  const file = path.join(RUNS_DIR, "receipts.jsonl");
-  if (!fs.existsSync(file)) return res.json([]);
-  const raw = fs.readFileSync(file, "utf8").trim();
-  if (!raw) return res.json([]);
-  const lines = raw.split("\n").filter(Boolean);
-  const out = [];
-  for (const l of lines.slice(-limit)) {
-    try {
-      out.push(JSON.parse(l));
-    } catch {
-      // ignore malformed
+  const cacheKey = `receipts:${limit}`;
+  const out = withCache(cacheKey, 5000, () => {
+    const file = path.join(RUNS_DIR, "receipts.jsonl");
+    if (!fs.existsSync(file)) return [];
+    const raw = fs.readFileSync(file, "utf8").trim();
+    if (!raw) return [];
+    const lines = raw.split("\n").filter(Boolean);
+    const results = [];
+    for (const l of lines.slice(-limit)) {
+      try {
+        results.push(JSON.parse(l));
+      } catch {
+        // ignore malformed
+      }
     }
-  }
+    return results;
+  });
   res.json(out);
 });
 
-app.get("/api/artifacts", (req, res) => {
+app.get("/api/artifacts", async (req, res) => {
   const prefix = String(req.query.prefix || "");
   let base;
   try {
@@ -143,16 +187,28 @@ app.get("/api/artifacts", (req, res) => {
     return res.status(400).json({ error: "prefix must be under runs/" });
   }
 
-  if (!fs.existsSync(base)) return res.json([]);
+  try {
+    await fsp.access(base);
+  } catch {
+    return res.json([]);
+  }
 
-  const walk = (d) =>
-    fs.readdirSync(d, { withFileTypes: true }).flatMap((e) =>
-      e.isDirectory()
-        ? walk(path.join(d, e.name))
-        : [{ path: path.relative(RUNS_DIR, path.join(d, e.name)).replace(/\\\\/g, "/") }]
+  const walk = async (d) => {
+    const entries = await fsp.readdir(d, { withFileTypes: true });
+    const results = await Promise.all(
+      entries.map(async (e) => {
+        if (e.isDirectory()) {
+          return walk(path.join(d, e.name));
+        } else {
+          return [{ path: path.relative(RUNS_DIR, path.join(d, e.name)).replace(/\\\\/g, "/") }];
+        }
+      })
     );
+    return results.flat();
+  };
 
-  res.json(walk(base));
+  const artifacts = await walk(base);
+  res.json(artifacts);
 });
 
 app.get("/api/file", (req, res) => {
@@ -323,6 +379,13 @@ app.post("/api/command", async (req, res) => {
   });
 
   res.json(out);
+});
+
+// ---- CACHE MANAGEMENT ----
+
+app.delete("/api/cache", (_req, res) => {
+  cache.clear();
+  res.json({ message: "Cache cleared successfully" });
 });
 
 // ---- SCOPED LOCAL CLI: audit export (per execution) ----
