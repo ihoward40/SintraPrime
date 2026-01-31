@@ -28,6 +28,7 @@
     "ui:client": "npm --prefix ui/client run dev",
     "ui:build": "npm --prefix ui/client run build",
     "verify:audit": "node ./scripts/verify.js",
+    "validate:schemas": "node ./scripts/validate-schemas.mjs",
     "deepthink": "node ./deepthink/src/deepthink.mjs",
     "ci:deepthink-gates": "node ./scripts/ci/deepthink-gates.mjs",
     "detect:tiers": "node ./scripts/detect-tiers.mjs --out tier_declaration.json",

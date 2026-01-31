@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "sintraprime://schemas/sp_switchboard.schema.json",
+  "title": "SP Switchboard",
+  "description": "Single source of truth for system control toggles and gates, including config-based locking",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "control_id",
+    "control_name",
+    "scope",
+    "is_enabled"
+  ],
+  "properties": {
+    "control_id": {
+      "type": "string",
+      "pattern": "^CTL-[0-9]{3,}$",
+      "description": "Unique identifier for this control (e.g., CTL-001)"
+    },
+    "control_name": {
+      "type": "string",
+      "enum": [
+        "EXECUTE_ENABLED",
+        "VOICE_EXEC_ENABLED",
+        "QUARANTINE_MODE",
+        "SMS_EXEC_ENABLED",
+        "BOOKING_EXEC_ENABLED",
+        "BREAK_GLASS_ENABLED",
+        "CONFIG_COOLDOWN_ENABLED",
+        "BUDGET_GOV_ENABLED"
+      ],
+      "description": "Unique name identifier for the control"
+    },
+    "scope": {
+      "type": "string",
+      "enum": ["GLOBAL", "VOICE", "EMAIL", "GITHUB", "CALENDAR", "SMS", "ALL"],
+      "description": "Scope of this control toggle"
+    },
+    "is_enabled": {
+      "type": "boolean",
+      "description": "The actual on/off switch (human-controlled master switch)"
+    },
+    "severity": {
+      "type": "string",
+      "enum": ["Info", "Guardrail", "Lockdown"],
+      "description": "Severity level of this control"
+    },
+    "config_gate_locked": {
+      "type": "boolean",
+      "description": "Computed lock status based on pending config changes. System-owned, not human-controlled."
+    },
+    "config_gate_reason": {
+      "type": "string",
+      "maxLength": 1000,
+      "description": "Explanation of why config gate is locked (e.g., 'Pending config change CFG-001234 awaiting canary validation')"
+    },
+    "current_config_fingerprint_sha256": {
+      "type": "string",
+      "pattern": "^[a-fA-F0-9]{64}$",
+      "description": "SHA-256 fingerprint of current effective configuration. Updated by Make.com whenever config snapshot is taken."
+    },
+    "execute_gate_status": {
+      "type": "string",
+      "enum": ["PASS", "BLOCKED"],
+      "description": "Final computed gate status: EXECUTE_ENABLED && !QUARANTINE_MODE && !CONFIG_GATE_LOCKED"
+    },
+    "effective_from": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Optional: when control becomes active (UTC)"
+    },
+    "effective_to": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Optional: auto-expire date (UTC)"
+    },
+    "owner": {
+      "type": "string",
+      "maxLength": 240,
+      "description": "Who manages this control"
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 2000,
+      "description": "Why it exists, when to toggle, usage notes"
+    },
+    "last_changed_by": {
+      "type": "string",
+      "maxLength": 240,
+      "description": "Who last modified this control"
+    },
+    "last_changed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When last modified (UTC)"
+    },
+    "cooldown_hours": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 168,
+      "description": "Hours to wait after config change before full execution (default for config changes)"
+    },
+    "pending_config_gate_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Count of pending config changes where gates_prod_execute=true (rollup from Config Change Log)"
+    },
+    "latest_gating_config_change_id": {
+      "type": "string",
+      "pattern": "^CFG-[0-9]{6,}$",
+      "description": "ID of the most recent config change where gates_prod_execute=true and status is PENDING"
+    }
+  }
+}

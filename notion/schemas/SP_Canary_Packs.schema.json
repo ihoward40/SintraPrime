@@ -1,0 +1,163 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "sintraprime://schemas/sp_canary_packs.schema.json",
+  "title": "SP Canary Packs",
+  "description": "Canary validation packs for configuration changes - sealed artifacts proving config was tested before re-enable",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "canary_pack_id",
+    "config_change_id",
+    "triggered_at",
+    "canary_type",
+    "test_result",
+    "config_fingerprint_sha256"
+  ],
+  "properties": {
+    "canary_pack_id": {
+      "type": "string",
+      "pattern": "^CAN-[0-9]{8}-[0-9]{3}$",
+      "description": "Unique identifier for this canary pack (format: CAN-YYYYMMDD-NNN, e.g., CAN-20260125-001)"
+    },
+    "config_change_id": {
+      "type": "string",
+      "pattern": "^CFG-[0-9]{6,}$",
+      "description": "Linked config change ID (relation to Config Change Log)"
+    },
+    "triggered_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When canary testing started (UTC)"
+    },
+    "completed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When canary testing completed (UTC)"
+    },
+    "canary_type": {
+      "type": "string",
+      "enum": [
+        "ACTION_REGISTRY",
+        "PAE",
+        "RATE_LIMITS",
+        "SWITCHBOARD",
+        "PACK_PIPELINE",
+        "COMBINED"
+      ],
+      "description": "Type of configuration being tested"
+    },
+    "test_receipts": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^RCP-[0-9]{6,}$"
+      },
+      "description": "Array of receipt IDs for test executions (relations to Execution Receipts)"
+    },
+    "test_result": {
+      "type": "string",
+      "enum": ["PASS", "FAIL", "ERROR", "PENDING"],
+      "description": "Overall result of canary testing"
+    },
+    "test_summary": {
+      "type": "string",
+      "maxLength": 2000,
+      "description": "Human-readable summary of test results"
+    },
+    "config_fingerprint_sha256": {
+      "type": "string",
+      "pattern": "^[a-fA-F0-9]{64}$",
+      "description": "SHA-256 fingerprint of the configuration being tested"
+    },
+    "config_snapshot_sha256": {
+      "type": "string",
+      "pattern": "^[a-fA-F0-9]{64}$",
+      "description": "SHA-256 of the complete config snapshot used in testing"
+    },
+    "canary_pack_json": {
+      "type": "string",
+      "description": "Complete canary pack artifact as JSON string"
+    },
+    "canary_pack_hash": {
+      "type": "string",
+      "pattern": "^[a-fA-F0-9]{64}$",
+      "description": "SHA-256 hash of the canary pack JSON (tamper-evident seal)"
+    },
+    "chain_hash": {
+      "type": "string",
+      "pattern": "^[a-fA-F0-9]{64}$",
+      "description": "Hash chain linking to weekly pack chain"
+    },
+    "test_actions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["action_type", "result"],
+        "properties": {
+          "action_type": {
+            "type": "string",
+            "enum": [
+              "VOICE_BOOKING",
+              "VOICE_TRANSFER",
+              "SMS_SEND",
+              "EMAIL_SEND",
+              "RATE_LIMIT_TEST",
+              "PAE_VALIDATION"
+            ]
+          },
+          "result": {
+            "type": "string",
+            "enum": ["SUCCESS", "FAILED", "BLOCKED"]
+          },
+          "receipt_id": {
+            "type": "string",
+            "pattern": "^RCP-[0-9]{6,}$"
+          },
+          "details": {
+            "type": "string",
+            "maxLength": 500
+          }
+        }
+      },
+      "description": "Detailed breakdown of individual test actions"
+    },
+    "tests_passed": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Count of successful test actions"
+    },
+    "tests_failed": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Count of failed test actions"
+    },
+    "tests_total": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Total count of test actions"
+    },
+    "pass_threshold": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "Percentage of tests that must pass for canary to be considered successful (default: 100)"
+    },
+    "actual_pass_rate": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "Actual percentage of tests that passed"
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 4000,
+      "description": "Additional notes, observations, or anomalies"
+    },
+    "operator": {
+      "type": "string",
+      "maxLength": 240,
+      "description": "Person or system that triggered/monitored this canary"
+    }
+  }
+}
