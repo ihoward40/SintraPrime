@@ -1,38 +1,76 @@
-"attempts": <number>, "successes": <number>, "errors": <number> }`
+# Supermemory Operational Scripts Integration (v1)
+
+This document describes the integration of the v1 Supermemory operational scripts into the SintraPrime repository. These scripts include hardened features like `-Strict` mode and a `version` field for robust automation.
+
+---
+
+## 1. `sm-receipts-summary.ps1` (v1)
+
+This script reads Supermemory receipt files and generates a health summary.
+
+### Usage
+
+**Human Mode (one-line health summary):**
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ops\sm-receipts-summary.ps1
+```
+
+**Make.com Mode (for automation):**
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ops\sm-receipts-summary.ps1 -MakeFriendly
+```
+
+**Make.com Pretty Debug Mode:**
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ops\sm-receipts-summary.ps1 -MakeFriendlyPretty
+```
+
+### JSON Output Fields (v1)
+
+- `version`: `"sm-make-v1"` (NEW)
+- `status`: `ok` or `fail`
+- `exitCode`: `0` for success, non-zero for failure
+- `hits`: `{ "attempts": <number>, "successes": <number>, "errors": <number> }`
 - `p95`: 95th percentile latency in milliseconds
 - `receiptFile`: The name of the receipt file that was analyzed
 
 ---
 
-## 2. `restart-supermemory.ps1`
+## 2. `restart-supermemory.ps1` (v1)
 
 This script is a proof runner that performs a series of checks to ensure Supermemory is functioning correctly.
 
-**Checks Performed:**
+### What `-Strict` Mode Does (NEW)
 
-1.  **Key Presence:** Verifies that a `SUPERMEMORY_API_KEY` is present (checks length only, never prints the key).
-2.  **Indexing:** Indexes a slice of the repository (default: `src/`).
-3.  **Positive Control:** Searches for a unique token that is guaranteed to be in the index.
-4.  **Bait Token:** Searches for a unique token that is guaranteed *not* to be in the index.
+When the `-Strict` flag is used, the script performs additional verification checks:
+
+1.  **Search & Index CLI Existence:** Verifies that both the search and index CLIs exist at their expected paths.
+2.  **Search CLI Schema Validation:** Ensures the search CLI returns parseable JSON that matches one of the expected "v1-ish" shapes (e.g., a JSON array, or an object with an `items`, `results`, or `hits` property).
+3.  **Index CLI JSON Output:** Requires the index CLI to output at least one parseable JSON object. If the indexer only prints human-readable logs, `-Strict` mode will intentionally fail.
+4.  **Positive/Bait Search Conformance:** Ensures the output of the positive and bait token searches also conforms to the expected schema.
 
 ### Usage
 
 **Human Mode (full proof run with detailed output):**
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File ops\restart-supermemory.ps1
+# With strict validation
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ops\restart-supermemory.ps1 -Strict
 ```
 
 **Make.com Mode (for automation):**
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File ops\restart-supermemory.ps1 -MakeFriendly
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ops\restart-supermemory.ps1 -MakeFriendly -Strict
 ```
 
 **Make.com Pretty Debug Mode:**
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File ops\restart-supermemory.ps1 -MakeFriendlyPretty
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ops\restart-supermemory.ps1 -MakeFriendlyPretty -Strict
 ```
 
 **Optional Parameters:**
@@ -44,8 +82,10 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File ops\restart-supermemory.
   -WaitReceiptsMs 6000
 ```
 
-### JSON Output Fields
+### JSON Output Fields (v1)
 
+- `version`: `"sm-make-v1"` (NEW)
+- `strict`: `true` or `false` (NEW)
 - `status`: `ok` or `fail`
 - `exitCode`: `0` for success, non-zero for failure (different codes for different failure types)
 - `hits`: `{ "positive": <number>, "bait": <number> }`
@@ -54,17 +94,27 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File ops\restart-supermemory.
 
 ---
 
-## The "MakeFriendly" Guarantee
+## The "MakeFriendly" Guarantee (v1)
 
 When the `-MakeFriendly` or `-MakeFriendlyPretty` switch is used:
 
+- **`version` field:** The JSON output will always include a `version` field with the value `"sm-make-v1"`. This allows for robust routing and schema enforcement in Make.com.
 - **No extraneous output:** The scripts will not write to `stdout` or `stderr` using `Write-Host`, `Write-Output`, etc.
 - **Captured output:** Output from external commands (like Node.js) is captured, not printed.
 - **Single JSON object:** The script's entire output to `stdout` is a single, well-formed JSON object with no trailing newline.
 - **Consistent exit code:** The script's exit code will match the `exitCode` field in the JSON payload.
 - **Error trapping:** Even in the case of an unexpected error, the script will emit a valid JSON object with an error status.
 
-This ensures that Make.com scenarios can reliably parse the script's output without any extra noise.
+---
+
+## A Note on `-Strict` and the Index CLI
+
+**Strict mode requires the index CLI to output JSON.** If your index CLI currently only prints human-readable logs, `-Strict` mode will intentionally fail. To fix this, you should upgrade your index CLI to either:
+
+-   Add a `--json` flag that enables JSON output.
+-   Always print a final JSON summary line, e.g., `{"status":"ok","indexed":12,"skipped":0,"errors":0,"tag":"..."}`.
+
+This is the recommended approach to make `-Strict` mode deterministic and audit-friendly.
 
 ---
 
@@ -72,10 +122,17 @@ This ensures that Make.com scenarios can reliably parse the script's output with
 
 As noted in the original instructions, the successful completion of the SintraPrime implementation should be verified through evidence, not just assertions. The workflow of using health endpoints, analyzing receipts, and running proof scripts like these is the correct approach to achieve this verification.
 
-## Future Enhancements
+---
 
-A potential future enhancement is to add a `-Strict` mode to the scripts. This mode would:
+## Recommended Future Enhancements
 
-1.  Verify that the Supermemory search and index CLIs exist.
-2.  Verify that the CLIs return the expected schema.
-3.  Output a `version` field in the Make-friendly JSON to allow for schema version enforcement in Make.com.
+Based on the v1 script upgrades, here are the recommended next steps for hardening your operational tooling:
+
+1.  **Hard Schema Pinning:** Ship a `sm-make-v1.schema.json` file and have `-Strict` mode validate against it, rather than just performing shape checks. This eliminates parsing drift.
+2.  **CLI Self-Test Verbs:** Add `--version`, `--self-test --json`, and `--schema --json` verbs to your Supermemory CLIs. This makes `-Strict` mode faster and more reliable.
+3.  **Signed Receipts:** Add `receiptHash` (SHA-256), `chainHash` (hash chain), and an optional `ed25519Signature` to your receipts for a tamper-evident, court-safe audit trail.
+4.  **Deterministic Timing:** Include `startedAt`, `endedAt`, `durationMs`, `p50`, `p95`, and `p99` in the Make-friendly JSON for more precise performance telemetry.
+5.  **Stronger Secret Leakage Detection:** Scan for patterns resembling keys (prefixes, JWT-like blobs, high-entropy strings) in receipts and logs to prevent accidental data spills.
+6.  **Idempotent Proof Runs:** Emit a `runId` and `idempotencyKey` in the script output and log it to receipts to prevent Make.com retries from creating phantom runs.
+7.  **Make.com Router Hardening:** Create a dedicated Make.com sub-flow that parses the JSON, filters on `version == "sm-make-v1"`, routes by `exitCode`, and sends failures to a dead-letter queue.
+8.  **One-Line Diagnostic Capsule:** In human mode, print a single summary line with pointers to the receipt file and the last error cause for faster debugging.

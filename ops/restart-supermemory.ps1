@@ -31,10 +31,13 @@ param(
   [int]$WaitReceiptsMs = 4000,
   [switch]$MakeFriendly,
   [switch]$MakeFriendlyPretty,
+  [switch]$Strict,
   [switch]$Debug
 )
 
 if ($MakeFriendlyPretty) { $MakeFriendly = $true }
+
+$script:MAKE_SCHEMA_VERSION = 'sm-make-v1'
 
 # ---- Make-friendly hard mute (no stray output) ----
 if ($MakeFriendly) {
@@ -64,6 +67,8 @@ function Emit-MakeAndExit {
 
   $obj = [ordered]@{
     status      = $Status
+    version    = $script:MAKE_SCHEMA_VERSION
+    strict     = [bool]$Strict
     exitCode    = $ExitCode
     hits        = $Hits
     p95         = $P95
@@ -105,6 +110,87 @@ function Try-ParseJsonLine {
   try { return ($t | ConvertFrom-Json -ErrorAction Stop) } catch { return $null }
 }
 
+
+function Try-ParseJsonFromText {
+  param([object]$Output)
+
+  if ($null -eq $Output) { return $null }
+
+  $lines = @()
+  if ($Output -is [string]) {
+    $lines = $Output -split "`n"
+  } else {
+    $lines = @($Output)
+  }
+
+  # Try parse from the end: most CLIs print JSON on the last line
+  for ($i = $lines.Count - 1; $i -ge 0; $i--) {
+    $l = ($lines[$i] -as [string]).Trim()
+    if (!$l) { continue }
+    if ($l.StartsWith("{") -or $l.StartsWith("[")) {
+      $obj = Try-ParseJsonLine $l
+      if ($obj) { return $obj }
+    }
+  }
+
+  # Fallback: scan the full blob for a JSON-looking chunk (best-effort)
+  $blob = ($lines -join "`n")
+  try {
+    $matches = [regex]::Matches($blob, '(?s)(\{.*\}|\[.*\])')
+    if ($matches.Count -gt 0) {
+      $candidate = $matches[$matches.Count - 1].Groups[1].Value.Trim()
+      if ($candidate.StartsWith("{") -or $candidate.StartsWith("[")) {
+        return (Try-ParseJsonLine $candidate)
+      }
+    }
+  } catch { }
+
+  return $null
+}
+
+function Assert-SearchSchema {
+  param([object]$Resp, [string]$Context)
+
+  if ($null -eq $Resp) { return $false }
+  $props = $Resp.PSObject.Properties.Name
+
+  # Accept any of these shapes:
+  # - array of results
+  # - object with items/results array
+  # - object with hits integer or hits.count
+  if ($Resp -is [System.Array]) { return $true }
+
+  if ($props -contains 'items') {
+    $items = @($Resp.items)
+    if ($null -eq $items) { return $false }
+    return $true
+  }
+
+  if ($props -contains 'results') {
+    $r = $Resp.results
+    if ($r -is [System.Array]) { return $true }
+    try { if ([int]$r.count -ge 0) { return $true } } catch { }
+  }
+
+  if ($props -contains 'hits') {
+    $h = $Resp.hits
+    if ($h -is [int]) { return $true }
+    try { if ([int]$h.count -ge 0) { return $true } } catch { }
+  }
+
+  return $false
+}
+
+function Assert-IndexSchema {
+  param([object]$Resp)
+
+  if ($null -eq $Resp) { return $false }
+  $props = $Resp.PSObject.Properties.Name
+
+  # Be permissive: different indexers summarize differently.
+  $hasAny = ($props -contains 'status') -or ($props -contains 'indexed') -or ($props -contains 'uploaded') -or ($props -contains 'files') -or ($props -contains 'ok')
+  return [bool]$hasAny
+}
 function Resolve-RepoRoot {
   param([string]$ScriptDir)
   # expects script in repo\ops\
@@ -324,6 +410,25 @@ if (-not (Test-Path -LiteralPath $searchCli)) {
   throw "Missing search CLI: $searchCli"
 }
 
+
+# Strict mode: verify CLIs respond with parseable, expected schema (fail-closed).
+if ($Strict) {
+  Write-Diag "Strict mode: validating Supermemory search CLI schema..."
+  $probeToken = "sm_schema_probe_" + ([guid]::NewGuid().ToString("N"))
+  $probe = Invoke-External "node" @($searchCli, '--query', $probeToken, '--tag', $Tag, '--max', "1")
+  if ($probe.ExitCode -ne 0) {
+    $hitsObj = [ordered]@{ positive = 0; bait = 0 }
+    if ($MakeFriendly) { Emit-MakeAndExit -Status 'fail' -ExitCode 8 -Hits $hitsObj -P95 $null -ReceiptFile '' }
+    throw "Strict schema probe failed (search CLI exit $($probe.ExitCode))"
+  }
+  $probeObj = Try-ParseJsonFromText $probe.Output
+  if (-not (Assert-SearchSchema $probeObj 'probe')) {
+    $hitsObj = [ordered]@{ positive = 0; bait = 0 }
+    if ($MakeFriendly) { Emit-MakeAndExit -Status 'fail' -ExitCode 8 -Hits $hitsObj -P95 $null -ReceiptFile '' }
+    throw "Strict schema probe failed (search CLI schema mismatch)"
+  }
+}
+
 # Prepare control files
 $guid = [Guid]::NewGuid().ToString()
 $posToken = "SM_POSITIVE_{0}" -f $guid
@@ -353,9 +458,32 @@ try {
     exit 3
   }
 
+  if ($Strict) {
+    Write-Diag "Strict mode: validating Supermemory index CLI schema..."
+    $ixObj = Try-ParseJsonFromText $ix.Output
+    if (-not (Assert-IndexSchema $ixObj)) {
+      $hitsObj = [ordered]@{ positive = 0; bait = 0 }
+      if ($MakeFriendly) { Emit-MakeAndExit -Status 'fail' -ExitCode 8 -Hits $hitsObj -P95 $null -ReceiptFile '' }
+      Write-Diag "sm.fail strict_index_schema_bad"
+      exit 8
+    }
+  }
+
+
   # Search positive
   $sx1 = Invoke-External -Exe 'node' -Args @($searchCli, '--tag', $Tag, '--query', $posToken)
   $script:positiveHits = Parse-HitsFromSearchOutput -Lines $sx1.Output
+
+  if ($Strict) {
+    $sx1Obj = Try-ParseJsonFromText $sx1.Output
+    if (-not (Assert-SearchSchema $sx1Obj 'positive')) {
+      $hitsObj = [ordered]@{ positive = 0; bait = 0 }
+      if ($MakeFriendly) { Emit-MakeAndExit -Status 'fail' -ExitCode 8 -Hits $hitsObj -P95 $null -ReceiptFile '' }
+      Write-Diag "sm.fail strict_search_schema_positive_bad"
+      exit 8
+    }
+  }
+
   if ($script:positiveHits -lt 1) {
     $hitsObj = [ordered]@{ positive = $script:positiveHits; bait = 0 }
     if ($MakeFriendly) { Emit-MakeAndExit -Status 'fail' -ExitCode 4 -Hits $hitsObj -P95 $null -ReceiptFile '' }
@@ -366,6 +494,17 @@ try {
   # Search bait (must be 0)
   $sx2 = Invoke-External -Exe 'node' -Args @($searchCli, '--tag', $Tag, '--query', $baitToken)
   $script:baitHits = Parse-HitsFromSearchOutput -Lines $sx2.Output
+
+  if ($Strict) {
+    $sx2Obj = Try-ParseJsonFromText $sx2.Output
+    if (-not (Assert-SearchSchema $sx2Obj 'bait')) {
+      $hitsObj = [ordered]@{ positive = $script:positiveHits; bait = 0 }
+      if ($MakeFriendly) { Emit-MakeAndExit -Status 'fail' -ExitCode 8 -Hits $hitsObj -P95 $null -ReceiptFile '' }
+      Write-Diag "sm.fail strict_search_schema_bait_bad"
+      exit 8
+    }
+  }
+
   if ($script:baitHits -gt 0) {
     $hitsObj = [ordered]@{ positive = $script:positiveHits; bait = $script:baitHits }
     if ($MakeFriendly) { Emit-MakeAndExit -Status 'fail' -ExitCode 5 -Hits $hitsObj -P95 $null -ReceiptFile '' }

@@ -26,6 +26,8 @@ param(
 
 if ($MakeFriendlyPretty) { $MakeFriendly = $true }
 
+$script:MAKE_SCHEMA_VERSION = 'sm-make-v1'
+
 # ---- Make-friendly hard mute (no stray output) ----
 if ($MakeFriendly) {
   $global:ProgressPreference = 'SilentlyContinue'
@@ -50,6 +52,7 @@ function Emit-MakeAndExit {
 
   $obj = [ordered]@{
     status      = $Status
+    version    = $script:MAKE_SCHEMA_VERSION
     exitCode    = $ExitCode
     hits        = $Hits
     p95         = $P95
