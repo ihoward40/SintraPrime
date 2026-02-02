@@ -414,6 +414,34 @@ if (-not (Test-Path -LiteralPath $searchCli)) {
 # Strict mode: verify CLIs respond with parseable, expected schema (fail-closed).
 if ($Strict) {
   Write-Diag "Strict mode: validating Supermemory search CLI schema..."
+  # Node sanity (Strict): ensure node exists + scripts parse
+  $nv = Invoke-External "node" @("--version")
+  if ($nv.ExitCode -ne 0) {
+    $hitsObj = [ordered]@{ positive = 0; bait = 0 }
+    if ($MakeFriendly) { Emit-MakeAndExit -Status 'fail' -ExitCode 8 -Hits $hitsObj -P95 $null -ReceiptFile '' }
+    throw "Strict preflight failed (node --version exit $($nv.ExitCode))"
+  }
+  $maj = $null
+  if ($nv.Output -match '^v(\d+)\.') { $maj = [int]$Matches[1] }
+  if ($maj -ne $null -and $maj -lt 16) {
+    $hitsObj = [ordered]@{ positive = 0; bait = 0 }
+    if ($MakeFriendly) { Emit-MakeAndExit -Status 'fail' -ExitCode 8 -Hits $hitsObj -P95 $null -ReceiptFile '' }
+    throw "Strict preflight failed (node version too old: $($nv.Output))"
+  }
+
+  $chkS = Invoke-External "node" @("--check", $searchCli)
+  if ($chkS.ExitCode -ne 0) {
+    $hitsObj = [ordered]@{ positive = 0; bait = 0 }
+    if ($MakeFriendly) { Emit-MakeAndExit -Status 'fail' -ExitCode 8 -Hits $hitsObj -P95 $null -ReceiptFile '' }
+    throw "Strict preflight failed (node --check search CLI exit $($chkS.ExitCode))"
+  }
+
+  $chkI = Invoke-External "node" @("--check", $indexCli)
+  if ($chkI.ExitCode -ne 0) {
+    $hitsObj = [ordered]@{ positive = 0; bait = 0 }
+    if ($MakeFriendly) { Emit-MakeAndExit -Status 'fail' -ExitCode 8 -Hits $hitsObj -P95 $null -ReceiptFile '' }
+    throw "Strict preflight failed (node --check index CLI exit $($chkI.ExitCode))"
+  }
   $probeToken = "sm_schema_probe_" + ([guid]::NewGuid().ToString("N"))
   $probe = Invoke-External "node" @($searchCli, '--query', $probeToken, '--tag', $Tag, '--max', "1")
   if ($probe.ExitCode -ne 0) {

@@ -1,12 +1,23 @@
-# Supermemory Operational Scripts Integration (v1)
+# Supermemory Operational Scripts Integration (v2)
 
-This document describes the integration of the v1 Supermemory operational scripts into the SintraPrime repository. These scripts include hardened features like `-Strict` mode and a `version` field for robust automation.
+This document describes the integration of the v2 Supermemory operational scripts into the SintraPrime repository. These scripts add even more robust validation, including `-Strict` mode for the receipts summary script and Node.js preflight checks, while maintaining a stable `v1` schema for Make.com compatibility.
 
 ---
 
-## 1. `sm-receipts-summary.ps1` (v1)
+## 1. `sm-receipts-summary.ps1` (v2)
 
 This script reads Supermemory receipt files and generates a health summary.
+
+### What `-Strict` Mode Does (NEW in v2)
+
+When the `-Strict` flag is used, the script performs additional validation on the receipt file's tail:
+
+1.  **Valid JSON:** Ensures there are valid JSON records.
+2.  **Event Field:** Verifies that at least one record has an `event` field.
+3.  **Supermemory Attempts:** Checks that at least one `sm.*` attempt was detected.
+4.  **Secret Leakage Scan:** Scans for the presence of `"text"` or `"rawText"` property keys to prevent accidental secret leakage. If found, the script will fail.
+
+If any of these strict checks fail, the script will set `status = "fail"` and `exitCode = 8`.
 
 ### Usage
 
@@ -28,24 +39,31 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File ops\sm-receipts-summary.
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File ops\sm-receipts-summary.ps1 -MakeFriendlyPretty
 ```
 
-### JSON Output Fields (v1)
+### JSON Output Fields (v2)
 
-- `version`: `"sm-make-v1"` (NEW)
+- `version`: `"sm-make-v1"` (Stable)
+- `strict`: `true` or `false` (NEW)
 - `status`: `ok` or `fail`
-- `exitCode`: `0` for success, non-zero for failure
+- `exitCode`: `0` for success, `8` for strict mode failure, other non-zero for other failures
 - `hits`: `{ "attempts": <number>, "successes": <number>, "errors": <number> }`
 - `p95`: 95th percentile latency in milliseconds
 - `receiptFile`: The name of the receipt file that was analyzed
 
 ---
 
-## 2. `restart-supermemory.ps1` (v1)
+## 2. `restart-supermemory.ps1` (v2)
 
 This script is a proof runner that performs a series of checks to ensure Supermemory is functioning correctly.
 
-### What `-Strict` Mode Does (NEW)
+### What `-Strict` Mode Does (Enhanced in v2)
 
-When the `-Strict` flag is used, the script performs additional verification checks:
+When the `-Strict` flag is used, the script performs several layers of validation:
+
+**1. Node.js Preflight Checks (NEW in v2):**
+-   **Node Version:** Verifies that `node --version` runs and is not an ancient version.
+-   **CLI Syntax Check:** Runs `node --check` on both the search and index CLIs to prove they are syntactically valid and parsable by Node.js.
+
+**2. Core Validation Checks (from v1):**
 
 1.  **Search & Index CLI Existence:** Verifies that both the search and index CLIs exist at their expected paths.
 2.  **Search CLI Schema Validation:** Ensures the search CLI returns parseable JSON that matches one of the expected "v1-ish" shapes (e.g., a JSON array, or an object with an `items`, `results`, or `hits` property).
@@ -82,10 +100,10 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File ops\restart-supermemory.
   -WaitReceiptsMs 6000
 ```
 
-### JSON Output Fields (v1)
+### JSON Output Fields (v2)
 
-- `version`: `"sm-make-v1"` (NEW)
-- `strict`: `true` or `false` (NEW)
+- `version`: `"sm-make-v1"` (Stable)
+- `strict`: `true` or `false`
 - `status`: `ok` or `fail`
 - `exitCode`: `0` for success, non-zero for failure (different codes for different failure types)
 - `hits`: `{ "positive": <number>, "bait": <number> }`
@@ -94,7 +112,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File ops\restart-supermemory.
 
 ---
 
-## The "MakeFriendly" Guarantee (v1)
+## The "MakeFriendly" Guarantee (v2)
 
 When the `-MakeFriendly` or `-MakeFriendlyPretty` switch is used:
 
@@ -124,9 +142,9 @@ As noted in the original instructions, the successful completion of the SintraPr
 
 ---
 
-## Recommended Future Enhancements
+## Recommended Next-Level Upgrades
 
-Based on the v1 script upgrades, here are the recommended next steps for hardening your operational tooling:
+Based on the v2 script upgrades, here are the recommended next steps for hardening your operational tooling:
 
 1.  **Hard Schema Pinning:** Ship a `sm-make-v1.schema.json` file and have `-Strict` mode validate against it, rather than just performing shape checks. This eliminates parsing drift.
 2.  **CLI Self-Test Verbs:** Add `--version`, `--self-test --json`, and `--schema --json` verbs to your Supermemory CLIs. This makes `-Strict` mode faster and more reliable.

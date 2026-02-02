@@ -21,7 +21,8 @@ param(
   [int]$MaxLines = 20000,
   [switch]$MakeFriendly,
   [switch]$MakeFriendlyPretty,
-  [switch]$Debug
+  [switch]$Debug,
+  [switch]$Strict
 )
 
 if ($MakeFriendlyPretty) { $MakeFriendly = $true }
@@ -218,6 +219,34 @@ $hitsObj = [ordered]@{
 # Status logic: ok if we saw at least one attempt and zero errors
 $status = if ($attempts -gt 0 -and $errors -eq 0) { 'ok' } else { 'fail' }
 $exitCode = if ($status -eq 'ok') { 0 } else { 1 }
+
+# Strict mode: validate receipts schema + no raw input keys (tail-only)
+if ($Strict) {
+  $problems = New-Object System.Collections.Generic.List[string]
+  if ($parsedLines.Count -le 0) { $problems.Add('no_valid_json_records') }
+  if ($attempts -le 0) { $problems.Add('no_sm_attempts_detected') }
+  if ($attempts -gt 0 -and $lat.Count -gt 0 -and $p95 -eq $null) { $problems.Add('p95_unavailable') }
+
+  # Must see at least one 'event' field on any parsed record
+  $anyEvent = $false
+  foreach ($o in $parsedLines) {
+    try { if ($o.PSObject.Properties.Name -contains 'event') { $anyEvent = $true; break } } catch {}
+  }
+  if (-not $anyEvent) { $problems.Add('missing_event_field') }
+
+  # Tail-only raw text key scan (property names only)
+  try {
+    $tailJoined = [string]::Join("`n", $lines)
+    if ($tailJoined -match '"(rawText|text)"\s*:') { $problems.Add('raw_text_key_detected') }
+  } catch {}
+
+  if ($problems.Count -gt 0) {
+    $status = 'fail'
+    $exitCode = 8
+    Write-Diag ('sm.strict.fail problems=' + ($problems -join ','))
+  }
+}
+
 
 if ($MakeFriendly) {
   Emit-MakeAndExit -Status $status -ExitCode $exitCode -Hits $hitsObj -P95 $p95 -ReceiptFile $receiptFile
