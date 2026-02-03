@@ -647,7 +647,7 @@ export class AdCampaignManager {
     );
     
     return {
-      date: today,
+      date: today || new Date().toISOString().split('T')[0] || '',
       campaigns: campaignSummaries,
       totalSpend,
       totalRevenue,
