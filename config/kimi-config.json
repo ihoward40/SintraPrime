@@ -1,0 +1,14 @@
+{
+  "provider": "moonshot",
+  "model": "moonshot-v1-32k",
+  "api_version": "v1",
+  "default_params": {
+    "temperature": 0.7,
+    "max_tokens": 4000,
+    "top_p": 1.0
+  },
+  "rate_limits": {
+    "requests_per_minute": 60,
+    "tokens_per_minute": 100000
+  }
+}
