@@ -113,8 +113,56 @@ Create variables:
   - Idempotency Key: `{{idempotencyKey}}`
   - Case: relation to triggering case
 
+## Importing the Make.com Blueprint
+
+A ready-to-use Make.com blueprint is provided in this directory:
+
+**File:** `evidence-hygiene-blueprint.json`
+
+### Import Steps
+
+1. **Open Make.com** and navigate to your organization/team
+2. **Create New Scenario** → Choose "Import Blueprint"
+3. **Upload** `evidence-hygiene-blueprint.json`
+4. **Configure Connections** (after import):
+   - Notion connection for all Notion modules
+   - Ensure your Notion integration has access to all three databases
+
+### Required Environment Variables
+
+Before activating the scenario, set these connection variables in Make.com:
+
+- `NOTION_CASES_DB_ID` - Database ID for 🧾 Cases
+- `NOTION_TASKS_DB_ID` - Database ID for Tasks
+- `NOTION_RUN_RECEIPTS_DB_ID` - Database ID for Run Receipts
+
+**Finding Database IDs:**
+1. Open the database in Notion
+2. Copy the URL: `https://notion.so/workspace/DATABASE_ID?v=...`
+3. The `DATABASE_ID` is the 32-character hex string (without dashes)
+
+### Testing the Scenario
+
+1. Create a test case in 🧾 Cases with:
+   - `Stage` = `Wave-1 Sent`
+   - `WT Gate For Automation` = `✅ ALLOWED`
+   - `CaseID` = `TEST-CASE-001`
+
+2. The scenario should:
+   - Trigger on the new case
+   - Compute idempotency key: `TEST-CASE-001:evidence_hygiene:v1`
+   - Check for duplicate tasks
+   - Create a new task (if no duplicate)
+   - Write a Run Receipt with outcome `created`
+
+3. Run the scenario again (manually or wait for trigger):
+   - Should find the existing task
+   - Write a Run Receipt with outcome `duplicate`
+   - Should NOT create a second task
+
 ## Notes / Guardrails
 
 - Keep **Run Receipts append-only**. Never edit prior receipts; create a new one each run.
 - Prefer using **CaseID** over Notion page ids for long-term stability.
 - If you later add retries, keep receipt outcomes explicit (`duplicate` vs `created` vs `blocked`) so you can audit behavior.
+- The blueprint maintains `schemaVersion` stability - do not modify version fields unless updating the contract schema.
