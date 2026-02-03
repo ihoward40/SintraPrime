@@ -1,0 +1,57 @@
+{
+  "name": "SintraPrime Default Policy",
+  "version": "1.0",
+  "createdAt": "2026-02-03T00:00:00.000Z",
+  "createdBy": "system",
+  "description": "Default governance policy for SintraPrime Supermemory operations",
+  "settings": {
+    "maxConcurrentRuns": 1,
+    "maxExecutionTimeSeconds": 300,
+    "maxRetries": 3,
+    "maxDailySpend": 1000,
+    "maxSingleTransaction": 100,
+    "requireApprovalAbove": 50,
+    "requireTwoPersonRule": false,
+    "twoPersonRuleThreshold": 500,
+    "allowedOperations": [
+      "search",
+      "index",
+      "report",
+      "health",
+      "proof",
+      "diff",
+      "rotate",
+      "fixtures",
+      "integrity",
+      "status"
+    ],
+    "blockedOperations": [
+      "delete",
+      "purge",
+      "drop"
+    ],
+    "receiptRetentionDays": 90,
+    "requireSignedReceipts": true,
+    "p95ThresholdMs": 2000,
+    "errorRateThreshold": 0.05,
+    "enableStrictMode": true,
+    "enableHealthDiff": true,
+    "enableBaitTokenCheck": true,
+    "enableLockFile": true,
+    "enableRouting": true,
+    "alertChannels": [
+      "make",
+      "slack"
+    ],
+    "criticalAlertChannels": [
+      "make",
+      "slack",
+      "pagerduty"
+    ]
+  },
+  "metadata": {
+    "lastReviewed": "2026-02-03T00:00:00.000Z",
+    "reviewedBy": "system",
+    "nextReviewDate": "2026-03-03T00:00:00.000Z"
+  }
+}

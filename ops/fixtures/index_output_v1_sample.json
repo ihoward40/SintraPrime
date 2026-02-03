@@ -1,0 +1,12 @@
+{
+  "schemaVersion": "index-v1",
+  "indexed": 150,
+  "skipped": 2,
+  "errors": 0,
+  "duration_ms": 2500,
+  "timestamp": "2026-02-03T12:00:00.000Z",
+  "details": {
+    "newDocuments": 145,
+    "updatedDocuments": 5
+  }
+}

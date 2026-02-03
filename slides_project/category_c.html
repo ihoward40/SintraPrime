@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background-color: #F2F2F2; }
+        .slide-container {
+            width: 1280px;
+            min-height: 720px;
+            background-color: #F2F2F2;
+            color: #000000;
+            position: relative;
+            overflow: hidden;
+            padding: 60px;
+            display: grid;
+            grid-template-rows: auto 1fr;
+            gap: 40px;
+        }
+        .header {
+            border-bottom: 4px solid #000000;
+            padding-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+        .header-text h1 {
+            font-size: 48px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: -1px;
+            margin-bottom: 10px;
+        }
+        .header-text h2 {
+            font-size: 24px;
+            font-weight: 400;
+            color: #333333;
+        }
+        .category-badge {
+            background-color: #000000;
+            color: #FFFFFF;
+            padding: 10px 20px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .content-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 40px;
+        }
+        .upgrade-column {
+            display: flex;
+            flex-direction: column;
+            border-top: 1px solid #333333;
+            padding-top: 20px;
+        }
+        .upgrade-number {
+            font-size: 64px;
+            font-weight: 900;
+            color: #FF3B30;
+            line-height: 1;
+            margin-bottom: 20px;
+        }
+        .upgrade-title {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            line-height: 1.2;
+        }
+        .roi-tag {
+            display: inline-block;
+            font-size: 14px;
+            font-weight: 700;
+            text-transform: uppercase;
+            background-color: #E0E0E0;
+            padding: 4px 8px;
+            margin-bottom: 20px;
+            align-self: flex-start;
+        }
+        .upgrade-details {
+            font-size: 18px;
+            line-height: 1.5;
+            color: #333333;
+        }
+        .upgrade-details ul {
+            list-style-type: none;
+        }
+        .upgrade-details li {
+            margin-bottom: 10px;
+            position: relative;
+            padding-left: 20px;
+        }
+        .upgrade-details li::before {
+            content: "•";
+            color: #FF3B30;
+            position: absolute;
+            left: 0;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="slide-container">
+        <div class="header">
+            <div class="header-text">
+                <h1>Operational Hardening</h1>
+                <h2>Prevents Chaos & Improves Reliability</h2>
+            </div>
+            <div class="category-badge">Category C</div>
+        </div>
+        
+        <div class="content-grid">
+            <div class="upgrade-column">
+                <div class="upgrade-number">06</div>
+                <div class="upgrade-title">Lock File / Mutex</div>
+                <div class="roi-tag">High ROI • Low Effort</div>
+                <div class="upgrade-details">
+                    <ul>
+                        <li>Prevent overlapping runs from Make retries + manual executions</li>
+                        <li>Exit with code 9 if lock exists and is recent (&lt;5 minutes)</li>
+                        <li>Prevents race conditions and resource contention</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="upgrade-column">
+                <div class="upgrade-number">07</div>
+                <div class="upgrade-title">Receipt Rotation + Retention</div>
+                <div class="roi-tag">Medium ROI • Medium Effort</div>
+                <div class="upgrade-details">
+                    <ul>
+                        <li>Keep last 30 days locally, auto-archive older to Google Drive</li>
+                        <li>Prevents disk space issues and ensures compliance</li>
+                        <li>Automated daily cleanup script</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="upgrade-column">
+                <div class="upgrade-number">08</div>
+                <div class="upgrade-title">Timeout Discipline</div>
+                <div class="roi-tag">High ROI • Medium Effort</div>
+                <div class="upgrade-details">
+                    <ul>
+                        <li>Hard timeout around node calls with killable job wrapper</li>
+                        <li>Exit with code 10 for timeout failures</li>
+                        <li>Prevents hung processes from cascading failures</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

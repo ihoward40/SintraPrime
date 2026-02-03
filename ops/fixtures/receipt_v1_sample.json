@@ -1,0 +1,14 @@
+{
+  "event": "sm.search.success",
+  "timestamp": "2026-02-03T12:00:00.000Z",
+  "version": "receipt-v1",
+  "data": {
+    "query": "test query",
+    "hits": 5,
+    "duration_ms": 150
+  },
+  "metadata": {
+    "hostname": "sintra-prod-01",
+    "pid": 12345
+  }
+}
