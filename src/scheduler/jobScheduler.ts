@@ -134,12 +134,45 @@ export class JobScheduler {
    * Execute a job
    */
   private async executeJob(job: JobQueueItem): Promise<void> {
-    // In a real implementation, this would integrate with the orchestrator
     console.log(`Executing job ${job.id}`);
     
-    // Placeholder for actual execution
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    try {
+      // Check if orchestrator is available
+      if (typeof this.orchestrator === 'undefined') {
+        throw new Error('Orchestrator not configured');
+      }
+
+      // Convert job task to TaskRequest format
+      const taskRequest = {
+        id: job.id,
+        prompt: job.task.prompt || job.task.toString(),
+        context: job.task.context || {},
+        priority: job.priority,
+        requester: 'scheduler',
+        timestamp: new Date().toISOString()
+      };
+
+      // Execute through orchestrator
+      const result = await this.orchestrator.executeTask(taskRequest);
+      
+      // Log execution result
+      console.log(`Job ${job.id} completed:`, result);
+      
+      return result;
+    } catch (error) {
+      console.error(`Job ${job.id} failed:`, error);
+      throw error;
+    }
   }
+
+  /**
+   * Set the orchestrator for job execution
+   */
+  setOrchestrator(orchestrator: any): void {
+    this.orchestrator = orchestrator;
+  }
+
+  private orchestrator: any = null;
 
   /**
    * Main scheduler loop

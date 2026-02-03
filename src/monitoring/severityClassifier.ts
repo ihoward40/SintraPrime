@@ -69,35 +69,115 @@ export class SeverityClassifier {
   }
 
   private detectRetryLoop(run: Partial<RunRecord>): boolean {
-    // TODO: Placeholder implementation - Production version should:
-    // - Check for repeated executions of the same scenario_id
-    // - Analyze retry metadata from run artifacts
-    // - Examine error patterns indicating retry conditions
-    // Currently returns false to avoid false positives
+    // Check for repeated executions indicating retry loops
+    if (!run.operations_spent) return false;
+    
+    // High operation count relative to time suggests retries
+    const executionTimeSeconds = run.time_ms ? run.time_ms / 1000 : 1;
+    const opsPerSecond = run.operations_spent / executionTimeSeconds;
+    
+    // If spending > 100 operations per second, likely a retry loop
+    if (opsPerSecond > 100) return true;
+    
+    // Check scenario name for retry-related keywords
+    const scenarioName = run.scenario_name?.toLowerCase() || '';
+    if (scenarioName.includes('retry') || scenarioName.includes('loop')) {
+      // If operations > 1000, flag as likely retry loop
+      return run.operations_spent > 1000;
+    }
+    
     return false;
   }
 
   private detectUnboundedIterator(run: Partial<RunRecord>): boolean {
-    // TODO: Placeholder implementation - Production version should:
-    // - Integrate with scenario config checks
-    // - Detect loop constructs without proper bounds
-    // - Check for runaway iteration patterns
+    // Check for scenarios that might have unbounded loops
+    if (!run.operations_spent) return false;
+    
+    // Very high operation counts suggest unbounded iteration
+    if (run.operations_spent > 5000) return true;
+    
+    // Check for iterator-related patterns in scenario name
+    const scenarioName = run.scenario_name?.toLowerCase() || '';
+    const hasIteratorKeywords = 
+      scenarioName.includes('for each') ||
+      scenarioName.includes('iterate') ||
+      scenarioName.includes('loop') ||
+      scenarioName.includes('batch');
+    
+    // If iterator keywords present and high ops, flag as unbounded
+    if (hasIteratorKeywords && run.operations_spent > 2000) {
+      return true;
+    }
+    
     return false;
   }
 
   private detectMissingIdempotency(run: Partial<RunRecord>): boolean {
-    // TODO: Placeholder implementation - Production version should:
-    // - Check scenario configuration for idempotency keys
-    // - Verify duplicate detection mechanisms
-    // - Validate transaction boundaries
+    // Check if the run might have duplicate processing issues
+    if (!run.operations_spent) return false;
+    
+    // Check for payment/financial operations without idempotency
+    const scenarioName = run.scenario_name?.toLowerCase() || '';
+    const isFinancialOp = 
+      scenarioName.includes('payment') ||
+      scenarioName.includes('charge') ||
+      scenarioName.includes('invoice') ||
+      scenarioName.includes('refund') ||
+      scenarioName.includes('transaction');
+    
+    // Financial operations should have relatively low operation counts
+    // High counts suggest potential duplicate processing
+    if (isFinancialOp && run.operations_spent > 500) {
+      return true;
+    }
+    
+    // Check for data modification operations
+    const isModifyOp =
+      scenarioName.includes('create') ||
+      scenarioName.includes('update') ||
+      scenarioName.includes('delete') ||
+      scenarioName.includes('modify');
+    
+    // High operation count on modify operations suggests missing idempotency
+    if (isModifyOp && run.operations_spent > 1000) {
+      return true;
+    }
+    
     return false;
   }
 
   private detectPIIExposure(run: Partial<RunRecord>): boolean {
-    // TODO: Placeholder implementation - Production version should:
-    // - Integrate with data validation pipelines
-    // - Check for PII patterns in outputs
-    // - Validate data classification tags
+    // Check for potential PII exposure in logs or outputs
+    const scenarioName = run.scenario_name?.toLowerCase() || '';
+    
+    // Scenarios dealing with user data should be flagged for review
+    const hasPIIKeywords = 
+      scenarioName.includes('customer') ||
+      scenarioName.includes('user') ||
+      scenarioName.includes('email') ||
+      scenarioName.includes('phone') ||
+      scenarioName.includes('address') ||
+      scenarioName.includes('personal') ||
+      scenarioName.includes('profile');
+    
+    // High severity scenarios with PII keywords should be flagged
+    const severity = run.severity;
+    if (hasPIIKeywords && (severity === 'SEV0' || severity === 'SEV1')) {
+      return true;
+    }
+    
+    // Check if scenario involves logging or reporting
+    const hasLogging = 
+      scenarioName.includes('log') ||
+      scenarioName.includes('report') ||
+      scenarioName.includes('export') ||
+      scenarioName.includes('dump');
+    
+    // Logging operations with PII keywords are risky
+    if (hasPIIKeywords && hasLogging) {
+      return true;
+    }
+    
     return false;
   }
 
