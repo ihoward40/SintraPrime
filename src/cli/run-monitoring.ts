@@ -35,9 +35,10 @@ function parseArgs(): { command: string; args: Record<string, string> } {
   
   const parsedArgs: Record<string, string> = {};
   for (let i = 1; i < args.length; i++) {
-    if (args[i]?.startsWith("--")) {
-      const key = args[i].slice(2);
-      const value = args[i + 1] || "";
+    const a = args[i];
+    if (typeof a === "string" && a.startsWith("--")) {
+      const key = a.slice(2);
+      const value = args[i + 1] ?? "";
       parsedArgs[key] = value;
       i++;
     }

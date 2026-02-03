@@ -10,15 +10,15 @@
  */
 
 import crypto from "crypto";
-import type {
-  RunRecord,
-  CaseRecord,
-  SeverityLevel,
+import {
   CaseCategory,
   CaseStatus,
   ExposureBand,
-  RootCause,
-  RiskFlag,
+  type CaseRecord,
+  type RiskFlag,
+  type RootCause,
+  type RunRecord,
+  type SeverityLevel,
 } from "./types.js";
 
 /**
@@ -72,7 +72,7 @@ export async function linkRunToCase(
  */
 function generateCaseId(): string {
   const date = new Date();
-  const dateStr = date.toISOString().split("T")[0].replace(/-/g, ""); // YYYYMMDD
+  const dateStr = date.toISOString().slice(0, 10).replace(/-/g, ""); // YYYYMMDD
   
   // Generate 6-character random alphanumeric suffix
   const suffix = crypto.randomBytes(3).toString("hex").toUpperCase();

@@ -12,6 +12,7 @@ import type {
   RunRecord,
   Classification,
   SlackMessage,
+  SlackActionsBlock,
   SeverityLevel,
 } from "./types.js";
 
@@ -138,8 +139,10 @@ export function formatAlert(
 
   // Add artifacts button if available
   if (runRecord.Artifacts_Link) {
-    const actionsBlock = message.blocks[2];
-    if (actionsBlock.type === "actions") {
+    const actionsBlock = message.blocks.find(
+      (b): b is SlackActionsBlock => b.type === "actions"
+    );
+    if (actionsBlock) {
       actionsBlock.elements.push({
         type: "button",
         text: {

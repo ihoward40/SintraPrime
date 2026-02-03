@@ -13,6 +13,7 @@ import {
   type RunRecord,
   type Classification,
   type MisconfigAssessment,
+  type PolicyAction,
   type PolicyConfig,
   type RiskFlag,
   SeverityLevel,
@@ -219,8 +220,8 @@ function determineSeverity(
 function getPolicyActions(
   severity: SeverityLevel,
   policyConfig: PolicyConfig
-): string[] {
-  const key = severity.toLowerCase() as keyof typeof policyConfig.severity_policy;
+): PolicyAction[] {
+  const key = severity.toLowerCase() as keyof PolicyConfig["severity_policy"];
   return policyConfig.severity_policy[key]?.action ?? [];
 }
 

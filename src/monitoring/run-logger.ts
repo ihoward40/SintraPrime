@@ -18,7 +18,7 @@ import type { RunRecord } from "./types.js";
  */
 export async function logRun(runData: RunRecord): Promise<void> {
   const timestamp = new Date(runData.Timestamp);
-  const dateStr = timestamp.toISOString().split("T")[0]; // YYYY-MM-DD
+  const dateStr = timestamp.toISOString().slice(0, 10); // YYYY-MM-DD
   
   // Create directory structure
   const runDir = path.join(process.cwd(), "runs", "CREDIT_MONITORING", dateStr);
