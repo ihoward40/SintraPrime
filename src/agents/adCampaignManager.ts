@@ -11,7 +11,7 @@
  * @module AdCampaignManager
  */
 
-import { Task, TaskResult, ExecutionContext } from '../types';
+import { Task, TaskResult, ExecutionContext } from '../types/index.js';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -647,7 +647,7 @@ export class AdCampaignManager {
     );
     
     return {
-      date: today,
+      date: today || new Date().toISOString().split('T')[0] || '',
       campaigns: campaignSummaries,
       totalSpend,
       totalRevenue,

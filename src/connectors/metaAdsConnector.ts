@@ -30,7 +30,8 @@ export class MetaAdsConnector implements Connector {
   async authenticate(): Promise<void> {
     // Verify credentials by fetching account info
     try {
-      await this.call('GET', `/${this.config.adAccountId}`, {
+      await this.call('GET', {
+        endpoint: `/${this.config.adAccountId}`,
         fields: 'name,account_status'
       });
       this.authenticated = true;
@@ -42,7 +43,8 @@ export class MetaAdsConnector implements Connector {
   /**
    * Make an API call to Meta
    */
-  async call(method: string, endpoint: string, args: any): Promise<any> {
+  async call(method: string, args: any): Promise<any> {
+    const { endpoint, ...restArgs } = args;
     if (!this.authenticated && endpoint !== `/${this.config.adAccountId}`) {
       throw new Error('Not authenticated. Call authenticate() first.');
     }
@@ -51,8 +53,8 @@ export class MetaAdsConnector implements Connector {
     url.searchParams.append('access_token', this.config.accessToken);
 
     // Add query parameters for GET requests
-    if (method === 'GET' && args) {
-      Object.entries(args).forEach(([key, value]) => {
+    if (method === 'GET' && Object.keys(restArgs).length > 0) {
+      Object.entries(restArgs).forEach(([key, value]) => {
         url.searchParams.append(key, String(value));
       });
     }
@@ -63,7 +65,7 @@ export class MetaAdsConnector implements Connector {
         headers: {
           'Content-Type': 'application/json'
         },
-        body: method !== 'GET' ? JSON.stringify(args) : undefined
+        body: method !== 'GET' && Object.keys(restArgs).length > 0 ? JSON.stringify(restArgs) : undefined
       });
 
       if (!response.ok) {
@@ -81,7 +83,7 @@ export class MetaAdsConnector implements Connector {
    * Get campaigns
    */
   async getCampaigns(fields = 'id,name,status,objective'): Promise<any> {
-    return this.call('GET', `/${this.config.adAccountId}/campaigns`, { fields });
+    return this.call('GET', { endpoint: `/${this.config.adAccountId}/campaigns`, fields });
   }
 
   /**
@@ -93,21 +95,21 @@ export class MetaAdsConnector implements Connector {
     status: string;
     special_ad_categories?: string[];
   }): Promise<any> {
-    return this.call('POST', `/${this.config.adAccountId}/campaigns`, campaign);
+    return this.call('POST', { endpoint: `/${this.config.adAccountId}/campaigns`, ...campaign });
   }
 
   /**
    * Get campaign insights
    */
   async getCampaignInsights(campaignId: string, fields = 'impressions,clicks,spend,cpc,cpm'): Promise<any> {
-    return this.call('GET', `/${campaignId}/insights`, { fields });
+    return this.call('GET', { endpoint: `/${campaignId}/insights`, fields });
   }
 
   /**
    * Get ad sets
    */
   async getAdSets(campaignId: string, fields = 'id,name,status,daily_budget'): Promise<any> {
-    return this.call('GET', `/${campaignId}/adsets`, { fields });
+    return this.call('GET', { endpoint: `/${campaignId}/adsets`, fields });
   }
 
   /**
@@ -123,28 +125,29 @@ export class MetaAdsConnector implements Connector {
     targeting: any;
     status: string;
   }): Promise<any> {
-    return this.call('POST', `/${this.config.adAccountId}/adsets`, adSet);
+    return this.call('POST', { endpoint: `/${this.config.adAccountId}/adsets`, ...adSet });
   }
 
   /**
    * Get ads
    */
   async getAds(adSetId: string, fields = 'id,name,status,creative'): Promise<any> {
-    return this.call('GET', `/${adSetId}/ads`, { fields });
+    return this.call('GET', { endpoint: `/${adSetId}/ads`, fields });
   }
 
   /**
    * Update campaign status
    */
   async updateCampaignStatus(campaignId: string, status: 'ACTIVE' | 'PAUSED' | 'DELETED'): Promise<any> {
-    return this.call('POST', `/${campaignId}`, { status });
+    return this.call('POST', { endpoint: `/${campaignId}`, status });
   }
 
   /**
    * Get account spending
    */
   async getAccountSpending(): Promise<any> {
-    return this.call('GET', `/${this.config.adAccountId}`, {
+    return this.call('GET', {
+      endpoint: `/${this.config.adAccountId}`,
       fields: 'spend_cap,amount_spent,balance'
     });
   }

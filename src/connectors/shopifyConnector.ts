@@ -31,7 +31,7 @@ export class ShopifyConnector implements Connector {
   async authenticate(): Promise<void> {
     // Verify credentials by making a test API call
     try {
-      await this.call('GET', '/admin/api/' + this.config.apiVersion + '/shop.json', {});
+      await this.call('GET', { endpoint: '/admin/api/' + this.config.apiVersion + '/shop.json' });
       this.authenticated = true;
     } catch (error) {
       throw new Error(`Shopify authentication failed: ${error}`);
@@ -41,7 +41,8 @@ export class ShopifyConnector implements Connector {
   /**
    * Make an API call to Shopify
    */
-  async call(method: string, endpoint: string, args: any): Promise<any> {
+  async call(method: string, args: any): Promise<any> {
+    const { endpoint, ...restArgs } = args;
     if (!this.authenticated) {
       throw new Error('Not authenticated. Call authenticate() first.');
     }
@@ -59,7 +60,7 @@ export class ShopifyConnector implements Connector {
       const response = await fetch(url, {
         method,
         headers,
-        body: method !== 'GET' ? JSON.stringify(args) : undefined
+        body: method !== 'GET' && Object.keys(restArgs).length > 0 ? JSON.stringify(restArgs) : undefined
       });
 
       // Update rate limit info from response headers
@@ -79,35 +80,35 @@ export class ShopifyConnector implements Connector {
    * Get products
    */
   async getProducts(limit = 50): Promise<any> {
-    return this.call('GET', `/admin/api/${this.config.apiVersion}/products.json?limit=${limit}`, {});
+    return this.call('GET', { endpoint: `/admin/api/${this.config.apiVersion}/products.json?limit=${limit}` });
   }
 
   /**
    * Create a product
    */
   async createProduct(product: any): Promise<any> {
-    return this.call('POST', `/admin/api/${this.config.apiVersion}/products.json`, { product });
+    return this.call('POST', { endpoint: `/admin/api/${this.config.apiVersion}/products.json`, product });
   }
 
   /**
    * Update a product
    */
   async updateProduct(productId: string, product: any): Promise<any> {
-    return this.call('PUT', `/admin/api/${this.config.apiVersion}/products/${productId}.json`, { product });
+    return this.call('PUT', { endpoint: `/admin/api/${this.config.apiVersion}/products/${productId}.json`, product });
   }
 
   /**
    * Get orders
    */
   async getOrders(limit = 50): Promise<any> {
-    return this.call('GET', `/admin/api/${this.config.apiVersion}/orders.json?limit=${limit}`, {});
+    return this.call('GET', { endpoint: `/admin/api/${this.config.apiVersion}/orders.json?limit=${limit}` });
   }
 
   /**
    * Get order by ID
    */
   async getOrder(orderId: string): Promise<any> {
-    return this.call('GET', `/admin/api/${this.config.apiVersion}/orders/${orderId}.json`, {});
+    return this.call('GET', { endpoint: `/admin/api/${this.config.apiVersion}/orders/${orderId}.json` });
   }
 
   /**
@@ -129,9 +130,14 @@ export class ShopifyConnector implements Connector {
   private updateRateLimit(response: Response): void {
     const remaining = response.headers.get('X-Shopify-Shop-Api-Call-Limit');
     if (remaining) {
-      const [used, total] = remaining.split('/').map(Number);
-      this.rateLimitRemaining = total - used;
-      this.rateLimitResetTime = Date.now() + 1000; // Reset after 1 second
+      const parts = remaining.split('/');
+      const used = Number(parts[0]);
+      const total = Number(parts[1]);
+      // Check for NaN after Number conversion
+      if (!isNaN(total) && !isNaN(used)) {
+        this.rateLimitRemaining = total - used;
+        this.rateLimitResetTime = Date.now() + 1000; // Reset after 1 second
+      }
     }
   }
 }

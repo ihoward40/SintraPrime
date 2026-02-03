@@ -118,11 +118,14 @@ export class SecretsVault {
    */
   private decrypt(encrypted: string): string {
     const [ivHex, encryptedData] = encrypted.split(':');
+    if (!ivHex || !encryptedData) {
+      throw new Error('Invalid encrypted data format');
+    }
     const iv = Buffer.from(ivHex, 'hex');
     
     const decipher = crypto.createDecipheriv('aes-256-cbc', this.encryptionKey, iv);
     
-    let decrypted = decipher.update(encryptedData, 'hex', 'utf8');
+    let decrypted: string = decipher.update(encryptedData, 'hex', 'utf8');
     decrypted += decipher.final('utf8');
     
     return decrypted;

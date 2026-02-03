@@ -11,7 +11,7 @@
  * @module AITechnologyMonitor
  */
 
-import { ExecutionContext, TaskResult } from '../types';
+import { ExecutionContext, TaskResult } from '../types/index.js';
 
 // ============================================================================
 // TYPES & INTERFACES
