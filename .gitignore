@@ -1,9 +1,16 @@
 node_modules/
 dist/
 .env
+.env.*
+!.env.example
 
 # TypeScript incremental build cache
 tsconfig.tsbuildinfo
+
+# ElevenLabs voice synthesis - generated audio files
+voice/
+*.mp3
+*.wav
 
 # Control plane secrets
 control/secrets.env
