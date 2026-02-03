@@ -41,7 +41,8 @@ export class ShopifyConnector implements Connector {
   /**
    * Make an API call to Shopify
    */
-  async call(method: string, endpoint: string, args: any): Promise<any> {
+  async call(method: string, args: any): Promise<any> {
+    const { endpoint, ...restArgs } = args;
     if (!this.authenticated) {
       throw new Error('Not authenticated. Call authenticate() first.');
     }
@@ -59,7 +60,7 @@ export class ShopifyConnector implements Connector {
       const response = await fetch(url, {
         method,
         headers,
-        body: method !== 'GET' ? JSON.stringify(args) : undefined
+        body: method !== 'GET' && Object.keys(restArgs).length > 0 ? JSON.stringify(restArgs) : undefined
       });
 
       // Update rate limit info from response headers

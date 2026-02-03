@@ -4,12 +4,31 @@
  * Provides AI-powered analysis and report generation for governance operations
  */
 
-import { OpenAI } from 'openai';
+// Lazy-loaded OpenAI client
+let openaiInstance: any = null;
+let openaiLoadError: Error | null = null;
 
-export const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-  baseURL: process.env.OPENAI_API_BASE,
-});
+async function getOpenAI(): Promise<any | null> {
+  if (openaiInstance) return openaiInstance;
+  if (openaiLoadError) return null;
+  
+  try {
+    const OpenAIModule = await import('openai');
+    if (process.env.OPENAI_API_KEY) {
+      openaiInstance = new OpenAIModule.OpenAI({
+        apiKey: process.env.OPENAI_API_KEY,
+        baseURL: process.env.OPENAI_API_BASE,
+      });
+    }
+    return openaiInstance;
+  } catch (error) {
+    openaiLoadError = error as Error;
+    console.warn('OpenAI package not installed. AI features will be disabled.');
+    return null;
+  }
+}
+
+export const openai = null; // Deprecated: use getOpenAI() instead
 
 export function isAIAvailable(): boolean {
   return !!process.env.OPENAI_API_KEY;
@@ -22,6 +41,11 @@ export async function generateAnalysisReport(
   analysisData: any,
   options: { format?: 'markdown' | 'text' } = {}
 ): Promise<string> {
+  const openai = await getOpenAI();
+  if (!isAIAvailable() || !openai) {
+    return '# Analysis Report\n\n*AI features not available. Please configure OPENAI_API_KEY.*';
+  }
+
   const { format = 'markdown' } = options;
 
   const prompt = `Generate a comprehensive governance analysis report based on the following data:
@@ -38,19 +62,31 @@ Format the report as ${format} with the following sections:
 
 Be professional, concise, and actionable.`;
 
-  const response = await openai.responses.create({
-    model: 'gpt-5',
-    input: prompt,
-    instructions: 'You are a governance and compliance analyst generating audit reports.',
-  });
+  try {
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4',
+      messages: [
+        { role: 'system', content: 'You are a governance and compliance analyst generating audit reports.' },
+        { role: 'user', content: prompt }
+      ],
+    });
 
-  return response.output?.[0]?.content || '';
+    return response.choices[0]?.message?.content || '';
+  } catch (error) {
+    console.error('AI analysis failed:', error);
+    return '# Analysis Report\n\n*AI analysis failed. See logs for details.*';
+  }
 }
 
 /**
  * Generate natural language summary of DeepThink output
  */
 export async function summarizeDeepThinkOutput(output: any): Promise<string> {
+  const openai = await getOpenAI();
+  if (!isAIAvailable() || !openai) {
+    return 'AI summary not available. Please configure OPENAI_API_KEY.';
+  }
+
   const prompt = `Summarize the following analysis output in clear, non-technical language:
 
 ${JSON.stringify(output, null, 2)}
@@ -63,13 +99,21 @@ Provide:
 
 Keep it concise and suitable for executive review.`;
 
-  const response = await openai.responses.create({
-    model: 'gpt-5',
-    input: prompt,
-    temperature: 0.7,
-  });
+  try {
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4',
+      messages: [
+        { role: 'system', content: 'You are a governance analyst creating executive summaries.' },
+        { role: 'user', content: prompt }
+      ],
+      temperature: 0.7,
+    });
 
-  return response.output?.[0]?.content || '';
+    return response.choices[0]?.message?.content || '';
+  } catch (error) {
+    console.error('AI summary failed:', error);
+    return 'AI summary failed. See logs for details.';
+  }
 }
 
 /**
@@ -78,6 +122,11 @@ Keep it concise and suitable for executive review.`;
 export async function generateDiagramDescription(
   systemComponents: string[]
 ): Promise<string> {
+  const openai = await getOpenAI();
+  if (!isAIAvailable() || !openai) {
+    return 'AI diagram generation not available. Please configure OPENAI_API_KEY.';
+  }
+
   const prompt = `Create a detailed description for a system architecture diagram with these components:
 
 ${systemComponents.join('\n')}
@@ -90,10 +139,18 @@ Describe:
 
 Format as a structured description suitable for diagram generation.`;
 
-  const response = await openai.responses.create({
-    model: 'gpt-5',
-    input: prompt,
-  });
+  try {
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4',
+      messages: [
+        { role: 'system', content: 'You are a system architect creating architecture diagrams.' },
+        { role: 'user', content: prompt }
+      ],
+    });
 
-  return response.output?.[0]?.content || '';
+    return response.choices[0]?.message?.content || '';
+  } catch (error) {
+    console.error('AI diagram generation failed:', error);
+    return 'AI diagram generation failed. See logs for details.';
+  }
 }

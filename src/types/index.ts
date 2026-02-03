@@ -112,3 +112,29 @@ export interface Connector {
   authenticate(): Promise<void>;
   call(method: string, args: any): Promise<any>;
 }
+
+export interface Task {
+  id: string;
+  type: string;
+  prompt: string;
+  context?: any;
+  priority: 'low' | 'medium' | 'high';
+  requester: string;
+  timestamp: string;
+}
+
+export interface TaskResult {
+  success: boolean;
+  data?: any;
+  error?: string;
+  timestamp: string;
+}
+
+export interface ExecutionContext {
+  taskId: string;
+  planId?: string;
+  stepId?: string;
+  config?: any;
+  connectors?: Map<string, Connector>;
+  tools?: Map<string, Tool>;
+}

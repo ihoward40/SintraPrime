@@ -42,7 +42,8 @@ export class GoogleDriveConnector implements Connector {
   /**
    * Make an API call to Google Drive
    */
-  async call(method: string, endpoint: string, args: any): Promise<any> {
+  async call(method: string, args: any): Promise<any> {
+    const { endpoint, ...restArgs } = args;
     if (!this.authenticated && endpoint !== '/about') {
       throw new Error('Not authenticated. Call authenticate() first.');
     }
@@ -50,8 +51,8 @@ export class GoogleDriveConnector implements Connector {
     const url = new URL(`${this.baseUrl}${endpoint}`);
     
     // Add query parameters for GET requests
-    if (method === 'GET' && args) {
-      Object.entries(args).forEach(([key, value]) => {
+    if (method === 'GET' && Object.keys(restArgs).length > 0) {
+      Object.entries(restArgs).forEach(([key, value]) => {
         url.searchParams.append(key, String(value));
       });
     }
@@ -63,7 +64,7 @@ export class GoogleDriveConnector implements Connector {
           'Authorization': `Bearer ${this.config.accessToken}`,
           'Content-Type': 'application/json'
         },
-        body: method !== 'GET' ? JSON.stringify(args) : undefined
+        body: method !== 'GET' && Object.keys(restArgs).length > 0 ? JSON.stringify(restArgs) : undefined
       });
 
       if (!response.ok) {

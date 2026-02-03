@@ -42,7 +42,8 @@ export class MetaAdsConnector implements Connector {
   /**
    * Make an API call to Meta
    */
-  async call(method: string, endpoint: string, args: any): Promise<any> {
+  async call(method: string, args: any): Promise<any> {
+    const { endpoint, ...restArgs } = args;
     if (!this.authenticated && endpoint !== `/${this.config.adAccountId}`) {
       throw new Error('Not authenticated. Call authenticate() first.');
     }
@@ -51,8 +52,8 @@ export class MetaAdsConnector implements Connector {
     url.searchParams.append('access_token', this.config.accessToken);
 
     // Add query parameters for GET requests
-    if (method === 'GET' && args) {
-      Object.entries(args).forEach(([key, value]) => {
+    if (method === 'GET' && Object.keys(restArgs).length > 0) {
+      Object.entries(restArgs).forEach(([key, value]) => {
         url.searchParams.append(key, String(value));
       });
     }
@@ -63,7 +64,7 @@ export class MetaAdsConnector implements Connector {
         headers: {
           'Content-Type': 'application/json'
         },
-        body: method !== 'GET' ? JSON.stringify(args) : undefined
+        body: method !== 'GET' && Object.keys(restArgs).length > 0 ? JSON.stringify(restArgs) : undefined
       });
 
       if (!response.ok) {
