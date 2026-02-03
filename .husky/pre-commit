@@ -1,12 +1,14 @@
 #!/usr/bin/env sh
-. "$(dirname -- "$0")/_/husky.sh"
 
-# Prevent committing secrets
-echo "🔒 Scanning for secrets..."
-npx --yes @secretlint/secretlint "$(git diff --cached --name-only --diff-filter=ACM)" || {
-  echo "❌ Secret detected! Commit blocked."
-  exit 1
-}
+# Prevent committing secrets (only if there are staged files)
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM)
+if [ -n "$STAGED_FILES" ]; then
+  echo "🔒 Scanning for secrets..."
+  echo "$STAGED_FILES" | xargs npx secretlint || {
+    echo "❌ Secret detected! Commit blocked."
+    exit 1
+  }
+fi
 
 # Run lint-staged
 npx lint-staged

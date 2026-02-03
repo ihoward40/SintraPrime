@@ -1,4 +1,4 @@
-import pino from 'pino';
+import pino = require('pino');
 import { env } from '../config/env-validator.js';
 
 export const logger = pino({
