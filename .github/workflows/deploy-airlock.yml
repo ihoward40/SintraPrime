@@ -1,0 +1,28 @@
+name: Deploy Airlock
+
+on:
+  push:
+    branches: [master, main]
+    paths:
+      - 'airlock_server/**'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy to Render
+        env:
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+        run: |
+          if [ -n "$RENDER_DEPLOY_HOOK" ]; then
+            curl -X POST "$RENDER_DEPLOY_HOOK"
+            echo "Deployment triggered successfully"
+          else
+            echo "RENDER_DEPLOY_HOOK not configured, skipping deployment"
+          fi

@@ -1,10 +1,64 @@
-name: ci
+name: CI
 
 on:
   push:
+    branches: [master, main, develop]
   pull_request:
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Format check
+        run: npm run format:check
+
+      - name: Typecheck
+        run: npm run typecheck
+
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Run tests with coverage
+        run: npm run test:coverage
+
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage/coverage-final.json
+          fail_ci_if_error: false
+        continue-on-error: true
+
   smoke:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -34,8 +88,8 @@ jobs:
       - name: Start mock server
         env:
           WEBHOOK_SECRET: test-secret
-          MOCK_INCLUDE_THREADID: "1"
-          MOCK_PORT: "8787"
+          MOCK_INCLUDE_THREADID: '1'
+          MOCK_PORT: '8787'
         run: |
           node ./scripts/mock-server.js &
           sleep 1
@@ -44,8 +98,28 @@ jobs:
       - name: Smoke vectors (strict)
         env:
           WEBHOOK_SECRET: test-secret
-          STRICT_AGENT_OUTPUT: "1"
+          STRICT_AGENT_OUTPUT: '1'
           VALIDATION_WEBHOOK_URL: http://localhost:8787/validation
           PLANNER_WEBHOOK_URL: http://localhost:8787/planner
           THREAD_ID: local_test_001
         run: npm run smoke:vectors:trim
+
+  security:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install
+        run: npm ci
+
+      - name: Run npm audit
+        run: npm audit --audit-level=moderate
+        continue-on-error: true
