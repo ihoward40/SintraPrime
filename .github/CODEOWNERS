@@ -1,0 +1,60 @@
+# SintraPrime Code Owners
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# === SUPPLY CHAIN SECURITY ===
+# Any dependency change requires review
+/package.json                  @ihoward40
+/package-lock.json             @ihoward40
+/**/package.json               @ihoward40
+/**/package-lock.json          @ihoward40
+
+# === CI/CD & WORKFLOWS ===
+# Any workflow change = potential supply chain attack
+/.github/workflows/            @ihoward40
+/.github/dependabot.yml        @ihoward40
+/.github/CODEOWNERS            @ihoward40
+
+# === SECURITY-CRITICAL SERVICES ===
+# Airlock handles HMAC auth + file uploads
+/airlock_server/               @ihoward40
+/airlock_server/middleware/    @ihoward40
+/airlock_server/env-validator.mjs @ihoward40
+
+# === SIGNING & CRYPTOGRAPHY ===
+/governance/keys/              @ihoward40
+/src/**/signing/               @ihoward40
+/scripts/signing/              @ihoward40
+
+# === MONITORING & CREDIT SYSTEM ===
+# Financial impact (credit spend tracking)
+/src/monitoring/               @ihoward40
+/config/monitoring-policy*     @ihoward40
+
+# === GOVERNANCE & COMPLIANCE ===
+/governance/                   @ihoward40
+/docs/governance/              @ihoward40
+
+# === CORE EXECUTION PATHS ===
+/src/cli/                      @ihoward40
+/deepthink/                    @ihoward40
+
+# === ENVIRONMENT & SECRETS ===
+.env.example                   @ihoward40
+airlock_server/.env.example    @ihoward40
+/src/config/env-validator.ts   @ihoward40
+
+# === BUILD & DEPLOY ===
+/Dockerfile                    @ihoward40
+/docker-compose.yml            @ihoward40
+/render.yaml                   @ihoward40
+/tsconfig*.json                @ihoward40
+
+# === LOGGING (can leak secrets) ===
+/src/utils/logger.ts           @ihoward40
+
+# === AUTHENTICATION & AUTHORIZATION ===
+/src/**/auth/**                @ihoward40
+/src/**/middleware/security*   @ihoward40
+
+# Default owner for everything else
+*                              @ihoward40
