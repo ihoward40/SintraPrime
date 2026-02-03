@@ -185,6 +185,14 @@ The credit monitoring system integrates with automation platforms to:
    - Module: Format Output
    - Show: Severity, variance, risk flags, actions
 
+## Flow 5: Evidence Hygiene Task Creator (Notion)
+
+**Trigger:** Notion database watch (Stage-based)
+
+**Purpose:** When a Case enters `Stage = "Wave-1 Sent"`, enforce the `WT Gate For Automation` check, create exactly-one Evidence Hygiene task (idempotent), and write a Run Receipt on every run.
+
+**Spec:** See `automations/make/evidence-hygiene.md` and `automations/make/contracts/evidence-hygiene.contract.json`
+
 ## Configuration Variables
 
 All automation flows use these environment variables:
