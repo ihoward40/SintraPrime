@@ -1,0 +1,17 @@
+# Critical infrastructure requiring explicit review
+/.github/workflows/          @ihoward40
+/airlock_server/             @ihoward40
+/governance/keys/            @ihoward40
+/src/monitoring/             @ihoward40
+/config/monitoring-policy*   @ihoward40
+/governance/                 @ihoward40
+/docs/governance/            @ihoward40
+/src/cli/                    @ihoward40
+/deepthink/                  @ihoward40
+.env.example                 @ihoward40
+airlock_server/.env.example  @ihoward40
+package.json                 @ihoward40
+package-lock.json            @ihoward40
+*/package.json               @ihoward40
+*/package-lock.json          @ihoward40
+*                            @ihoward40

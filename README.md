@@ -1,5 +1,25 @@
 # Agent Mode Engine
 
+[![CI](https://github.com/ihoward40/SintraPrime/actions/workflows/ci.yml/badge.svg)](https://github.com/ihoward40/SintraPrime/actions)
+[![CodeQL](https://github.com/ihoward40/SintraPrime/actions/workflows/codeql.yml/badge.svg)](https://github.com/ihoward40/SintraPrime/security)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Node](https://img.shields.io/badge/node-%3E%3D20-brightgreen)](https://nodejs.org)
+
+> Institution-grade evidence lifecycle, cryptographic verification, and court-ready procedural memory engine.
+
+## Quick Start
+
+```bash
+# Install (Node 20+ required)
+npm install
+
+# Build
+npm run build
+
+# Run
+npm start
+```
+
 ## Agent Mode (API-only)
 
 Validator → Planner → Executor pipeline and receipt logging: [docs/agent-mode-executor-v1.md](docs/agent-mode-executor-v1.md)
