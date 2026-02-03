@@ -30,7 +30,8 @@ export class MetaAdsConnector implements Connector {
   async authenticate(): Promise<void> {
     // Verify credentials by fetching account info
     try {
-      await this.call('GET', `/${this.config.adAccountId}`, {
+      await this.call('GET', {
+        endpoint: `/${this.config.adAccountId}`,
         fields: 'name,account_status'
       });
       this.authenticated = true;
@@ -82,7 +83,7 @@ export class MetaAdsConnector implements Connector {
    * Get campaigns
    */
   async getCampaigns(fields = 'id,name,status,objective'): Promise<any> {
-    return this.call('GET', `/${this.config.adAccountId}/campaigns`, { fields });
+    return this.call('GET', { endpoint: `/${this.config.adAccountId}/campaigns`, fields });
   }
 
   /**
@@ -94,21 +95,21 @@ export class MetaAdsConnector implements Connector {
     status: string;
     special_ad_categories?: string[];
   }): Promise<any> {
-    return this.call('POST', `/${this.config.adAccountId}/campaigns`, campaign);
+    return this.call('POST', { endpoint: `/${this.config.adAccountId}/campaigns`, ...campaign });
   }
 
   /**
    * Get campaign insights
    */
   async getCampaignInsights(campaignId: string, fields = 'impressions,clicks,spend,cpc,cpm'): Promise<any> {
-    return this.call('GET', `/${campaignId}/insights`, { fields });
+    return this.call('GET', { endpoint: `/${campaignId}/insights`, fields });
   }
 
   /**
    * Get ad sets
    */
   async getAdSets(campaignId: string, fields = 'id,name,status,daily_budget'): Promise<any> {
-    return this.call('GET', `/${campaignId}/adsets`, { fields });
+    return this.call('GET', { endpoint: `/${campaignId}/adsets`, fields });
   }
 
   /**
@@ -124,28 +125,29 @@ export class MetaAdsConnector implements Connector {
     targeting: any;
     status: string;
   }): Promise<any> {
-    return this.call('POST', `/${this.config.adAccountId}/adsets`, adSet);
+    return this.call('POST', { endpoint: `/${this.config.adAccountId}/adsets`, ...adSet });
   }
 
   /**
    * Get ads
    */
   async getAds(adSetId: string, fields = 'id,name,status,creative'): Promise<any> {
-    return this.call('GET', `/${adSetId}/ads`, { fields });
+    return this.call('GET', { endpoint: `/${adSetId}/ads`, fields });
   }
 
   /**
    * Update campaign status
    */
   async updateCampaignStatus(campaignId: string, status: 'ACTIVE' | 'PAUSED' | 'DELETED'): Promise<any> {
-    return this.call('POST', `/${campaignId}`, { status });
+    return this.call('POST', { endpoint: `/${campaignId}`, status });
   }
 
   /**
    * Get account spending
    */
   async getAccountSpending(): Promise<any> {
-    return this.call('GET', `/${this.config.adAccountId}`, {
+    return this.call('GET', {
+      endpoint: `/${this.config.adAccountId}`,
       fields: 'spend_cap,amount_spent,balance'
     });
   }

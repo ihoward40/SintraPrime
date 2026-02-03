@@ -32,7 +32,7 @@ export class GoogleDriveConnector implements Connector {
   async authenticate(): Promise<void> {
     // Verify credentials by fetching about info
     try {
-      await this.call('GET', '/about', { fields: 'user' });
+      await this.call('GET', { endpoint: '/about', fields: 'user' });
       this.authenticated = true;
     } catch (error) {
       throw new Error(`Google Drive authentication failed: ${error}`);
@@ -83,6 +83,7 @@ export class GoogleDriveConnector implements Connector {
    */
   async listFiles(query?: string, pageSize = 100): Promise<any> {
     const params: any = {
+      endpoint: '/files',
       pageSize,
       fields: 'files(id,name,mimeType,createdTime,modifiedTime,size)'
     };
@@ -91,14 +92,15 @@ export class GoogleDriveConnector implements Connector {
       params.q = query;
     }
 
-    return this.call('GET', '/files', params);
+    return this.call('GET', params);
   }
 
   /**
    * Get file metadata
    */
   async getFile(fileId: string): Promise<any> {
-    return this.call('GET', `/files/${fileId}`, {
+    return this.call('GET', {
+      endpoint: `/files/${fileId}`,
       fields: 'id,name,mimeType,createdTime,modifiedTime,size,webViewLink'
     });
   }
@@ -156,19 +158,20 @@ export class GoogleDriveConnector implements Connector {
    */
   async createFolder(folderName: string, parentFolderId?: string): Promise<any> {
     const metadata = {
+      endpoint: '/files',
       name: folderName,
       mimeType: 'application/vnd.google-apps.folder',
       parents: parentFolderId ? [parentFolderId] : undefined
     };
 
-    return this.call('POST', '/files', metadata);
+    return this.call('POST', metadata);
   }
 
   /**
    * Delete a file
    */
   async deleteFile(fileId: string): Promise<void> {
-    await this.call('DELETE', `/files/${fileId}`, {});
+    await this.call('DELETE', { endpoint: `/files/${fileId}` });
   }
 
   /**

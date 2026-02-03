@@ -31,7 +31,7 @@ export class ShopifyConnector implements Connector {
   async authenticate(): Promise<void> {
     // Verify credentials by making a test API call
     try {
-      await this.call('GET', '/admin/api/' + this.config.apiVersion + '/shop.json', {});
+      await this.call('GET', { endpoint: '/admin/api/' + this.config.apiVersion + '/shop.json' });
       this.authenticated = true;
     } catch (error) {
       throw new Error(`Shopify authentication failed: ${error}`);
@@ -80,35 +80,35 @@ export class ShopifyConnector implements Connector {
    * Get products
    */
   async getProducts(limit = 50): Promise<any> {
-    return this.call('GET', `/admin/api/${this.config.apiVersion}/products.json?limit=${limit}`, {});
+    return this.call('GET', { endpoint: `/admin/api/${this.config.apiVersion}/products.json?limit=${limit}` });
   }
 
   /**
    * Create a product
    */
   async createProduct(product: any): Promise<any> {
-    return this.call('POST', `/admin/api/${this.config.apiVersion}/products.json`, { product });
+    return this.call('POST', { endpoint: `/admin/api/${this.config.apiVersion}/products.json`, product });
   }
 
   /**
    * Update a product
    */
   async updateProduct(productId: string, product: any): Promise<any> {
-    return this.call('PUT', `/admin/api/${this.config.apiVersion}/products/${productId}.json`, { product });
+    return this.call('PUT', { endpoint: `/admin/api/${this.config.apiVersion}/products/${productId}.json`, product });
   }
 
   /**
    * Get orders
    */
   async getOrders(limit = 50): Promise<any> {
-    return this.call('GET', `/admin/api/${this.config.apiVersion}/orders.json?limit=${limit}`, {});
+    return this.call('GET', { endpoint: `/admin/api/${this.config.apiVersion}/orders.json?limit=${limit}` });
   }
 
   /**
    * Get order by ID
    */
   async getOrder(orderId: string): Promise<any> {
-    return this.call('GET', `/admin/api/${this.config.apiVersion}/orders/${orderId}.json`, {});
+    return this.call('GET', { endpoint: `/admin/api/${this.config.apiVersion}/orders/${orderId}.json` });
   }
 
   /**
@@ -131,8 +131,10 @@ export class ShopifyConnector implements Connector {
     const remaining = response.headers.get('X-Shopify-Shop-Api-Call-Limit');
     if (remaining) {
       const [used, total] = remaining.split('/').map(Number);
-      this.rateLimitRemaining = total - used;
-      this.rateLimitResetTime = Date.now() + 1000; // Reset after 1 second
+      if (total !== undefined && used !== undefined) {
+        this.rateLimitRemaining = total - used;
+        this.rateLimitResetTime = Date.now() + 1000; // Reset after 1 second
+      }
     }
   }
 }

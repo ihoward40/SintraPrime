@@ -126,8 +126,9 @@ export interface Task {
 export interface TaskResult {
   success: boolean;
   data?: any;
+  output?: any; // Some agents use 'output' instead of 'data'
   error?: string;
-  timestamp: string;
+  timestamp?: string; // Make timestamp optional for flexibility
 }
 
 export interface ExecutionContext {
