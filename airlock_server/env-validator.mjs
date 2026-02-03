@@ -18,10 +18,8 @@ export function validateEnv() {
   try {
     return envSchema.parse(process.env);
   } catch (error) {
-    if (error.name === 'ZodError') {
-      const issues = error.issues.map(
-        (issue) => `  - ${issue.path.join('.')}: ${issue.message}`
-      );
+    if (error instanceof z.ZodError) {
+      const issues = error.issues.map((issue) => `  - ${issue.path.join('.')}: ${issue.message}`);
       console.error('❌ Airlock environment validation failed:');
       console.error(issues.join('\n'));
       process.exit(1);
