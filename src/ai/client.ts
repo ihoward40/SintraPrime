@@ -13,9 +13,9 @@ async function getOpenAI(): Promise<any | null> {
   if (openaiLoadError) return null;
   
   try {
-    // Use eval to avoid TypeScript compile-time checking of the module
-    const importFn = new Function('specifier', 'return import(specifier)');
-    const OpenAIModule: any = await importFn('openai');
+    // @ts-ignore - OpenAI is an optional dependency
+    // Dynamic import will gracefully fail if package not installed
+    const OpenAIModule = await import('openai');
     if (process.env.OPENAI_API_KEY) {
       openaiInstance = new OpenAIModule.OpenAI({
         apiKey: process.env.OPENAI_API_KEY,

@@ -67,20 +67,21 @@ export class SeverityClassifier {
 
     return { severity, misconfig_likelihood, risk_flags, risk_summary };
   }
+  // Threshold constants for anomaly detection
+  private readonly RETRY_LOOP_THRESHOLD = 10000; // Credits spent indicating potential retry loop
+  private readonly UNBOUNDED_ITERATOR_THRESHOLD = 50000; // Credits suggesting unbounded iteration
 
   private detectRetryLoop(run: Partial<RunRecord>): boolean {
     // Check for repeated executions indicating retry loops
     if (!run.credits_total) return false;
     
-    // High operation count relative to time suggests retries
-    // Assuming each credit represents a significant operation
-    const creditsSpent = run.credits_total;
-    
-    // If spending > 10000 credits, likely a retry loop
-    if (creditsSpent > 10000) return true;
+    // High credit count suggests retry loops
+    // Threshold: 10000 credits = ~100 expensive operations being retried
+    if (run.credits_total > this.RETRY_LOOP_THRESHOLD) return true;
     
     // Check scenario name for retry-related keywords
     const scenarioName = run.scenario_name?.toLowerCase() || '';
+    const creditsSpent = run.credits_total;
     if (scenarioName.includes('retry') || scenarioName.includes('loop')) {
       // If credits > 5000, flag as likely retry loop
       return creditsSpent > 5000;
@@ -94,7 +95,8 @@ export class SeverityClassifier {
     if (!run.credits_total) return false;
     
     // Very high credit counts suggest unbounded iteration
-    if (run.credits_total > 50000) return true;
+    // Threshold: 50000 credits = ~500 iterations without proper bounds
+    if (run.credits_total > this.UNBOUNDED_ITERATOR_THRESHOLD) return true;
     
     // Check for iterator-related patterns in scenario name
     const scenarioName = run.scenario_name?.toLowerCase() || '';

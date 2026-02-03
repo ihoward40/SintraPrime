@@ -208,7 +208,10 @@ export class EmailConnector implements Connector {
         } else if (response.startsWith('250') && step === 8) {
           socket.write('QUIT\r\n');
           socket.end();
-          resolve({ success: true, messageId: response.split(' ')[1] });
+          // Extract message ID from response, with fallback
+          const responseParts = response.split(' ');
+          const messageId = responseParts.length >= 2 ? responseParts[1] : 'unknown';
+          resolve({ success: true, messageId });
         } else if (response.startsWith('5')) {
           reject(new Error(`SMTP error: ${response}`));
           socket.end();

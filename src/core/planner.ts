@@ -76,21 +76,17 @@ export class Planner {
       if (this.aiClient && typeof this.aiClient.generatePlan === 'function') {
         const response = await this.aiClient.generatePlan(prompt);
         const steps = this.parseAIResponse(response);
-        return steps.map((step, index) => {
-          const stepId = this.generateStepId();
-          return {
-            id: stepId,
-            description: step.description,
-            tool: step.tool,
-            args: step.args,
-            dependencies: step.dependencies.map(depIndex => {
-              // Convert dependency indices to step IDs
-              // Since we're generating IDs sequentially, we can use a temporary mapping
-              const allIds = steps.map(() => this.generateStepId());
-              return allIds[depIndex] || stepId;
-            })
-          };
-        });
+        
+        // Generate all step IDs first to ensure correct dependency mapping
+        const stepIds = steps.map(() => this.generateStepId());
+        
+        return steps.map((step, index) => ({
+          id: stepIds[index]!,
+          description: step.description,
+          tool: step.tool,
+          args: step.args,
+          dependencies: step.dependencies.map(depIndex => stepIds[depIndex]).filter((id): id is string => !!id)
+        }));
       }
     } catch (error) {
       console.warn('AI plan generation failed, using heuristic fallback:', error);

@@ -138,7 +138,7 @@ export class JobScheduler {
     
     try {
       // Check if orchestrator is available
-      if (typeof this.orchestrator === 'undefined') {
+      if (this.orchestrator === null) {
         throw new Error('Orchestrator not configured');
       }
 
