@@ -1,4 +1,12 @@
-# Agent Mode Engine
+# SintraPrime / Agent Mode Engine
+
+[![CI](https://github.com/ihoward40/SintraPrime/actions/workflows/ci.yml/badge.svg)](https://github.com/ihoward40/SintraPrime/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/ihoward40/SintraPrime/actions/workflows/codeql.yml/badge.svg)](https://github.com/ihoward40/SintraPrime/actions/workflows/codeql.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Node Version](https://img.shields.io/badge/node-%3E%3D20-brightgreen.svg)](https://nodejs.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue.svg)](https://www.typescriptlang.org/)
+
+> Institution-grade evidence lifecycle, cryptographic verification, and court-ready procedural memory engine.
 
 ## Agent Mode (API-only)
 
@@ -13,7 +21,6 @@ GOVERNANCE_RELEASES (CITEABLE)
 
 - SintraPrime_Mode_Governance_v1.0 (baseline; frozen)
 - SintraPrime_Mode_Governance_v1.1 (delta; active)
-
 
 Change Control:
 All governance changes are tracked via explicit release deltas.
@@ -66,6 +73,7 @@ For full documentation, see [`monitoring/README.md`](monitoring/README.md).
 SintraPrime Airlock is a production-ready HMAC-verified gateway that replaces paid Manus credits with owned infrastructure. It securely receives portal automation payloads, validates signatures and file integrity, and forwards sanitized receipts to Make.com workflows.
 
 **Key Features:**
+
 - HMAC-SHA256 signature verification (sender → Airlock → Make)
 - SHA-256 file hash validation
 - Temporary file storage for Make.com downloads
@@ -73,6 +81,7 @@ SintraPrime Airlock is a production-ready HMAC-verified gateway that replaces pa
 - Health check endpoint for monitoring
 
 **Quick Start:**
+
 ```bash
 cd airlock_server
 npm install
@@ -82,6 +91,7 @@ npm start
 ```
 
 **Documentation:**
+
 - **Server README**: [`airlock_server/README.md`](airlock_server/README.md) — Architecture and API reference
 - **Deployment Guide**: [`docs/AIRLOCK_DEPLOYMENT.md`](docs/AIRLOCK_DEPLOYMENT.md) — Step-by-step Render.com deployment
 - **Make.com Setup**: [`docs/MAKE_SCENARIO_SETUP.md`](docs/MAKE_SCENARIO_SETUP.md) — Configure Make.com scenario with HMAC verification
