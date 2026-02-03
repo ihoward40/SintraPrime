@@ -11,6 +11,12 @@
     "build:clean": "npm run clean && tsc -p tsconfig.json",
     "build:watch": "tsc -p tsconfig.json --incremental --watch",
     "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:watch": "vitest",
+    "prepare": "husky install || true",
     "dev": "tsx src/cli/run-command.ts",
     "start": "node dist/cli/run-command.js",
     "smoke": "node ./scripts/smoke.js",
@@ -49,16 +55,37 @@
     "zod": "^3.25.0"
   },
   "devDependencies": {
+    "@secretlint/secretlint": "^8.2.0",
+    "@secretlint/secretlint-rule-preset-recommend": "^8.2.0",
     "@types/node": "^22.10.0",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
     "ajv": "^8.17.1",
+    "eslint": "^9.0.0",
+    "eslint-config-prettier": "^9.1.0",
+    "husky": "^9.0.0",
+    "lint-staged": "^15.2.0",
     "markdown-it": "^14.1.0",
     "pdf-lib": "^1.17.1",
+    "pino": "^9.0.0",
+    "pino-pretty": "^11.0.0",
     "playwright": "^1.57.0",
+    "prettier": "^3.3.0",
     "puppeteer": "^23.11.1",
     "qrcode": "^1.5.4",
     "rimraf": "^6.0.1",
     "tsx": "^4.19.2",
     "tweetnacl": "^1.0.3",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "vitest": "^2.0.0"
+  },
+  "lint-staged": {
+    "*.ts": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{js,mjs,json,md,yml,yaml}": [
+      "prettier --write"
+    ]
   }
 }

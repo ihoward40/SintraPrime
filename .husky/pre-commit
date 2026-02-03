@@ -1,0 +1,12 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Prevent committing secrets
+echo "🔒 Scanning for secrets..."
+npx --yes @secretlint/secretlint "$(git diff --cached --name-only --diff-filter=ACM)" || {
+  echo "❌ Secret detected! Commit blocked."
+  exit 1
+}
+
+# Run lint-staged
+npx lint-staged

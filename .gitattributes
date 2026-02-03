@@ -1,0 +1,14 @@
+* text=auto eol=lf
+*.ts text
+*.js text
+*.mjs text
+*.json text
+*.md text
+*.yml text
+*.yaml text
+*.sh text eol=lf
+*.ps1 text eol=crlf
+*.png binary
+*.jpg binary
+*.pdf binary
+*.zip binary

@@ -1,0 +1,10 @@
+dist
+node_modules
+coverage
+*.min.js
+*.bundle.js
+ui/client/dist
+airlock_server/tmp
+runs
+tmp
+.github
