@@ -76,13 +76,21 @@ export class Planner {
       if (this.aiClient && typeof this.aiClient.generatePlan === 'function') {
         const response = await this.aiClient.generatePlan(prompt);
         const steps = this.parseAIResponse(response);
-        return steps.map((step, index) => ({
-          id: this.generateStepId(),
-          description: step.description,
-          tool: step.tool,
-          args: step.args,
-          dependencies: step.dependencies.map(dep => steps[dep]?.id || steps[0]?.id)
-        }));
+        return steps.map((step, index) => {
+          const stepId = this.generateStepId();
+          return {
+            id: stepId,
+            description: step.description,
+            tool: step.tool,
+            args: step.args,
+            dependencies: step.dependencies.map(depIndex => {
+              // Convert dependency indices to step IDs
+              // Since we're generating IDs sequentially, we can use a temporary mapping
+              const allIds = steps.map(() => this.generateStepId());
+              return allIds[depIndex] || stepId;
+            })
+          };
+        });
       }
     } catch (error) {
       console.warn('AI plan generation failed, using heuristic fallback:', error);
@@ -127,7 +135,7 @@ export class Planner {
     }
 
     if (prompt.includes('email') || prompt.includes('send') || prompt.includes('notify')) {
-      const prevStepId = steps.length > 0 ? steps[steps.length - 1].id : undefined;
+      const prevStepId = steps.length > 0 ? steps[steps.length - 1]?.id : undefined;
       steps.push({
         id: this.generateStepId(),
         description: 'Send notification email',
@@ -148,7 +156,7 @@ export class Planner {
     }
 
     if (prompt.includes('report') || prompt.includes('document') || prompt.includes('create')) {
-      const prevStepId = steps.length > 0 ? steps[steps.length - 1].id : undefined;
+      const prevStepId = steps.length > 0 ? steps[steps.length - 1]?.id : undefined;
       steps.push({
         id: this.generateStepId(),
         description: 'Create report document',
@@ -160,8 +168,9 @@ export class Planner {
 
     // If no specific patterns matched, create a generic plan
     if (steps.length === 0) {
+      const step1Id = this.generateStepId();
       steps.push({
-        id: this.generateStepId(),
+        id: step1Id,
         description: 'Analyze task requirements',
         tool: 'analyze',
         args: { prompt: request.prompt },
@@ -173,7 +182,7 @@ export class Planner {
         description: 'Execute task',
         tool: 'execute',
         args: { task: request.prompt },
-        dependencies: [steps[0].id]
+        dependencies: [step1Id]
       });
     }
 
@@ -185,15 +194,12 @@ export class Planner {
    */
   private generateVerificationStep(): PlanStep {
     return {
-        id: this.generateStepId(),
-        description: 'Generate a report',
-        tool: 'create_document',
-        args: { type: 'report', content: 'Task results' },
-        dependencies: []
-      }
-    ];
-
-    return steps;
+      id: this.generateStepId(),
+      description: 'Verify task completion',
+      tool: 'verify',
+      args: { checkResults: true },
+      dependencies: []
+    };
   }
 
   /**

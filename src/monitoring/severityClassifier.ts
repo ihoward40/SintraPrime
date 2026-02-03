@@ -70,20 +70,20 @@ export class SeverityClassifier {
 
   private detectRetryLoop(run: Partial<RunRecord>): boolean {
     // Check for repeated executions indicating retry loops
-    if (!run.operations_spent) return false;
+    if (!run.credits_total) return false;
     
     // High operation count relative to time suggests retries
-    const executionTimeSeconds = run.time_ms ? run.time_ms / 1000 : 1;
-    const opsPerSecond = run.operations_spent / executionTimeSeconds;
+    // Assuming each credit represents a significant operation
+    const creditsSpent = run.credits_total;
     
-    // If spending > 100 operations per second, likely a retry loop
-    if (opsPerSecond > 100) return true;
+    // If spending > 10000 credits, likely a retry loop
+    if (creditsSpent > 10000) return true;
     
     // Check scenario name for retry-related keywords
     const scenarioName = run.scenario_name?.toLowerCase() || '';
     if (scenarioName.includes('retry') || scenarioName.includes('loop')) {
-      // If operations > 1000, flag as likely retry loop
-      return run.operations_spent > 1000;
+      // If credits > 5000, flag as likely retry loop
+      return creditsSpent > 5000;
     }
     
     return false;
@@ -91,10 +91,10 @@ export class SeverityClassifier {
 
   private detectUnboundedIterator(run: Partial<RunRecord>): boolean {
     // Check for scenarios that might have unbounded loops
-    if (!run.operations_spent) return false;
+    if (!run.credits_total) return false;
     
-    // Very high operation counts suggest unbounded iteration
-    if (run.operations_spent > 5000) return true;
+    // Very high credit counts suggest unbounded iteration
+    if (run.credits_total > 50000) return true;
     
     // Check for iterator-related patterns in scenario name
     const scenarioName = run.scenario_name?.toLowerCase() || '';
@@ -104,8 +104,8 @@ export class SeverityClassifier {
       scenarioName.includes('loop') ||
       scenarioName.includes('batch');
     
-    // If iterator keywords present and high ops, flag as unbounded
-    if (hasIteratorKeywords && run.operations_spent > 2000) {
+    // If iterator keywords present and high credits, flag as unbounded
+    if (hasIteratorKeywords && run.credits_total > 20000) {
       return true;
     }
     
@@ -114,7 +114,7 @@ export class SeverityClassifier {
 
   private detectMissingIdempotency(run: Partial<RunRecord>): boolean {
     // Check if the run might have duplicate processing issues
-    if (!run.operations_spent) return false;
+    if (!run.credits_total) return false;
     
     // Check for payment/financial operations without idempotency
     const scenarioName = run.scenario_name?.toLowerCase() || '';
@@ -125,9 +125,9 @@ export class SeverityClassifier {
       scenarioName.includes('refund') ||
       scenarioName.includes('transaction');
     
-    // Financial operations should have relatively low operation counts
+    // Financial operations should have relatively low credit counts
     // High counts suggest potential duplicate processing
-    if (isFinancialOp && run.operations_spent > 500) {
+    if (isFinancialOp && run.credits_total > 5000) {
       return true;
     }
     
@@ -138,8 +138,8 @@ export class SeverityClassifier {
       scenarioName.includes('delete') ||
       scenarioName.includes('modify');
     
-    // High operation count on modify operations suggests missing idempotency
-    if (isModifyOp && run.operations_spent > 1000) {
+    // High credit count on modify operations suggests missing idempotency
+    if (isModifyOp && run.credits_total > 10000) {
       return true;
     }
     

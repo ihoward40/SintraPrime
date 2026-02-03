@@ -146,9 +146,85 @@ export class EmailConnector implements Connector {
    * Send email via SMTP
    */
   private async sendSMTPEmail(email: any): Promise<any> {
-    // In a real implementation, this would use nodemailer or similar
-    // For now, this is a placeholder
-    throw new Error('SMTP sending not yet implemented. Use Gmail API or implement nodemailer integration.');
+    // Use Node.js built-in net module for SMTP
+    const net = await import('node:net');
+    const tls = await import('node:tls');
+    
+    return new Promise((resolve, reject) => {
+      const host = this.config.host!;
+      const port = this.config.port || 587;
+      const secure = this.config.secure ?? (port === 465);
+      
+      // Create connection
+      const socket = secure 
+        ? tls.connect(port, host)
+        : net.connect(port, host);
+
+      let response = '';
+      let step = 0;
+
+      const to = Array.isArray(email.to) ? email.to.join(',') : email.to;
+      const from = this.config.user!;
+
+      socket.on('data', (data) => {
+        response = data.toString();
+        console.log('SMTP:', response);
+
+        // SMTP conversation
+        if (response.startsWith('220') && step === 0) {
+          socket.write(`EHLO ${host}\r\n`);
+          step = 1;
+        } else if (response.startsWith('250') && step === 1) {
+          socket.write('AUTH LOGIN\r\n');
+          step = 2;
+        } else if (response.startsWith('334') && step === 2) {
+          socket.write(Buffer.from(this.config.user!).toString('base64') + '\r\n');
+          step = 3;
+        } else if (response.startsWith('334') && step === 3) {
+          socket.write(Buffer.from(this.config.password!).toString('base64') + '\r\n');
+          step = 4;
+        } else if (response.startsWith('235') && step === 4) {
+          socket.write(`MAIL FROM:<${from}>\r\n`);
+          step = 5;
+        } else if (response.startsWith('250') && step === 5) {
+          socket.write(`RCPT TO:<${to}>\r\n`);
+          step = 6;
+        } else if (response.startsWith('250') && step === 6) {
+          socket.write('DATA\r\n');
+          step = 7;
+        } else if (response.startsWith('354') && step === 7) {
+          const message = [
+            `From: ${from}`,
+            `To: ${to}`,
+            `Subject: ${email.subject}`,
+            email.html ? 'Content-Type: text/html; charset=utf-8' : 'Content-Type: text/plain; charset=utf-8',
+            '',
+            email.html || email.body,
+            '.'
+          ].join('\r\n');
+          
+          socket.write(message + '\r\n');
+          step = 8;
+        } else if (response.startsWith('250') && step === 8) {
+          socket.write('QUIT\r\n');
+          socket.end();
+          resolve({ success: true, messageId: response.split(' ')[1] });
+        } else if (response.startsWith('5')) {
+          reject(new Error(`SMTP error: ${response}`));
+          socket.end();
+        }
+      });
+
+      socket.on('error', (error) => {
+        reject(new Error(`SMTP connection error: ${error.message}`));
+      });
+
+      socket.on('close', () => {
+        if (step < 8) {
+          reject(new Error('SMTP connection closed prematurely'));
+        }
+      });
+    });
   }
 
   /**
