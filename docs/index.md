@@ -77,3 +77,8 @@
 - **Config Management Schema Reference (v1)** ⭐ **NEW**  
   [`config-management-schema-reference.v1.md`](./config-management-schema-reference.v1.md)  
   Comprehensive reference for SP_Config_Change_Log, SP_Switchboard, SP_Execution_Receipts, and SP_Canary_Packs schemas. Includes relationships, workflows, integration guide, best practices, and migration paths.
+
+## Integrations
+
+- **OpenClaw + Supermemory (Memory Plugin)**  
+  [`integrations/openclaw-supermemory.md`](./integrations/openclaw-supermemory.md)
