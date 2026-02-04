@@ -288,13 +288,16 @@ async function testWindowsPlayback() {
 
   try {
     console.log("Playing audio...");
+
+    const absolutePath = path.isAbsolute(audioPath) ? audioPath : path.resolve(audioPath);
+    const escaped = absolutePath.replace(/'/g, "''");
     const child = spawn(
       "powershell",
       [
         "-NoProfile",
         "-NonInteractive",
         "-Command",
-        `Add-Type -AssemblyName presentationCore; $player = New-Object System.Windows.Media.MediaPlayer; $player.Open([Uri]::new('${audioPath.replace(/\\/g, "/")}', [UriKind]::Absolute)); $player.Play(); Start-Sleep -Seconds 3`,
+        `Start-Process -LiteralPath '${escaped}'; Start-Sleep -Seconds 1`,
       ],
       { stdio: "inherit" }
     );
