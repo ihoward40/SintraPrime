@@ -1,5 +1,3 @@
-import { speak } from "../src/speech/speak.js";
-
 function getArgValue(flag: string): string | undefined {
   const i = process.argv.indexOf(flag);
   if (i === -1) return undefined;
@@ -48,9 +46,17 @@ if (hasFlag("--help")) {
   process.exit(0);
 }
 
-speak({ text, category });
+async function main(): Promise<void> {
+  const { speak } = await import("../src/speech/speak.js");
+  speak({ text, category });
 
-// Give async sinks a moment to run before exiting.
-setTimeout(() => {
-  process.exit(0);
-}, 1500);
+  // Give async sinks a moment to run before exiting.
+  setTimeout(() => {
+    process.exit(0);
+  }, 1500);
+}
+
+main().catch((error) => {
+  process.stderr.write(`speak:test failed: ${String(error)}\n`);
+  process.exit(1);
+});

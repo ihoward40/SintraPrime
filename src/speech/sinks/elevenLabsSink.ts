@@ -134,12 +134,19 @@ async function saveAudioFile(buffer: Buffer, outputPath: string): Promise<void> 
 
 function playAudioOnWindows(audioPath: string): void {
   if (process.platform !== "win32") return;
-  if (process.env.ELEVEN_AUTO_PLAY !== "1") return;
+
+  const autoPlay = process.env.ELEVEN_AUTO_PLAY === "1";
+  if (!autoPlay) {
+    debug("Autoplay disabled (set ELEVEN_AUTO_PLAY=1 or pass --autoplay)");
+    return;
+  }
 
   try {
     const absolutePath = path.isAbsolute(audioPath) ? audioPath : path.resolve(audioPath);
     const escaped = absolutePath.replace(/'/g, "''");
     const ps = `Start-Process -FilePath '${escaped}'`;
+
+    debug(`Autoplay enabled; launching default player: ${absolutePath}`);
 
     const child = spawn(
       "powershell",
