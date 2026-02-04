@@ -62,7 +62,10 @@ export class ReportingEngine {
   /**
    * Generate a daily report
    */
-  async generateDailyReport(date: string = new Date().toISOString().split('T')[0]): Promise<ReportArtifact> {
+  async generateDailyReport(date: string = ((): string => {
+    const isoNow = new Date().toISOString();
+    return isoNow.split('T')[0] ?? isoNow;
+  })()): Promise<ReportArtifact> {
     // Collect data for the report
     const data = await this.collectDailyData(date);
 

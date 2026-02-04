@@ -7,7 +7,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { generateAnalysisReport, summarizeDeepThinkOutput, isAIAvailable } from '../ai/client';
+import { generateAnalysisReport, summarizeDeepThinkOutput, isAIAvailable } from '../ai/client.js';
 
 async function main() {
   const args = process.argv.slice(2);
@@ -39,8 +39,18 @@ async function main() {
   }
 
   const inputPath = args[inputIndex + 1];
-  const outputPath = outputIndex !== -1 ? args[outputIndex + 1] : null;
-  const format = formatIndex !== -1 ? args[formatIndex + 1] as 'markdown' | 'text' : 'markdown';
+  if (!inputPath || inputPath.startsWith('--')) {
+    console.error('Error: --input must be followed by a file path');
+    process.exit(1);
+  }
+
+  const outputCandidate = outputIndex !== -1 ? args[outputIndex + 1] : undefined;
+  const outputPath = outputCandidate && !outputCandidate.startsWith('--') ? outputCandidate : null;
+
+  const formatCandidate = formatIndex !== -1 ? args[formatIndex + 1] : undefined;
+  const format = (formatCandidate === 'text' || formatCandidate === 'markdown')
+    ? formatCandidate
+    : 'markdown';
 
   // Read input file
   if (!fs.existsSync(inputPath)) {

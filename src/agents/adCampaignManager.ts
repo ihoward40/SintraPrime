@@ -11,7 +11,7 @@
  * @module AdCampaignManager
  */
 
-import { Task, TaskResult, ExecutionContext } from '../types';
+import { Task, TaskResult, ExecutionContext } from '../types/index.js';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -602,7 +602,8 @@ export class AdCampaignManager {
    * Generates daily performance report
    */
   async generateDailyReport(): Promise<DailyReport> {
-    const today = new Date().toISOString().split('T')[0];
+    const isoNow = new Date().toISOString();
+    const today = isoNow.split('T')[0] ?? isoNow;
     const campaignSummaries: CampaignSummary[] = [];
     let totalSpend = 0;
     let totalRevenue = 0;

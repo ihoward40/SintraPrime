@@ -2,6 +2,24 @@
  * Core type definitions for the SintraPrime autonomous agent system
  */
 
+export interface ExecutionContext {
+  [key: string]: any;
+}
+
+export interface Task {
+  id?: string;
+  name?: string;
+  type?: string;
+  input?: any;
+  context?: ExecutionContext;
+}
+
+export interface TaskResult {
+  success: boolean;
+  output?: any;
+  error?: string;
+}
+
 export interface TaskRequest {
   id: string;
   prompt: string;
@@ -110,5 +128,5 @@ export interface Connector {
   name: string;
   type: string;
   authenticate(): Promise<void>;
-  call(method: string, args: any): Promise<any>;
+  call(method: string, endpoint: string, args: any): Promise<any>;
 }

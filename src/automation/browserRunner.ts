@@ -75,8 +75,7 @@ export class BrowserRunner {
       await this.takeScreenshot(`${task.id}_start`);
 
       // Execute each action
-      for (let i = 0; i < task.actions.length; i++) {
-        const action = task.actions[i];
+      for (const [i, action] of task.actions.entries()) {
         
         try {
           const result = await this.executeAction(action, i);
@@ -156,7 +155,10 @@ export class BrowserRunner {
         return { extracted: content };
 
       case 'scroll':
-        await this.page.evaluate(() => window.scrollBy(0, window.innerHeight));
+        await this.page.evaluate(() => {
+          const g = globalThis as any;
+          g.scrollBy(0, g.innerHeight);
+        });
         return { scrolled: true };
 
       default:

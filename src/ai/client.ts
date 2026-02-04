@@ -44,7 +44,7 @@ Be professional, concise, and actionable.`;
     instructions: 'You are a governance and compliance analyst generating audit reports.',
   });
 
-  return response.output?.[0]?.content || '';
+  return response.output_text ?? '';
 }
 
 /**
@@ -69,7 +69,7 @@ Keep it concise and suitable for executive review.`;
     temperature: 0.7,
   });
 
-  return response.output?.[0]?.content || '';
+  return response.output_text ?? '';
 }
 
 /**
@@ -95,5 +95,5 @@ Format as a structured description suitable for diagram generation.`;
     input: prompt,
   });
 
-  return response.output?.[0]?.content || '';
+  return response.output_text ?? '';
 }
