@@ -120,6 +120,22 @@ npm run speak:cinematic -- --preset cinematic --autoplay --debug
 npm run speak:open-latest
 ```
 
+Creative recommendations ("cinematic in the room"):
+
+```bash
+# Anchor voice that feels like "you" (defaults to overriding: info)
+ELEVEN_VOICE_ANCHOR=your_anchor_voice_id
+ELEVEN_ANCHOR_CATEGORIES=info,system
+
+# Optional: write speech decision + line artifacts under runs/ (good for auditing)
+SPEECH_ARTIFACTS=1
+
+# Try scene presets
+npm run speak:cinematic -- --preset courtroom --autoplay --debug
+npm run speak:cinematic -- --preset warroom --autoplay --debug
+npm run speak:cinematic -- --preset soothe --autoplay --debug
+```
+
 PowerShell equivalent:
 
 ```powershell

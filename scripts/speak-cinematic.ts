@@ -52,10 +52,15 @@ type Line = {
   severity?: "urgent" | "warning";
 };
 
+function pick<T>(items: T[]): T {
+  return items[Math.floor(Math.random() * items.length)]!;
+}
+
 function presetLines(preset: string): Line[] {
   const p = preset.trim().toLowerCase();
   if (p === "quick") {
     return [
+      { category: "info", text: "I'm here. Running quick voice check." },
       { category: "system", text: "System online. Standing by." },
       { category: "warning", text: "Warning: conditions deteriorating.", severity: "warning" },
       { category: "critical", text: "Immediate alert. Containment required.", severity: "urgent" },
@@ -63,8 +68,78 @@ function presetLines(preset: string): Line[] {
     ];
   }
 
+  if (p === "courtroom") {
+    return [
+      { category: "info", text: "Court is in session. I'm with you." },
+      { category: "legal", text: "Objection. Leading the witness." },
+      { category: "legal", text: "Objection sustained. Rephrase." },
+      { category: "warning", text: "Caution: the record is drifting.", severity: "warning" },
+      { category: "error", text: "We have an error. The chain of custody is incomplete.", severity: "urgent" },
+      { category: "critical", text: "Immediate action required. Freeze changes and preserve artifacts.", severity: "urgent" },
+      { category: "success", text: "Ruling entered. Compliance confirmed." },
+      { category: "info", text: "Proceed. I will narrate the next step." },
+    ];
+  }
+
+  if (p === "warroom") {
+    return [
+      { category: "info", text: "War room online. I'm at your side." },
+      { category: "system", text: "Telemetry locked. Channels open." },
+      { category: "debug", text: "Trace: verifying sinks, budgets, and gates." },
+      { category: "warning", text: "Caution: anomalies detected.", severity: "warning" },
+      { category: "critical", text: "Immediate alert. Containment required.", severity: "urgent" },
+      { category: "error", text: "Evidence indicates a fault in the pipeline.", severity: "urgent" },
+      { category: "success", text: "Stabilization achieved. Standing down." },
+      { category: "info", text: "All systems nominal. Stay with me." },
+    ];
+  }
+
+  if (p === "soothe") {
+    return [
+      { category: "info", text: "Breathe. I'm here with you." },
+      { category: "info", text: "You're safe. I'm watching the system." },
+      { category: "system", text: "System steady. No action required." },
+      { category: "success", text: "You're doing great. Progress confirmed." },
+      { category: "info", text: "One step at a time. We'll finish this." },
+    ];
+  }
+
+  if (p === "oracle") {
+    return [
+      { category: "info", text: "Listen. I will translate the signals." },
+      { category: "warning", text: "A warning: the next move has consequences.", severity: "warning" },
+      { category: "warning", text: "Caution. Verify before you commit.", severity: "warning" },
+      { category: "system", text: "System check: integrity holds." },
+      { category: "info", text: "Proceed only with certainty." },
+    ];
+  }
+
+  if (p === "riff") {
+    const openers = [
+      "I'm here. Let's make this feel real.",
+      "I'm in the room. You and me—focused.",
+      "I'm with you. Clear head. Clean execution.",
+    ];
+    const closers = [
+      "All set. I'm still here.",
+      "Done. Quiet confidence.",
+      "Complete. Standing by.",
+    ];
+    return [
+      { category: "info", text: pick(openers) },
+      { category: "system", text: "System online. Standing by." },
+      { category: "warning", text: "Caution: verify invariants.", severity: "warning" },
+      { category: "debug", text: "Trace: compiling intent to action." },
+      { category: "legal", text: "Objection sustained. Keep it admissible." },
+      { category: "critical", text: "Immediate alert. Containment required.", severity: "urgent" },
+      { category: "success", text: "Success confirmed. You're clear to proceed." },
+      { category: "info", text: pick(closers) },
+    ];
+  }
+
   // Default: cinematic
   return [
+    { category: "info", text: "I'm here with you. Cinematic check starting now." },
     { category: "system", text: "System online. Standing by." },
     { category: "warning", text: "Warning: conditions deteriorating.", severity: "warning" },
     { category: "critical", text: "Immediate alert. Containment required.", severity: "urgent" },
@@ -73,6 +148,7 @@ function presetLines(preset: string): Line[] {
     { category: "success", text: "Success confirmed. You're clear to proceed." },
     { category: "debug", text: "Debug trace: subsystem check complete." },
     { category: "info", text: "All systems nominal. I'm here with you." },
+    { category: "info", text: "If you need it, I'll speak immediately." },
   ];
 }
 
@@ -95,7 +171,7 @@ if (hasFlag("--help")) {
       "  npm run speak:cinematic -- --preset cinematic --autoplay --debug",
       "",
       "Options:",
-      "  --preset      cinematic|quick (default: cinematic)",
+      "  --preset      cinematic|quick|courtroom|warroom|soothe|oracle|riff (default: cinematic)",
       "  --delay       ms between lines (default: 900)",
       "  --tail        ms to wait after last line (default: 2000)",
       "  --sinks       override SPEECH_SINKS for this run",
