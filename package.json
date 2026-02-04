@@ -39,7 +39,8 @@
     "skills:revoke": "node scripts/skills-revoke-one.mjs",
     "skills:check": "node scripts/skills-check-revoked.mjs",
     "skills:status": "node scripts/skills-status.mjs",
-    "diag:elevenlabs": "node test-elevenlabs-complete.mjs"
+    "diag:elevenlabs": "node test-elevenlabs-complete.mjs",
+    "speak:test": "tsx scripts/speak-test.ts"
   },
   "dependencies": {
     "express": "^4.21.2",
