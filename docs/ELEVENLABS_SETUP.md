@@ -104,6 +104,14 @@ npm run speak:test -- --text "Immediate alert. Containment required." --category
 
 Note: `speak:test` also auto-loads `.env.local` from the project root.
 
+Additional helpers:
+
+```bash
+npm run speak:voices
+npm run speak:cinematic -- --preset cinematic --autoplay --debug
+npm run speak:open-latest
+```
+
 PowerShell equivalent:
 
 ```powershell

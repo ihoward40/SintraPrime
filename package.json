@@ -40,7 +40,10 @@
     "skills:check": "node scripts/skills-check-revoked.mjs",
     "skills:status": "node scripts/skills-status.mjs",
     "diag:elevenlabs": "node test-elevenlabs-complete.mjs",
-    "speak:test": "tsx scripts/speak-test.ts"
+    "speak:test": "tsx scripts/speak-test.ts",
+    "speak:cinematic": "tsx scripts/speak-cinematic.ts",
+    "speak:open-latest": "tsx scripts/open-latest-audio.ts",
+    "speak:voices": "tsx scripts/speech-voice-map.ts"
   },
   "dependencies": {
     "express": "^4.21.2",
