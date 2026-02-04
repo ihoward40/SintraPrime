@@ -96,6 +96,14 @@ Run the diagnostic script to validate your setup:
 node test-elevenlabs-complete.mjs
 ```
 
+You can also run an in-app style speech probe (uses the real `speak()` pipeline):
+
+```bash
+npm run speak:test -- --text "Immediate alert. Containment required." --category critical --autoplay --debug
+```
+
+Note: `speak:test` also auto-loads `.env.local` from the project root.
+
 PowerShell equivalent:
 
 ```powershell

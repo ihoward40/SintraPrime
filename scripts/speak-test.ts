@@ -1,3 +1,30 @@
+import fs from "node:fs";
+import path from "node:path";
+
+function loadEnvLocal(): void {
+  const envPath = path.join(process.cwd(), ".env.local");
+  if (!fs.existsSync(envPath)) return;
+  try {
+    const content = fs.readFileSync(envPath, "utf-8");
+    content.split(/\r?\n/).forEach((line) => {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith("#")) return;
+      const i = trimmed.indexOf("=");
+      if (i === -1) return;
+      const key = trimmed.slice(0, i).trim();
+      const value = trimmed.slice(i + 1).trim();
+      if (!key) return;
+
+      // Only fill missing values; let the current process env win.
+      const existing = process.env[key];
+      if (existing != null && String(existing).trim() !== "") return;
+      process.env[key] = value;
+    });
+  } catch {
+    // fail-open
+  }
+}
+
 function getArgValue(flag: string): string | undefined {
   const i = process.argv.indexOf(flag);
   if (i === -1) return undefined;
@@ -18,6 +45,8 @@ function hasFlag(flag: string): boolean {
   return process.argv.includes(flag);
 }
 
+loadEnvLocal();
+
 const text = getArgOrEnv("--text", "SPEAK_TEXT", "Testing speech output.") ?? "";
 const category = getArgOrEnv("--category", "SPEAK_CATEGORY", "info") ?? "info";
 const sinks = getArgOrEnv("--sinks", "SPEECH_SINKS");
@@ -31,6 +60,9 @@ if (hasFlag("--help")) {
     [
       "Usage:",
       "  npm run speak:test -- --text \"hello\" --category info --sinks console,elevenlabs --autoplay",
+      "",
+      "Notes:",
+      "  - Automatically loads .env.local from the repo root (if present)",
       "",
       "Flags:",
       "  --text       Text to speak (default: 'Testing speech output.')",

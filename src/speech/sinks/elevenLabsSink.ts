@@ -49,6 +49,17 @@ function debug(message: string) {
   }
 }
 
+function isPlaceholderApiKey(raw: string): boolean {
+  const v = String(raw).trim();
+  if (!v) return true;
+  return (
+    v.includes("YOUR_") ||
+    v.includes("_HERE") ||
+    v.includes("REPLACE_ME") ||
+    v === "sk_REPLACE_ME"
+  );
+}
+
 // Map speech categories to character voices
 function getCategoryVoiceId(category: string): string | undefined {
   const mapping: Record<string, string> = {
@@ -163,8 +174,9 @@ export const elevenLabsSink: SpeechSink = {
   name: "elevenlabs",
   async speak(payload: SpeechPayload) {
     // Fail-open: don't crash if API key not configured
-    if (!process.env.ELEVEN_API_KEY) {
-      debug("ELEVEN_API_KEY not configured, skipping");
+    const apiKey = process.env.ELEVEN_API_KEY;
+    if (!apiKey || isPlaceholderApiKey(apiKey)) {
+      debug("ELEVEN_API_KEY not configured (or placeholder), skipping");
       return;
     }
 
