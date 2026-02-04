@@ -60,8 +60,30 @@ function isPlaceholderApiKey(raw: string): boolean {
   );
 }
 
+function parseCsv(raw: string | undefined): string[] {
+  const v = String(raw ?? "").trim();
+  if (!v) return [];
+  return v
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
 // Map speech categories to character voices
 function getCategoryVoiceId(category: string): string | undefined {
+  const cat = category.toLowerCase();
+
+  // Optional: force an "anchor" voice for selected categories (defaults to info).
+  // Example:
+  //   ELEVEN_VOICE_ANCHOR=NJmYrgihCW9JEIDDhwSj
+  //   ELEVEN_ANCHOR_CATEGORIES=info,system
+  const anchor = String(process.env.ELEVEN_VOICE_ANCHOR ?? "").trim();
+  if (anchor) {
+    const anchorCats = parseCsv(process.env.ELEVEN_ANCHOR_CATEGORIES);
+    const effective = anchorCats.length ? anchorCats : ["info"];
+    if (effective.includes(cat)) return anchor;
+  }
+
   const mapping: Record<string, string> = {
     system: process.env.ELEVEN_VOICE_ANDROID || "",
     warning: process.env.ELEVEN_VOICE_ORACLE || "",
@@ -73,7 +95,7 @@ function getCategoryVoiceId(category: string): string | undefined {
     legal: process.env.ELEVEN_VOICE_JUDGE || "",
   };
 
-  const voiceId = mapping[category.toLowerCase()];
+  const voiceId = mapping[cat];
   if (voiceId) return voiceId;
 
   // Fallback to default voice

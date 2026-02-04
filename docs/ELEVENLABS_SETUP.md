@@ -55,6 +55,14 @@ ELEVEN_VOICE_PROSECUTOR=voice_id_for_errors
 ELEVEN_VOICE_SAGE=voice_id_for_success_messages
 ELEVEN_VOICE_DEFAULT=voice_id_for_fallback
 
+# Optional: Anchor voice ("in the room" narrator)
+# If set, it overrides selected categories (defaults to: info)
+# Example:
+#   ELEVEN_VOICE_ANCHOR=NJmYrgihCW9JEIDDhwSj
+#   ELEVEN_ANCHOR_CATEGORIES=info,system
+ELEVEN_VOICE_ANCHOR=
+ELEVEN_ANCHOR_CATEGORIES=info
+
 # Optional: Output directory for generated audio files
 ELEVEN_OUTPUT_DIR=voice/dynamic
 
