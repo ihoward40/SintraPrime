@@ -137,16 +137,9 @@ function playAudioOnWindows(audioPath: string): void {
   if (process.env.ELEVEN_AUTO_PLAY !== "1") return;
 
   try {
-    const escaped = audioPath.replace(/'/g, "''");
-    const ps = [
-      "Add-Type -AssemblyName presentationCore;",
-      `$p='${escaped}';`,
-      "$u = [Uri]('file:///' + ($p -replace '\\\\','/'));",
-      "$player = New-Object System.Windows.Media.MediaPlayer;",
-      "$player.Open($u);",
-      "$player.Play();",
-      "Start-Sleep -Seconds 5;",
-    ].join(" ");
+    const absolutePath = path.isAbsolute(audioPath) ? audioPath : path.resolve(audioPath);
+    const escaped = absolutePath.replace(/'/g, "''");
+    const ps = `Start-Process -LiteralPath '${escaped}'`;
 
     const child = spawn(
       "powershell",
