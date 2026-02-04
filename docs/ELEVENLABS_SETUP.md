@@ -118,6 +118,7 @@ Additional helpers:
 npm run speak:voices
 npm run speak:cinematic -- --preset cinematic --autoplay --debug
 npm run speak:open-latest
+npm run sound:check
 ```
 
 Creative recommendations ("cinematic in the room"):
