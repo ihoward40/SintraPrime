@@ -31,6 +31,32 @@ jobs:
       - name: Detect derived tiers
         run: npm run -s ci:detect-tiers
 
+      - name: Notion schema drift gate (skipped)
+        if: ${{ secrets.NOTION_TOKEN == '' || secrets.NOTION_AUTOMATION_CONFIG_JSON == '' }}
+        run: |
+          echo "Notion schema drift gate: skipping (missing NOTION_TOKEN and/or NOTION_AUTOMATION_CONFIG_JSON secrets)."
+
+      - name: Notion schema drift gate (optional; fail-closed)
+        if: ${{ secrets.NOTION_TOKEN != '' && secrets.NOTION_AUTOMATION_CONFIG_JSON != '' }}
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          NOTION_AUTOMATION_CONFIG_JSON: ${{ secrets.NOTION_AUTOMATION_CONFIG_JSON }}
+          NOTION_SCHEMA_DRIFT_GATE_PAGE_ID: ${{ secrets.NOTION_SCHEMA_DRIFT_GATE_PAGE_ID }}
+        run: |
+          set -euo pipefail
+          echo "$NOTION_AUTOMATION_CONFIG_JSON" > control/notion-automation-config.json
+          if [ -n "${NOTION_SCHEMA_DRIFT_GATE_PAGE_ID:-}" ]; then
+            npm run -s notion:gate:doctor
+          else
+            echo "No NOTION_SCHEMA_DRIFT_GATE_PAGE_ID secret; skipping notion:gate:doctor preflight."
+          fi
+          npm run -s notion:schema:snapshot
+          if [ ! -f scripts/schema-snapshots/notion.schema-baseline.json ]; then
+            echo "No baseline file present; skipping drift comparison."
+            exit 0
+          fi
+          npm run -s notion:schema:gate
+
       - name: Start mock server
         env:
           WEBHOOK_SECRET: test-secret

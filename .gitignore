@@ -7,9 +7,13 @@ tsconfig.tsbuildinfo
 
 # Control plane secrets
 control/secrets.env
+control/notion-automation-config.json
 .DS_Store
 runs/
 tmp/
+
+# Notion drift guard outputs (non-authoritative)
+scripts/schema-snapshots/notion.schema-snapshot.json
 
 # Local editor settings
 .vscode/

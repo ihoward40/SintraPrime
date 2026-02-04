@@ -1,0 +1,92 @@
+{
+  "kind": "notion.automation_config.v2",
+  "notes": "Example only. Copy to control/notion-automation-config.json and fill your real IDs + property names. Keep property names frozen once stable.",
+  "notion": {
+    "api_base": "https://api.notion.com",
+    "api_version": "2022-06-28"
+  },
+  "databases": {
+    "systems_automations": {
+      "name": "Systems/Automations",
+      "database_id": "REPLACE_ME",
+      "gate_row_title": "Schema Drift Gate",
+      "properties": {
+        "gate_status": "Gate Status",
+        "blocked_reason": "Blocked Reason"
+      },
+      "gate_status_values": {
+        "ok": "✅ OK",
+        "blocked": "🛑 BLOCKED"
+      }
+    },
+    "run_receipts": {
+      "name": "Run Receipts",
+      "database_id": "REPLACE_ME",
+      "properties": {
+        "timestamp": "Timestamp",
+        "outcome": "Outcome",
+        "action_type": "Action Type",
+        "scenario_name": "Scenario Name",
+        "blocked_reason": "Blocked Reason",
+        "artifacts": "Artifacts",
+        "idempotency_key": "Idempotency Key"
+      },
+      "outcome_values": {
+        "success": "Success",
+        "error": "Error",
+        "skipped": "Skipped",
+        "blocked": "Blocked"
+      }
+    },
+    "cases": {
+      "name": "Cases (workflow)",
+      "database_id": "REPLACE_ME",
+      "title_property": { "name": "Name", "type": "title" },
+      "stage_property": {
+        "name": "Stage",
+        "type": "select",
+        "options": {
+          "New": "OPTION_ID_REPLACE_ME",
+          "Wave-1 Sent": "OPTION_ID_REPLACE_ME"
+        }
+      },
+      "watchtower_rollups": {
+        "wt_gate_for_automation": "WT Gate For Automation",
+        "wt_gate_verdict": "WT Gate Verdict"
+      }
+    },
+    "cases_master": {
+      "name": "Cases – Master (watchtower)",
+      "database_id": "REPLACE_ME",
+      "title_property": { "name": "Case ID", "type": "title" },
+      "status_property": {
+        "name": "Status",
+        "type": "select",
+        "options": {
+          "Active": "OPTION_ID_REPLACE_ME",
+          "Monitoring": "OPTION_ID_REPLACE_ME"
+        }
+      },
+      "properties": {
+        "respondent": { "name": "Respondent", "type": "text" },
+        "packet_override_allowed": { "name": "Packet Override Allowed", "type": "checkbox" },
+        "override_expires": { "name": "Override Expires", "type": "date" },
+        "automation_eligibility": { "name": "Automation Eligibility", "type": "formula" },
+        "packet_completeness": { "name": "Packet Completeness", "type": "formula" },
+        "override_valid": { "name": "Override Valid", "type": "formula" },
+        "override_status": { "name": "Override Status", "type": "formula" }
+      }
+    },
+    "tasks": {
+      "name": "Tasks",
+      "database_id": "REPLACE_ME",
+      "idempotency_key_property": { "name": "Idempotency Key", "type": "text" }
+    }
+  },
+  "idempotency": {
+    "spec": "{CaseID}:{task_type}:v{version}",
+    "examples": {
+      "evidence_hygiene_v1": "HTN-2026-0001:evidence_hygiene:v1"
+    }
+  }
+}

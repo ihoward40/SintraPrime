@@ -38,7 +38,11 @@
     "ci:verify-signatures": "node ./scripts/ci/verify-signatures.mjs",
     "skills:revoke": "node scripts/skills-revoke-one.mjs",
     "skills:check": "node scripts/skills-check-revoked.mjs",
-    "skills:status": "node scripts/skills-status.mjs"
+    "skills:status": "node scripts/skills-status.mjs",
+    "notion:schema:snapshot": "node ./scripts/notion-schema-snapshot.mjs --pretty",
+    "notion:schema:lint": "node ./scripts/notion-schema-lint.mjs --strict",
+    "notion:schema:gate": "node ./scripts/notion-schema-gate.mjs",
+    "notion:gate:doctor": "node ./scripts/notion-gate-doctor.mjs"
   },
   "dependencies": {
     "express": "^4.21.2",
