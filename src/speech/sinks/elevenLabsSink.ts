@@ -139,7 +139,7 @@ function playAudioOnWindows(audioPath: string): void {
   try {
     const absolutePath = path.isAbsolute(audioPath) ? audioPath : path.resolve(audioPath);
     const escaped = absolutePath.replace(/'/g, "''");
-    const ps = `Start-Process -LiteralPath '${escaped}'`;
+    const ps = `Start-Process -FilePath '${escaped}'`;
 
     const child = spawn(
       "powershell",

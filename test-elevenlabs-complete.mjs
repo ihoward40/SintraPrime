@@ -297,7 +297,7 @@ async function testWindowsPlayback() {
         "-NoProfile",
         "-NonInteractive",
         "-Command",
-        `Start-Process -LiteralPath '${escaped}'; Start-Sleep -Seconds 1`,
+        `Start-Process -FilePath '${escaped}'; Start-Sleep -Seconds 1`,
       ],
       { stdio: "inherit" }
     );
