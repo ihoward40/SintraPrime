@@ -27,6 +27,18 @@ The ElevenLabs integration provides high-quality text-to-speech synthesis with s
 
 Create a `.env.local` file in the project root (this file is automatically ignored by git):
 
+**Windows / PowerShell quickstart (recommended):**
+
+```powershell
+cd "C:\Users\admin\.sintraprime esm project"
+Copy-Item -Force .env.example .env.local
+notepad .env.local
+```
+
+Notes:
+- `.env.local` uses `NAME=value` lines (no `$env:` prefix).
+- In PowerShell, typing `NAME=value` directly will error; PowerShell session variables must be set like `$env:NAME="value"`.
+
 ```bash
 # ElevenLabs API Key (required)
 ELEVEN_API_KEY=sk_your_actual_api_key_here
@@ -81,6 +93,12 @@ SPEECH_SINKS=console,elevenlabs
 Run the diagnostic script to validate your setup:
 
 ```bash
+node test-elevenlabs-complete.mjs
+```
+
+PowerShell equivalent:
+
+```powershell
 node test-elevenlabs-complete.mjs
 ```
 
@@ -169,6 +187,12 @@ This ensures your application won't be throttled even when multiple speech event
 **Solution**: Create a `.env.local` file with your actual API key:
 ```bash
 ELEVEN_API_KEY=sk_your_actual_api_key
+```
+
+If you're setting it for the current PowerShell session only:
+
+```powershell
+$env:ELEVEN_API_KEY="sk_your_actual_api_key"
 ```
 
 ### "No character voice IDs configured"
