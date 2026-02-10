@@ -11,6 +11,7 @@
     "build:clean": "npm run clean && tsc -p tsconfig.json",
     "build:watch": "tsc -p tsconfig.json --incremental --watch",
     "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node ./scripts/run-tests.mjs",
     "dev": "tsx src/cli/run-command.ts",
     "start": "node dist/cli/run-command.js",
     "smoke": "node ./scripts/smoke.js",
