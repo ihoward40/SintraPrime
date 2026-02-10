@@ -41,7 +41,13 @@ export class ShopifyConnector implements Connector {
   /**
    * Make an API call to Shopify
    */
-  async call(method: string, endpoint: string, args: any): Promise<any> {
+  async call(method: string, endpointOrArgs: string | any, maybeArgs?: any): Promise<any> {
+    const endpoint = typeof endpointOrArgs === 'string' ? endpointOrArgs : '';
+    const args = typeof endpointOrArgs === 'string' ? maybeArgs : endpointOrArgs;
+
+    if (!endpoint) {
+      throw new Error('Endpoint is required');
+    }
     if (!this.authenticated) {
       throw new Error('Not authenticated. Call authenticate() first.');
     }
@@ -129,8 +135,12 @@ export class ShopifyConnector implements Connector {
   private updateRateLimit(response: Response): void {
     const remaining = response.headers.get('X-Shopify-Shop-Api-Call-Limit');
     if (remaining) {
-      const [used, total] = remaining.split('/').map(Number);
-      this.rateLimitRemaining = total - used;
+      const [usedStr, totalStr] = remaining.split('/');
+      const used = Number(usedStr);
+      const total = Number(totalStr);
+      if (Number.isFinite(used) && Number.isFinite(total)) {
+        this.rateLimitRemaining = total - used;
+      }
       this.rateLimitResetTime = Date.now() + 1000; // Reset after 1 second
     }
   }

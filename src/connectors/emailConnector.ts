@@ -74,10 +74,12 @@ export class EmailConnector implements Connector {
   /**
    * Make an API call
    */
-  async call(method: string, args: any): Promise<any> {
+  async call(method: string, endpointOrArgs: string | any, maybeArgs?: any): Promise<any> {
     if (!this.authenticated) {
       throw new Error('Not authenticated. Call authenticate() first.');
     }
+
+    const args = typeof endpointOrArgs === 'string' ? maybeArgs : endpointOrArgs;
 
     if (method === 'send') {
       return this.sendEmail(args);

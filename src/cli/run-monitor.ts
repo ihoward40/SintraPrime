@@ -21,6 +21,10 @@ const aggregator = new CreditAggregator();
 if (command === 'classify') {
   // Example: classify a run
   const runDataPath = process.argv[3];
+  if (!runDataPath) {
+    console.error('Usage: run-monitor.ts classify <input_file>');
+    process.exit(1);
+  }
   const runData = JSON.parse(fs.readFileSync(runDataPath, 'utf-8'));
 
   const classification = classifier.classify(runData);
@@ -28,6 +32,10 @@ if (command === 'classify') {
 } else if (command === 'alert') {
   // Example: generate Slack alert
   const runDataPath = process.argv[3];
+  if (!runDataPath) {
+    console.error('Usage: run-monitor.ts alert <input_file>');
+    process.exit(1);
+  }
   const runData: RunRecord = JSON.parse(fs.readFileSync(runDataPath, 'utf-8'));
 
   const alert = alertFormatter.format(runData);

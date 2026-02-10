@@ -117,7 +117,16 @@ export class SecretsVault {
    * Decrypt a value
    */
   private decrypt(encrypted: string): string {
-    const [ivHex, encryptedData] = encrypted.split(':');
+    const parts = encrypted.split(':');
+    if (parts.length !== 2) {
+      throw new Error('Invalid encrypted value');
+    }
+
+    const ivHex = parts[0];
+    const encryptedData = parts[1];
+    if (!ivHex || !encryptedData) {
+      throw new Error('Invalid encrypted value');
+    }
     const iv = Buffer.from(ivHex, 'hex');
     
     const decipher = crypto.createDecipheriv('aes-256-cbc', this.encryptionKey, iv);
