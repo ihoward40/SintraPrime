@@ -31,6 +31,8 @@
     "validate:schemas": "node ./scripts/validate-schemas.mjs",
     "deepthink": "node ./deepthink/src/deepthink.mjs",
     "ci:deepthink-gates": "node ./scripts/ci/deepthink-gates.mjs",
+    "ci:lint-md:templates": "node ./scripts/ci/lint-markdown-templates.mjs",
+    "ci:validate-json:selected": "node ./scripts/ci/validate-json-selected.mjs",
     "detect:tiers": "node ./scripts/detect-tiers.mjs --out tier_declaration.json",
     "ci:detect-tiers": "node ./scripts/detect-tiers.mjs",
     "sign:manifest": "node ./scripts/signing/sign-manifest.mjs",
