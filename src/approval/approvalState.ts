@@ -8,6 +8,12 @@ export type ApprovalState = {
   rejected_at?: string;
   rejection_reason?: string;
   plan_hash: string;
+  // Tier-X: record skills lock hash for deterministic governance on resume.
+  skills_lock_sha256?: string;
+  // Tier-X: record skill-gate decision inputs/outputs for audit and deterministic resume checks.
+  skills_checked?: string[];
+  skills_gate_decision?: "ALLOW" | "DENY" | "APPROVAL_REQUIRED";
+  skills_gate_reasons?: { code: "SKILL_REVOKED" | "SKILL_DISABLED" | "SKILL_EXPERIMENTAL"; skill: string; detail?: string }[];
   // Tier-20/21: store the originating command for deterministic policy re-checks.
   command?: string;
   // Tier-21: domain context for scoped approvals.

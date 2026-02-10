@@ -22,6 +22,7 @@ import { writeNotionWriteArtifact } from "../artifacts/writeNotionWriteArtifact.
 import { writeNotionLiveReadArtifact } from "../artifacts/writeNotionLiveReadArtifact.js";
 import { loadAgentRegistry, findAgentsProvidingCapability } from "../agents/agentRegistry.js";
 import { resolveCapabilities, resolvedCapabilitiesToReceiptMap } from "../agents/resolveCapabilities.js";
+import { runtimeSkillGate } from "../skills/runtime-skill-gate.js";
 import { checkPolicy, checkPolicyWithMeta } from "../policy/checkPolicy.js";
 import { checkPlanPolicy } from "../policy/checkPolicy.js";
 import { enforceMaxRunsPerDay } from "../autonomy/budget.js";
@@ -203,6 +204,27 @@ function parseApproveCommand(command: string): { execution_id: string } | null {
     throw new Error("Usage: /approve <execution_id>");
   }
   return { execution_id };
+}
+
+function collectRequiredCapabilitiesFromPlan(plan: any): string[] {
+  const caps: string[] = [];
+
+  const top = plan?.required_capabilities;
+  if (Array.isArray(top)) {
+    for (const c of top) if (typeof c === "string" && c.trim()) caps.push(c.trim());
+  }
+
+  const phases = plan?.phases;
+  if (Array.isArray(phases)) {
+    for (const p of phases) {
+      const req = p?.required_capabilities;
+      if (Array.isArray(req)) {
+        for (const c of req) if (typeof c === "string" && c.trim()) caps.push(c.trim());
+      }
+    }
+  }
+
+  return Array.from(new Set(caps)).sort();
 }
 
 type TemplateRegistryEntry = {
@@ -2033,6 +2055,62 @@ async function run() {
       (plan as any).plan_hash = plan_hash;
     }
 
+    // Runtime skill gate (resume path): must run before any batch execution.
+    {
+      const requiredCapsForSkillGate = collectRequiredCapabilitiesFromPlan(plan);
+      const resolvedCapsForGate: Record<string, string> = (state as any).resolved_capabilities ?? {};
+
+      const skillGate = runtimeSkillGate({
+        required_capabilities: requiredCapsForSkillGate,
+        resolved_capabilities: resolvedCapsForGate,
+        is_approved_execution: true,
+      });
+
+      (state as any).skills_lock_sha256 = skillGate.skills_lock_sha256;
+      (plan as any).skills_lock_sha256 = skillGate.skills_lock_sha256;
+
+      if (skillGate.decision === "DENY") {
+        const top =
+          skillGate.reasons.find((r) => r.code === "SKILL_REVOKED" || r.code === "SKILL_DISABLED") ??
+          skillGate.reasons[0] ??
+          skillGate.meta?.[0];
+        const denied = {
+          kind: "PolicyDenied" as const,
+          code: (top as any)?.code ?? "SKILL_GATE_DENY",
+          reason: (top as any)?.detail ?? "blocked by runtime skill gate",
+          details: { skill_gate: skillGate },
+        };
+
+        const now = nowIso();
+        await persistRun({
+          execution_id: plan.execution_id,
+          threadId: plan.threadId,
+          goal: plan.goal,
+          dry_run: plan.dry_run,
+          started_at: typeof state.started_at === "string" ? state.started_at : now,
+          finished_at: now,
+          status: "denied",
+          error: denied.reason,
+          agent_versions: plan.agent_versions,
+          resolved_capabilities: resolvedCapsForGate,
+          skills_lock_sha256: skillGate.skills_lock_sha256,
+          skills_checked: skillGate.checked,
+          skills_gate_decision: skillGate.decision,
+          skills_gate_reasons: skillGate.reasons,
+          policy_denied: { code: denied.code, reason: denied.reason },
+          steps: [],
+        } as any);
+
+        console.log(JSON.stringify(denied, null, 2));
+        process.exit(3);
+      }
+
+      // Prefer persisting recomputed resolved capabilities for downstream resume logic.
+      if (!((state as any).resolved_capabilities) && Object.keys(resolvedCapsForGate).length) {
+        (state as any).resolved_capabilities = resolvedCapsForGate;
+      }
+    }
+
     // Tier-10.6: batch approvals (one approval executes multiple pending steps)
     const pending = Array.isArray((state as any)?.pending_step_ids)
       ? ((state as any).pending_step_ids as any[]).map(String).filter(Boolean)
@@ -2161,6 +2239,7 @@ async function run() {
       }
 
       const runLog = await executePlan(execPlan);
+      (runLog as any).skills_lock_sha256 = (state as any).skills_lock_sha256 ?? (plan as any).skills_lock_sha256;
       // Persist the derived fingerprint so downstream governance (Tier-23)
       // can observe recent successful activity for this autonomy scope.
       (runLog as any).fingerprint = fingerprint;
@@ -2305,6 +2384,53 @@ async function run() {
 
     const artifacts: any = state.artifacts ?? {};
     const resolvedCapsAll: Record<string, string> = state.resolved_capabilities ?? {};
+
+    // Runtime skill gate (resume path): block revoked/disabled skills deterministically.
+    const requiredCapsForSkillGate = collectRequiredCapabilitiesFromPlan(plan);
+    const skillGate = runtimeSkillGate({
+      required_capabilities: requiredCapsForSkillGate,
+      resolved_capabilities: resolvedCapsAll,
+      is_approved_execution: true,
+    });
+    const skills_lock_sha256 = skillGate.skills_lock_sha256;
+
+    if (skillGate.decision === "DENY") {
+      const top =
+        skillGate.reasons.find((r) => r.code === "SKILL_REVOKED" || r.code === "SKILL_DISABLED") ??
+        skillGate.reasons[0] ??
+        skillGate.meta?.[0];
+      const denied = {
+        kind: "PolicyDenied" as const,
+        code: (top as any)?.code ?? "SKILL_GATE_DENY",
+        reason: (top as any)?.detail ?? "blocked by runtime skill gate",
+        details: { skill_gate: skillGate },
+      };
+
+      const now = nowIso();
+      await persistRun({
+        execution_id: plan.execution_id,
+        threadId: plan.threadId,
+        goal: plan.goal,
+        dry_run: plan.dry_run,
+        started_at: typeof state.started_at === "string" ? state.started_at : now,
+        finished_at: now,
+        status: "denied",
+        error: denied.reason,
+        agent_versions: plan.agent_versions,
+        resolved_capabilities: resolvedCapsAll,
+        skills_lock_sha256,
+        skills_checked: skillGate.checked,
+        skills_gate_decision: skillGate.decision,
+        skills_gate_reasons: skillGate.reasons,
+        policy_denied: { code: denied.code, reason: denied.reason },
+        steps: [],
+      } as any);
+
+      console.log(JSON.stringify(denied, null, 2));
+      process.exitCode = 3;
+      return;
+    }
+
     const allStepLogs: any[] = Array.isArray(state.steps) ? state.steps : [];
     const phasesPlanned: string[] = Array.isArray(state.phases_planned) ? state.phases_planned : [];
     const phasesExecuted: string[] = Array.isArray(state.phases_executed) ? state.phases_executed : [];
@@ -2436,6 +2562,7 @@ async function run() {
         steps: allStepLogs,
         agent_versions: plan.agent_versions,
         resolved_capabilities: resolvedCapsAll,
+        skills_lock_sha256: (state as any).skills_lock_sha256 ?? skills_lock_sha256,
         phases_planned: phasesPlanned,
         phases_executed: phasesExecuted,
         artifacts,
@@ -2541,6 +2668,7 @@ async function run() {
     }
 
     const runLog = await executePlan(plan);
+  (runLog as any).skills_lock_sha256 = (state as any).skills_lock_sha256 ?? skills_lock_sha256;
     (runLog as any).receipt_hash = computeReceiptHashForLog(runLog);
 
     // Tier 6.x artifacts should also be emitted on /approve (resume path).
@@ -3118,6 +3246,7 @@ async function run() {
     const artifacts: Record<string, { outputs: Record<string, unknown>; files?: string[]; metadata: { started_at: string; finished_at: string } }> = {};
     const phasesExecuted: string[] = [];
     const resolvedCapsAll: Record<string, string> = {};
+    let skills_lock_sha256: string | undefined;
     const allStepLogs: any[] = [];
     let applyStepOrdinal = 0;
     let planFinalized = false;
@@ -3211,6 +3340,133 @@ async function run() {
         required_capabilities: phase.required_capabilities,
         steps: executedSteps,
       };
+
+      // Runtime skill gate (pre-exec): block revoked/disabled; require approval for experimental unless opted-in.
+      {
+        const gate = runtimeSkillGate({
+          required_capabilities: Array.isArray(phase.required_capabilities) ? phase.required_capabilities : [],
+          resolved_capabilities: phaseResolvedCaps,
+          is_approved_execution: false,
+        });
+        if (gate.skills_lock_sha256) skills_lock_sha256 = gate.skills_lock_sha256;
+
+        if (gate.decision === "DENY") {
+          const top =
+            gate.reasons.find((r) => r.code === "SKILL_REVOKED" || r.code === "SKILL_DISABLED") ??
+            gate.reasons[0] ??
+            gate.meta?.[0];
+          const denied = {
+            kind: "PolicyDenied" as const,
+            code: (top as any)?.code ?? "SKILL_GATE_DENY",
+            reason: (top as any)?.detail ?? "blocked by runtime skill gate",
+            details: { skill_gate: gate, phase_id: phaseId },
+          };
+
+          const now = nowIso();
+          await persistRun({
+            execution_id: plannerOut.execution_id,
+            threadId: plannerOut.threadId,
+            goal: plannerOut.goal,
+            dry_run: plannerOut.dry_run,
+            started_at: overallStarted,
+            finished_at: now,
+            status: "denied",
+            error: denied.reason,
+            agent_versions: plannerOut.agent_versions,
+            resolved_capabilities: resolvedCapsAll,
+            skills_lock_sha256,
+            skills_checked: gate.checked,
+            skills_gate_decision: gate.decision,
+            skills_gate_reasons: gate.reasons,
+            phases_planned: phasesPlanned,
+            phases_executed: phasesExecuted,
+            denied_phase: phaseId,
+            artifacts,
+            policy_denied: { code: denied.code, reason: denied.reason },
+            steps: allStepLogs,
+          } as any);
+
+          console.log(JSON.stringify(denied, null, 2));
+          process.exitCode = 3;
+          return;
+        }
+
+        if (gate.decision === "APPROVAL_REQUIRED") {
+          const now = nowIso();
+          const plan_hash = computePlanHash(plannerOut);
+          const stateFile = approvalStatePath(plannerOut.execution_id);
+
+          const approvalOut = {
+            kind: "ApprovalRequired" as const,
+            code: "SKILL_EXPERIMENTAL",
+            reason: "Experimental skill usage requires approval",
+            execution_id: plannerOut.execution_id,
+            plan_hash,
+            details: { skill_gate: gate, phase_id: phaseId },
+          };
+
+          writeApprovalState({
+            execution_id: plannerOut.execution_id,
+            command,
+            original_command,
+            domain_id: domain_id ?? undefined,
+            created_at: now,
+            status: "awaiting_approval",
+            plan_hash,
+            skills_lock_sha256,
+            skills_checked: gate.checked,
+            skills_gate_decision: gate.decision,
+            skills_gate_reasons: gate.reasons,
+            mode: "phased",
+            plan: plannerOut,
+            phases_planned: phasesPlanned,
+            phases_executed: phasesExecuted,
+            next_phase_id: phaseId,
+            artifacts,
+            resolved_capabilities: resolvedCapsAll,
+            steps: allStepLogs,
+            started_at: overallStarted,
+          });
+
+          await persistRun({
+            execution_id: plannerOut.execution_id,
+            threadId: plannerOut.threadId,
+            goal: plannerOut.goal,
+            dry_run: plannerOut.dry_run,
+            plan_hash,
+            started_at: overallStarted,
+            finished_at: now,
+            status: "awaiting_approval",
+            error: approvalOut.reason,
+            agent_versions: plannerOut.agent_versions,
+            resolved_capabilities: resolvedCapsAll,
+            skills_lock_sha256,
+            skills_checked: gate.checked,
+            skills_gate_decision: gate.decision,
+            skills_gate_reasons: gate.reasons,
+            phases_planned: phasesPlanned,
+            phases_executed: phasesExecuted,
+            denied_phase: null,
+            artifacts,
+            approval_required: { ...approvalOut, state_file: stateFile },
+            steps: allStepLogs,
+          } as any);
+
+          console.log(
+            JSON.stringify(
+              {
+                ...approvalOut,
+                approval_required: true,
+                executed: false,
+              },
+              null,
+              2
+            )
+          );
+          process.exitCode = 4;
+          return;
+        }
+      }
 
       // Policy gate per phase.
       const policy = checkPolicyWithMeta(phasePlan, process.env, new Date(), {
@@ -3308,6 +3564,7 @@ async function run() {
             status: "awaiting_approval",
             kind: "ApprovalRequiredBatch",
             plan_hash,
+            skills_lock_sha256,
             mode: "phased",
             plan: plannerOut,
             phases_planned: phasesPlanned,
@@ -3333,6 +3590,7 @@ async function run() {
             error: approval?.reason,
             agent_versions: plannerOut.agent_versions,
             resolved_capabilities: resolvedCapsAll,
+            skills_lock_sha256,
             phases_planned: phasesPlanned,
             phases_executed: phasesExecuted,
             denied_phase: null,
@@ -3399,6 +3657,7 @@ async function run() {
           created_at: now,
           status: "awaiting_approval",
           plan_hash,
+          skills_lock_sha256,
           mode: "phased",
           plan: plannerOut,
           phases_planned: phasesPlanned,
@@ -3422,6 +3681,7 @@ async function run() {
           error: approval?.reason,
           agent_versions: plannerOut.agent_versions,
           resolved_capabilities: resolvedCapsAll,
+          skills_lock_sha256,
           phases_planned: phasesPlanned,
           phases_executed: phasesExecuted,
           denied_phase: null,
@@ -3618,6 +3878,7 @@ async function run() {
       steps: allStepLogs,
       agent_versions: plannerOut.agent_versions,
       resolved_capabilities: resolvedCapsAll,
+      skills_lock_sha256,
       phases_planned: phasesPlanned,
       phases_executed: phasesExecuted,
       artifacts,
@@ -3901,6 +4162,105 @@ async function run() {
   // Tier-20: safety backpressure; write suspension artifacts before gating/exec.
   autoSuspendDelegationsForCommand(command);
 
+  // Runtime skill gate (pre-exec): block revoked/disabled; require approval for experimental unless opted-in.
+  const skillGate = runtimeSkillGate({
+    required_capabilities: capsRaw,
+    resolved_capabilities: resolvedCapabilities ?? {},
+    is_approved_execution: false,
+  });
+  const skills_lock_sha256 = skillGate.skills_lock_sha256;
+
+  if (skillGate.decision === "DENY") {
+    const top =
+      skillGate.reasons.find((r) => r.code === "SKILL_REVOKED" || r.code === "SKILL_DISABLED") ??
+      skillGate.reasons[0] ??
+      skillGate.meta?.[0];
+    const denied = {
+      kind: "PolicyDenied" as const,
+      code: (top as any)?.code ?? "SKILL_GATE_DENY",
+      reason: (top as any)?.detail ?? "blocked by runtime skill gate",
+      details: { skill_gate: skillGate },
+    };
+
+    const now = new Date().toISOString();
+    await persistRun({
+      execution_id: plannerOut.execution_id,
+      threadId: plannerOut.threadId,
+      goal: plannerOut.goal,
+      dry_run: plannerOut.dry_run,
+      started_at: now,
+      finished_at: now,
+      status: "denied",
+      error: denied.reason,
+      agent_versions: plannerOut.agent_versions,
+      resolved_capabilities: resolvedCapabilities,
+      skills_lock_sha256,
+      skills_checked: skillGate.checked,
+      skills_gate_decision: skillGate.decision,
+      skills_gate_reasons: skillGate.reasons,
+      policy_denied: { code: denied.code, reason: denied.reason },
+      steps: [],
+    } as any);
+
+    console.log(JSON.stringify(denied, null, 2));
+    process.exitCode = 3;
+    return;
+  }
+
+  if (skillGate.decision === "APPROVAL_REQUIRED") {
+    const now = new Date().toISOString();
+    const plan_hash = computePlanHash(plannerOut);
+    const stateFile = approvalStatePath(plannerOut.execution_id);
+
+    const approvalOut = {
+      kind: "ApprovalRequired" as const,
+      code: "SKILL_EXPERIMENTAL",
+      reason: "Experimental skill usage requires approval",
+      execution_id: plannerOut.execution_id,
+      plan_hash,
+      details: { skill_gate: skillGate },
+    };
+
+    writeApprovalState({
+      execution_id: plannerOut.execution_id,
+      command,
+      original_command,
+      domain_id: domain_id ?? undefined,
+      created_at: now,
+      status: "awaiting_approval",
+      plan_hash,
+      skills_lock_sha256,
+      skills_checked: skillGate.checked,
+      skills_gate_decision: skillGate.decision,
+      skills_gate_reasons: skillGate.reasons,
+      mode: "legacy",
+      plan: plannerOut,
+      resolved_capabilities: resolvedCapabilities,
+      started_at: now,
+    });
+
+    await persistRun({
+      execution_id: plannerOut.execution_id,
+      threadId: plannerOut.threadId,
+      goal: plannerOut.goal,
+      dry_run: plannerOut.dry_run,
+      plan_hash,
+      started_at: now,
+      finished_at: now,
+      status: "awaiting_approval",
+      error: approvalOut.reason,
+      agent_versions: plannerOut.agent_versions,
+      resolved_capabilities: resolvedCapabilities,
+      skills_lock_sha256,
+      approval_required: { ...approvalOut, state_file: stateFile },
+      steps: [],
+    } as any);
+
+    console.log(JSON.stringify({ ...approvalOut, approval_required: true, executed: false }, null, 2));
+    process.exitCode = 4;
+    return;
+  }
+
   const policy = checkPolicyWithMeta(plannerOut, process.env, new Date(), {
     execution_id: plannerOut.execution_id,
     command,
@@ -3979,8 +4339,10 @@ async function run() {
         status: "awaiting_approval",
         kind: "ApprovalRequiredBatch",
         plan_hash,
+        skills_lock_sha256,
         mode: "legacy",
         plan: plannerOut,
+        resolved_capabilities: resolvedCapabilities,
         pending_step_ids: approvable.map((s: any) => String(s.step_id ?? "")).filter(Boolean),
         prestates,
         started_at: now,
@@ -3997,6 +4359,8 @@ async function run() {
         status: "awaiting_approval",
         error: approval?.reason,
         agent_versions: plannerOut.agent_versions,
+        resolved_capabilities: resolvedCapabilities,
+        skills_lock_sha256,
         approval_required: {
           kind: "ApprovalRequiredBatch",
           execution_id: plannerOut.execution_id,
@@ -4081,8 +4445,10 @@ async function run() {
       created_at: now,
       status: "awaiting_approval",
       plan_hash,
+      skills_lock_sha256,
       mode: "legacy",
       plan: plannerOut,
+      resolved_capabilities: resolvedCapabilities,
       started_at: now,
     });
 
@@ -4097,6 +4463,8 @@ async function run() {
       status: "awaiting_approval",
       error: approval?.reason,
       agent_versions: plannerOut.agent_versions,
+      resolved_capabilities: resolvedCapabilities,
+      skills_lock_sha256,
       approval_required: { ...approvalOut, state_file: stateFile },
       steps: [],
     } as any);
@@ -4258,6 +4626,8 @@ async function run() {
   }
 
   const runLog = await executePlan(plannerOut);
+
+  (runLog as any).skills_lock_sha256 = skills_lock_sha256;
 
   (runLog as any).executed = runLog.status === "success";
   (runLog as any).approval_required = false;
