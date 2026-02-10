@@ -37,6 +37,16 @@
         "notion.write.page_property",
         "notion.write.page_title"
       ]
+    },
+    {
+      "name": "browser-l0-agent",
+      "version": "1.0.0",
+      "capabilities": [
+        "browser:l0",
+        "browser.l0.navigate",
+        "browser.l0.screenshot",
+        "browser.l0.dom_extract"
+      ]
     }
   ]
 }

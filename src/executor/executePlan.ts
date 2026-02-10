@@ -8,6 +8,8 @@ import { notionLivePatchWithIdempotency } from "../adapters/notionLiveWrite.js";
 import { writeNotionLiveWriteArtifact } from "../artifacts/writeNotionLiveWriteArtifact.js";
 import { writeDocsCaptureArtifact } from "../artifacts/writeDocsCaptureArtifact.js";
 import { getIdempotencyRecord, writeIdempotencyRecord } from "../idempotency/idempotencyLedger.js";
+import { browserL0DomExtract, browserL0Navigate, browserL0Screenshot } from "../browserOperator/l0.js";
+import { evidenceRollupSha256 } from "../receipts/evidenceRollup.js";
 
 type RunStatus =
   | "running"
@@ -131,6 +133,30 @@ function hasHeader(headers: Record<string, string>, headerName: string) {
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
+function normalizeEvidenceOnReceiptResponse(response: unknown): unknown {
+  if (!isPlainObject(response)) return response;
+  const evidence = (response as any).evidence;
+  if (!Array.isArray(evidence) || evidence.length === 0) return response;
+
+  const hasRollup = typeof (response as any).evidence_rollup_sha256 === "string";
+  if (hasRollup) return response;
+
+  // Best-effort: rollup only if evidence items look like ArtifactRef.
+  const okShape = evidence.every(
+    (e: any) =>
+      e &&
+      typeof e === "object" &&
+      typeof e.path === "string" &&
+      typeof e.sha256 === "string" &&
+      typeof e.mime === "string" &&
+      typeof e.bytes === "number"
+  );
+  if (!okShape) return response;
+
+  const rollup = evidenceRollupSha256(evidence as any);
+  return { ...response, evidence, evidence_rollup_sha256: rollup };
 }
 
 function getNestedString(root: unknown, keys: string[]): string | null {
@@ -277,6 +303,40 @@ async function executeDocsCaptureStep(step: ExecutionStep, timeoutMs: number, ex
   } finally {
     clearTimeout(timeout);
   }
+}
+
+async function executeBrowserL0Step(step: ExecutionStep, timeoutMs: number, execution_id: string) {
+  const action = String(step.action || "");
+  const url = step.url;
+  const payload = (step as any).payload;
+
+  if (action === "browser.l0.navigate") {
+    return await browserL0Navigate({ execution_id, step_id: step.step_id, url, timeoutMs });
+  }
+
+  if (action === "browser.l0.screenshot") {
+    const fullPage = payload && typeof payload === "object" ? (payload as any).fullPage : undefined;
+    return await browserL0Screenshot({
+      execution_id,
+      step_id: step.step_id,
+      url,
+      timeoutMs,
+      fullPage: typeof fullPage === "boolean" ? fullPage : undefined,
+    });
+  }
+
+  if (action === "browser.l0.dom_extract") {
+    const maxChars = payload && typeof payload === "object" ? (payload as any).maxChars : undefined;
+    return await browserL0DomExtract({
+      execution_id,
+      step_id: step.step_id,
+      url,
+      timeoutMs,
+      maxChars: typeof maxChars === "number" ? maxChars : undefined,
+    });
+  }
+
+  throw new Error(`Unknown browser.l0 action: ${action}`);
 }
 
 export async function executePlan(rawPlan: unknown, opts: ExecutePlanOptions = {}): Promise<ExecutionRunLog> {
@@ -462,9 +522,11 @@ export async function executePlan(rawPlan: unknown, opts: ExecutePlanOptions = {
                     })()
                 : step.action === "docs.capture"
                   ? await executeDocsCaptureStep(step, timeoutMs, plan.execution_id)
+                : step.action === "browser.l0.navigate" || step.action === "browser.l0.screenshot" || step.action === "browser.l0.dom_extract"
+                  ? await executeBrowserL0Step(step, timeoutMs, plan.execution_id)
                 : await executeStep(step, timeoutMs);
           stepLog.http_status = out.status;
-          stepLog.response = out.response;
+          stepLog.response = normalizeEvidenceOnReceiptResponse(out.response);
 
           const statusOk = step.expects.http_status.includes(out.status);
           stepLog.expectations.http_status_ok = statusOk;

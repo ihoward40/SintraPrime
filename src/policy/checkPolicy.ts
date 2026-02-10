@@ -8,6 +8,7 @@ import { readDomainOverlay } from "../domains/domainRegistry.js";
 import { deriveFingerprint } from "../governor/runGovernor.js";
 import { readRequalificationState } from "../requalification/requalification.js";
 import { readConfidence } from "../confidence/updateConfidence.js";
+import { assertUrlSafeForL0, BrowserL0GuardError } from "../browser/l0/ssrfGuards.js";
 
 export type PolicyDenied = {
   kind: "PolicyDenied";
@@ -608,6 +609,57 @@ export function checkPolicyWithMeta(
       }
     }
 
+    // Browser L0 (read-only) is a separate evidence lane.
+    // It is deny-by-default and requires an explicit host allowlist for http(s) URLs.
+    const isBrowserL0Action = action === "browser.l0" || action.startsWith("browser.l0.");
+    if (isBrowserL0Action) {
+      const method = String(step.method || "GET").toUpperCase();
+      const readOnlyFlag = (step as any).read_only;
+
+      if (readOnlyFlag !== true) {
+        return withMeta(deny("BROWSER_L0_REQUIRES_READ_ONLY", "browser.l0 requires read_only=true"));
+      }
+
+      if (method !== "GET" && method !== "HEAD") {
+        return withMeta(deny("BROWSER_L0_METHOD_NOT_ALLOWED", "browser.l0 only allows GET/HEAD"));
+      }
+
+      const allowData = String(env.BROWSER_L0_ALLOW_DATA ?? "1").trim() !== "0";
+      const allowHttp = String(env.BROWSER_L0_ALLOW_HTTP ?? "0").trim() === "1";
+      const allowedSchemes = allowData
+        ? allowHttp
+          ? ["https:", "http:", "data:"]
+          : ["https:", "data:"]
+        : allowHttp
+          ? ["https:", "http:"]
+          : ["https:"];
+
+      const allowedHosts = parseCsv(env.BROWSER_L0_ALLOWED_HOSTS);
+
+      try {
+        assertUrlSafeForL0(step.url, { allowedSchemes, allowedHosts });
+      } catch (err: any) {
+        if (err instanceof BrowserL0GuardError) {
+          if (err.code === "SCHEME_NOT_ALLOWED") {
+            return withMeta(deny("SCHEME_NOT_ALLOWED", err.message));
+          }
+          if (err.code === "HOST_NOT_ALLOWED") {
+            return withMeta(deny("HOST_NOT_ALLOWED", err.message));
+          }
+          if (err.code === "SSRF_GUARD_BLOCKED") {
+            return withMeta(deny("SSRF_GUARD_BLOCKED", err.message));
+          }
+          return withMeta(deny("BROWSER_L0_BAD_URL", err.message));
+        }
+        return withMeta(deny("BROWSER_L0_BAD_URL", String(err?.message ?? err)));
+      }
+
+      // data: is offline and deterministic; allow it through the generic protocol guard.
+      if (url.protocol === "data:") {
+        continue;
+      }
+    }
+
     // Tier 6.x: Notion has explicit read vs write lanes.
     // - Read is deny-only (Tier 6.0 contract)
     // - Write is approval-scoped (Tier 6.1), never auto-exec
@@ -715,7 +767,9 @@ export function checkPolicyWithMeta(
   const allowedDomains = parseCsv(env.ALLOWED_DOMAINS);
   if (allowedDomains.length) {
     for (const step of plan.steps) {
-      const host = new URL(step.url).hostname;
+      const u = new URL(step.url);
+      if (u.protocol === "data:") continue;
+      const host = u.hostname;
       if (!allowedDomains.includes(host)) {
         return withMeta(deny("DOMAIN_NOT_ALLOWED", `host ${host} not allowlisted`));
       }
