@@ -44,7 +44,18 @@ Be professional, concise, and actionable.`;
     instructions: 'You are a governance and compliance analyst generating audit reports.',
   });
 
-  return response.output?.[0]?.content || '';
+  const text = (response as any)?.output_text;
+  if (typeof text === 'string') return text;
+  const first = (response as any)?.output?.[0];
+  const content = first?.content;
+  if (Array.isArray(content)) {
+    const joined = content
+      .map((c: any) => (typeof c?.text === 'string' ? c.text : typeof c?.value === 'string' ? c.value : ''))
+      .join('')
+      .trim();
+    if (joined) return joined;
+  }
+  return '';
 }
 
 /**
@@ -69,7 +80,18 @@ Keep it concise and suitable for executive review.`;
     temperature: 0.7,
   });
 
-  return response.output?.[0]?.content || '';
+  const text = (response as any)?.output_text;
+  if (typeof text === 'string') return text;
+  const first = (response as any)?.output?.[0];
+  const content = first?.content;
+  if (Array.isArray(content)) {
+    const joined = content
+      .map((c: any) => (typeof c?.text === 'string' ? c.text : typeof c?.value === 'string' ? c.value : ''))
+      .join('')
+      .trim();
+    if (joined) return joined;
+  }
+  return '';
 }
 
 /**
@@ -95,5 +117,16 @@ Format as a structured description suitable for diagram generation.`;
     input: prompt,
   });
 
-  return response.output?.[0]?.content || '';
+  const text = (response as any)?.output_text;
+  if (typeof text === 'string') return text;
+  const first = (response as any)?.output?.[0];
+  const content = first?.content;
+  if (Array.isArray(content)) {
+    const joined = content
+      .map((c: any) => (typeof c?.text === 'string' ? c.text : typeof c?.value === 'string' ? c.value : ''))
+      .join('')
+      .trim();
+    if (joined) return joined;
+  }
+  return '';
 }

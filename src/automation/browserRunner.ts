@@ -77,6 +77,7 @@ export class BrowserRunner {
       // Execute each action
       for (let i = 0; i < task.actions.length; i++) {
         const action = task.actions[i];
+        if (!action) continue;
         
         try {
           const result = await this.executeAction(action, i);
@@ -156,7 +157,9 @@ export class BrowserRunner {
         return { extracted: content };
 
       case 'scroll':
-        await this.page.evaluate(() => window.scrollBy(0, window.innerHeight));
+        await this.page.evaluate(() => {
+          (globalThis as any).scrollBy(0, (globalThis as any).innerHeight);
+        });
         return { scrolled: true };
 
       default:

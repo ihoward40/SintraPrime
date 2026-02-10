@@ -11,6 +11,9 @@
     "build:clean": "npm run clean && tsc -p tsconfig.json",
     "build:watch": "tsc -p tsconfig.json --incremental --watch",
     "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --import tsx --test ./test/*.test.ts",
+    "ci:lint-md:templates": "node ./scripts/ci/lint-markdown-templates.mjs",
+    "ci:validate-json:selected": "node ./scripts/ci/validate-json-selected.mjs",
     "dev": "tsx src/cli/run-command.ts",
     "start": "node dist/cli/run-command.js",
     "smoke": "node ./scripts/smoke.js",
@@ -19,7 +22,7 @@
     "smoke:vectors": "node ./scripts/smoke-vectors.js",
     "smoke:vectors:trim": "node ./scripts/smoke-vectors.js | node ./scripts/trim-output.js",
     "mock:server": "node ./scripts/mock-server.js",
-    "autonomy": "node --loader tsx ./src/cli/run-autonomy.ts",
+    "autonomy": "node --import tsx ./src/cli/run-autonomy.ts",
     "demo:visual-browser": "node ./scripts/visual-browser-demo/demo.mjs",
     "pdf:render": "node ./scripts/pdf/render-court-pdf.mjs",
     "pdf:render:verified": "node ./scripts/pdf/render-court-pdf-verified.mjs",
@@ -42,6 +45,7 @@
   },
   "dependencies": {
     "express": "^4.21.2",
+    "openai": "^6.19.0",
     "rrule": "^2.8.1",
     "yaml": "^2.8.0",
     "yauzl": "^2.10.0",
@@ -49,6 +53,7 @@
     "zod": "^3.25.0"
   },
   "devDependencies": {
+    "@types/express": "^5.0.6",
     "@types/node": "^22.10.0",
     "ajv": "^8.17.1",
     "markdown-it": "^14.1.0",

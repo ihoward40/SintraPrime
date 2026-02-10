@@ -118,6 +118,9 @@ export class SecretsVault {
    */
   private decrypt(encrypted: string): string {
     const [ivHex, encryptedData] = encrypted.split(':');
+    if (!ivHex || !encryptedData) {
+      throw new Error('Invalid encrypted credential payload');
+    }
     const iv = Buffer.from(ivHex, 'hex');
     
     const decipher = crypto.createDecipheriv('aes-256-cbc', this.encryptionKey, iv);

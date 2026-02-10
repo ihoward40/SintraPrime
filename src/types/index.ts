@@ -106,9 +106,33 @@ export interface Tool {
   execute(args: any): Promise<any>;
 }
 
+// Legacy/compat task types used by some modules under src/agents and src/ai.
+export type TaskResult = {
+  ok?: boolean;
+  success?: boolean;
+  data?: unknown;
+  error?: string;
+  [k: string]: unknown;
+};
+
+export type ExecutionContext = {
+  now?: () => Date;
+  env?: Record<string, string | undefined>;
+  log?: (msg: string, meta?: unknown) => void;
+  secrets?: Record<string, string>;
+  [k: string]: unknown;
+};
+
+export type Task = {
+  id: string;
+  name: string;
+  run: (ctx: ExecutionContext) => Promise<TaskResult>;
+  [k: string]: unknown;
+};
+
 export interface Connector {
   name: string;
   type: string;
   authenticate(): Promise<void>;
-  call(method: string, args: any): Promise<any>;
+  call(method: string, endpoint: string, args: any): Promise<any>;
 }
