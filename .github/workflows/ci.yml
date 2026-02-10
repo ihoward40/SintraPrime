@@ -22,6 +22,12 @@ jobs:
       - name: Install
         run: npm ci
 
+      - name: Required checks (AGENTS)
+        run: |
+          npm run -s typecheck
+          npm run -s ci:lint-md:templates
+          npm run -s ci:validate-json:selected
+
       - name: DeepThink gates
         run: npm run -s ci:deepthink-gates
 
