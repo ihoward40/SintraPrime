@@ -1,0 +1,26 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "skills.learn.v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["skill_name", "description"],
+  "properties": {
+    "skill_name": { "type": "string", "minLength": 1, "maxLength": 120 },
+    "description": { "type": "string", "minLength": 1, "maxLength": 4000 },
+    "tools_requested": {
+      "type": "array",
+      "maxItems": 50,
+      "items": { "type": "string", "minLength": 1, "maxLength": 120 }
+    },
+    "risk_profile": {
+      "type": "string",
+      "enum": ["read-only", "writes", "payments", "comms"],
+      "default": "read-only"
+    },
+    "output_mode": {
+      "type": "string",
+      "enum": ["patch_only", "apply_patch"],
+      "default": "patch_only"
+    }
+  }
+}
