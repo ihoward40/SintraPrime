@@ -1,0 +1,27 @@
+{
+  "schema": "execution.plan.v1",
+  "id": "demo-competitive-brief-localhost-no-crawl",
+  "required_capabilities": ["browser:l0"],
+  "steps": [
+    {
+      "id": "cb_localhost",
+      "action": "competitive.brief.v1",
+      "read_only": true,
+      "method": "GET",
+      "payload": {
+        "targets": [
+          "http://localhost:8000/consumer-tools/",
+          "http://localhost:8000/about-us/",
+          "http://localhost:8000/ask-cfpb/"
+        ],
+        "screenshot": {
+          "enabled": true,
+          "mode": "strict",
+          "maxRequests": 5,
+          "viewport": { "width": 1440, "height": 900 }
+        },
+        "wideResearch": { "enabled": false }
+      }
+    }
+  ]
+}
