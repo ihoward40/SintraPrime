@@ -28,6 +28,9 @@ jobs:
           npm run -s ci:lint-md:templates
           npm run -s ci:validate-json:selected
 
+      - name: Tests
+        run: npm test
+
       - name: DeepThink gates
         run: npm run -s ci:deepthink-gates
 
