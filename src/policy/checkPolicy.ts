@@ -145,6 +145,10 @@ function parseUtcHm(envValue: string | undefined): { hour: number; minute: numbe
   return { hour, minute };
 }
 
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
 export function checkPlanPolicy(plan: any, env: NodeJS.ProcessEnv = process.env) {
   const maxSteps = asInt(env.POLICY_MAX_STEPS, 10);
   const maxRuntimeMs = asInt(env.POLICY_MAX_RUNTIME_MS, 30000);
@@ -658,6 +662,128 @@ export function checkPolicyWithMeta(
       if (url.protocol === "data:") {
         continue;
       }
+    }
+
+    // CompetitiveBrief: tight 3-pass pipeline (no crawling).
+    // This step executes locally but must enforce Browser L0 constraints for each declared target.
+    if (action === "competitive.brief.v1") {
+      const method = String(step.method || "GET").toUpperCase();
+      const readOnlyFlag = (step as any).read_only;
+
+      if (readOnlyFlag !== true) {
+        return withMeta(deny("COMPETITIVE_BRIEF_REQUIRES_READ_ONLY", "competitive.brief.v1 requires read_only=true"));
+      }
+
+      if (method !== "GET" && method !== "HEAD") {
+        return withMeta(deny("COMPETITIVE_BRIEF_METHOD_NOT_ALLOWED", "competitive.brief.v1 only allows GET/HEAD"));
+      }
+
+      const payload = (step as any).payload;
+      if (!isPlainObject(payload)) {
+        return withMeta(deny("COMPETITIVE_BRIEF_PAYLOAD_INVALID", "competitive.brief.v1 requires object payload"));
+      }
+
+      // Belt + suspenders: deny any crawl/spider/discovery fields even if schema disallows them.
+      const forbiddenKeys = [
+        "crawl",
+        "spider",
+        "sitemap",
+        "followLinks",
+        "discoverLinks",
+        "discover",
+        "harvest",
+        "recursion",
+      ];
+      for (const k of forbiddenKeys) {
+        if (Object.prototype.hasOwnProperty.call(payload, k)) {
+          return withMeta(deny("COMPETITIVE_BRIEF_NO_CRAWL", `field not allowed: ${k}`));
+        }
+      }
+
+      const targetsRaw = (payload as any).targets;
+      const targets: string[] = Array.isArray(targetsRaw) ? targetsRaw.map((t: any) => String(t)) : [];
+      if (!targets.length) {
+        return withMeta(deny("COMPETITIVE_BRIEF_TARGETS_REQUIRED", "targets must be a non-empty array"));
+      }
+
+      const wideResearch = isPlainObject((payload as any).wideResearch) ? ((payload as any).wideResearch as any) : null;
+      if (wideResearch && wideResearch.enabled === true) {
+        const destination = `${url.hostname}${url.pathname}`;
+        return withMeta(
+          requireApproval({
+            code: "COMPETITIVE_BRIEF_WIDE_RESEARCH_REQUIRES_APPROVAL",
+            reason: "wideResearch.enabled=true requires explicit approval",
+            action,
+            destination,
+            summary: "CompetitiveBrief Wide Research escalation",
+          })
+        );
+      }
+
+      const allowTargets = 3;
+      if (targets.length > allowTargets) {
+        const destination = `${url.hostname}${url.pathname}`;
+        return withMeta(
+          requireApproval({
+            code: "COMPETITIVE_BRIEF_TOO_MANY_TARGETS",
+            reason: `targets=${targets.length} exceeds allow threshold (${allowTargets})`,
+            action,
+            destination,
+            summary: `CompetitiveBrief targets=${targets.length}`,
+          })
+        );
+      }
+
+      const screenshot = isPlainObject((payload as any).screenshot) ? ((payload as any).screenshot as any) : null;
+      if (screenshot && screenshot.enabled === true) {
+        const mode = screenshot.mode ?? "same_origin";
+        if (mode !== "same_origin" && mode !== "strict") {
+          return withMeta(deny("COMPETITIVE_BRIEF_SCREENSHOT_MODE_NOT_ALLOWED", `mode=${String(mode)}`));
+        }
+        if (screenshot.maxRequests !== undefined && screenshot.maxRequests !== null) {
+          const mr = Number(screenshot.maxRequests);
+          if (!Number.isFinite(mr) || mr < 1 || mr > 200) {
+            return withMeta(
+              deny("COMPETITIVE_BRIEF_SCREENSHOT_MAX_REQUESTS_INVALID", `maxRequests=${String(screenshot.maxRequests)}`)
+            );
+          }
+        }
+      }
+
+      // Enforce Browser L0 SSRF/allowlist guards for each target.
+      const allowData = String(env.BROWSER_L0_ALLOW_DATA ?? "1").trim() !== "0";
+      const allowHttp = String(env.BROWSER_L0_ALLOW_HTTP ?? "0").trim() === "1";
+      const allowedSchemes = allowData
+        ? allowHttp
+          ? ["https:", "http:", "data:"]
+          : ["https:", "data:"]
+        : allowHttp
+          ? ["https:", "http:"]
+          : ["https:"];
+      const allowedHosts = parseCsv(env.BROWSER_L0_ALLOWED_HOSTS);
+
+      for (const targetUrl of targets) {
+        try {
+          assertUrlSafeForL0(targetUrl, { allowedSchemes, allowedHosts });
+        } catch (err: any) {
+          if (err instanceof BrowserL0GuardError) {
+            if (err.code === "SCHEME_NOT_ALLOWED") {
+              return withMeta(deny("SCHEME_NOT_ALLOWED", err.message));
+            }
+            if (err.code === "HOST_NOT_ALLOWED") {
+              return withMeta(deny("HOST_NOT_ALLOWED", err.message));
+            }
+            if (err.code === "SSRF_GUARD_BLOCKED") {
+              return withMeta(deny("SSRF_GUARD_BLOCKED", err.message));
+            }
+            return withMeta(deny("COMPETITIVE_BRIEF_BAD_TARGET", err.message));
+          }
+          return withMeta(deny("COMPETITIVE_BRIEF_BAD_TARGET", String(err?.message ?? err)));
+        }
+      }
+
+      // This action is local; no additional URL protocol checks apply beyond target validation.
+      continue;
     }
 
     // Tier 6.x: Notion has explicit read vs write lanes.

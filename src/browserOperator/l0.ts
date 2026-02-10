@@ -176,26 +176,80 @@ export async function browserL0Navigate(input: {
   timeoutMs: number;
 }) {
   assertUrlAllowedByBrowserL0(input.url);
-  const out = await withBrowserPage({
+  fs.mkdirSync(stepRunsDir(input.execution_id, input.step_id), { recursive: true });
+
+  const relHtml = toPosix(
+    path.join(
+      "runs",
+      "browser-l0",
+      safeFilePart(input.execution_id),
+      safeFilePart(input.step_id),
+      "navigate.html"
+    )
+  );
+  const relMeta = toPosix(
+    path.join(
+      "runs",
+      "browser-l0",
+      safeFilePart(input.execution_id),
+      safeFilePart(input.step_id),
+      "navigate.meta.json"
+    )
+  );
+
+  const maxCharsRaw = process.env.BROWSER_L0_MAX_NAVIGATE_CHARS;
+  const maxChars =
+    maxCharsRaw && Number.isFinite(Number(maxCharsRaw)) ? Math.max(1, Math.floor(Number(maxCharsRaw))) : 250_000;
+
+  const captured = await withBrowserPage({
     url: input.url,
     timeoutMs: input.timeoutMs,
     fn: async (page, resp) => {
       const title = await page.title().catch(() => null);
+      const html = await page.content().catch(() => "");
       return {
         final_url: page.url(),
         status: resp ? resp.status() : null,
         title,
+        headers: resp ? resp.headers() : {},
         content_type: resp ? resp.headers()["content-type"] ?? null : null,
+        html,
       };
     },
   });
 
-  return {
-    ok: true,
-    status: 200,
-    response: out,
-    responseJson: out,
+  const htmlOut = String(captured.html ?? "").slice(0, maxChars);
+  const htmlRef = writeArtifactRelative(relHtml, Buffer.from(htmlOut, "utf8"), "text/html; charset=utf-8");
+
+  const meta = {
+    execution_id: input.execution_id,
+    step_id: input.step_id,
+    url: input.url,
+    final_url: captured.final_url,
+    http_status: captured.status,
+    title: captured.title ?? null,
+    content_type: captured.content_type,
+    headers: captured.headers ?? {},
+    truncated: { max_chars: maxChars, html_chars: htmlOut.length },
+    captured_at: new Date().toISOString(),
   };
+  const metaRef = writeArtifactRelative(
+    relMeta,
+    Buffer.from(JSON.stringify(meta, null, 2) + "\n", "utf8"),
+    "application/json"
+  );
+
+  const evidence: ArtifactRef[] = [htmlRef, metaRef];
+  const response = {
+    url: input.url,
+    final_url: captured.final_url,
+    title: captured.title ?? null,
+    http_status: captured.status,
+    evidence,
+    evidence_rollup_sha256: evidenceRollupSha256(evidence),
+  };
+
+  return { ok: true, status: 200, response, responseJson: response };
 }
 
 export async function browserL0Screenshot(input: {

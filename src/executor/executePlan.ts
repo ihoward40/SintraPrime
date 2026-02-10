@@ -9,6 +9,7 @@ import { writeNotionLiveWriteArtifact } from "../artifacts/writeNotionLiveWriteA
 import { writeDocsCaptureArtifact } from "../artifacts/writeDocsCaptureArtifact.js";
 import { getIdempotencyRecord, writeIdempotencyRecord } from "../idempotency/idempotencyLedger.js";
 import { browserL0DomExtract, browserL0Navigate, browserL0Screenshot } from "../browserOperator/l0.js";
+import { runCompetitiveBriefV1 } from "../competitive/competitiveBrief.js";
 import { evidenceRollupSha256 } from "../receipts/evidenceRollup.js";
 
 type RunStatus =
@@ -339,6 +340,16 @@ async function executeBrowserL0Step(step: ExecutionStep, timeoutMs: number, exec
   throw new Error(`Unknown browser.l0 action: ${action}`);
 }
 
+async function executeCompetitiveBriefStep(step: ExecutionStep, timeoutMs: number, execution_id: string) {
+  const payload = (step as any).payload;
+  return await runCompetitiveBriefV1({
+    execution_id,
+    step_id: step.step_id,
+    timeoutMs,
+    input: payload,
+  });
+}
+
 export async function executePlan(rawPlan: unknown, opts: ExecutePlanOptions = {}): Promise<ExecutionRunLog> {
   const plan = ExecutionPlanSchema.parse(rawPlan);
   const nowIso = () => new Date().toISOString();
@@ -522,6 +533,8 @@ export async function executePlan(rawPlan: unknown, opts: ExecutePlanOptions = {
                     })()
                 : step.action === "docs.capture"
                   ? await executeDocsCaptureStep(step, timeoutMs, plan.execution_id)
+                : step.action === "competitive.brief.v1"
+                  ? await executeCompetitiveBriefStep(step, timeoutMs, plan.execution_id)
                 : step.action === "browser.l0.navigate" || step.action === "browser.l0.screenshot" || step.action === "browser.l0.dom_extract"
                   ? await executeBrowserL0Step(step, timeoutMs, plan.execution_id)
                 : await executeStep(step, timeoutMs);
