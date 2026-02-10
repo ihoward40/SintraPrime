@@ -2057,6 +2057,11 @@ async function run() {
 
     // Runtime skill gate (resume path): must run before any batch execution.
     {
+      const prior_skills_lock_sha256 =
+        typeof (state as any).skills_lock_sha256 === "string" && String((state as any).skills_lock_sha256).trim()
+          ? String((state as any).skills_lock_sha256)
+          : undefined;
+
       const requiredCapsForSkillGate = collectRequiredCapabilitiesFromPlan(plan);
       const resolvedCapsForGate: Record<string, string> = (state as any).resolved_capabilities ?? {};
 
@@ -2065,6 +2070,27 @@ async function run() {
         resolved_capabilities: resolvedCapsForGate,
         is_approved_execution: true,
       });
+
+      const current_skills_lock_sha256 =
+        typeof skillGate.skills_lock_sha256 === "string" && String(skillGate.skills_lock_sha256).trim()
+          ? String(skillGate.skills_lock_sha256)
+          : undefined;
+
+      if (prior_skills_lock_sha256 && current_skills_lock_sha256 && prior_skills_lock_sha256 !== current_skills_lock_sha256) {
+        console.log(
+          JSON.stringify({
+            kind: "NeedApprovalAgain",
+            code: "SKILL_LOCK_CHANGED",
+            reason: "skills.lock.json changed since approval; re-approval required",
+            details: {
+              approval_skills_lock_sha256: prior_skills_lock_sha256,
+              current_skills_lock_sha256,
+              skill_gate: skillGate,
+            },
+          })
+        );
+        process.exit(4);
+      }
 
       (state as any).skills_lock_sha256 = skillGate.skills_lock_sha256;
       (plan as any).skills_lock_sha256 = skillGate.skills_lock_sha256;
