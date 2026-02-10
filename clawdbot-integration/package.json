@@ -1,0 +1,35 @@
+{
+  "name": "sintraprime-clawdbot-integration",
+  "version": "1.0.0",
+  "description": "ClawdBot integration for SintraPrime with governance compliance",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "install-clawdbot": "npm install clawdbot",
+    "onboard": "npx clawdbot onboard",
+    "start": "npx clawdbot start",
+    "start-daemon": "npx clawdbot start --daemon",
+    "stop": "npx clawdbot stop",
+    "status": "npx clawdbot status",
+    "doctor": "npx clawdbot doctor",
+    "version": "npx clawdbot --version",
+    "chat": "npx clawdbot chat",
+    "logs": "npx clawdbot logs",
+    "help": "npx clawdbot --help"
+  },
+  "keywords": [
+    "clawdbot",
+    "sintraprime",
+    "ai-assistant",
+    "governance",
+    "automation"
+  ],
+  "author": "SintraPrime Team",
+  "license": "PRIVATE",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "dependencies": {},
+  "devDependencies": {},
+  "readme": "See README.md for installation and configuration instructions"
+}

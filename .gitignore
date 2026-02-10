@@ -63,3 +63,11 @@ Thumbs.db
 governance/keys/*.ed25519
 tools/OpenCodeSafe/test-seals/
 _GOVERNANCE/
+
+# ClawdBot integration - Runtime and sensitive files
+clawdbot-integration/.env
+clawdbot-integration/node_modules/
+clawdbot-integration/package-lock.json
+clawdbot-integration/clawdbot/
+clawdbot-integration/*.log
+clawdbot-integration/workspace/

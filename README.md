@@ -1,5 +1,34 @@
 # Agent Mode Engine
 
+## AI Provider Integrations
+
+### ClawdBot Integration
+
+SintraPrime now includes a complete ClawdBot software integration package with governance-compliant installation, configuration, and monitoring.
+
+**Quick Start:** [`clawdbot-integration/QUICK_START.md`](clawdbot-integration/QUICK_START.md)  
+**Installation Guide:** [`INSTALL_CLAWDBOT.md`](INSTALL_CLAWDBOT.md)  
+**Status Overview:** [`CLAWDBOT_STATUS.md`](CLAWDBOT_STATUS.md)
+
+ClawdBot provides:
+- Self-hosted AI assistant gateway
+- Multi-platform chat integration (Telegram/WhatsApp/Discord/Slack/Signal/iMessage)
+- Persistent memory and skills ecosystem
+- Full governance compliance (isolation, least privilege, execute consent)
+
+### Kimi K 2.5 (Moonshot AI)
+
+Kimi K 2.5 from Moonshot AI is now integrated as an AI provider for reasoning and analysis tasks.
+
+**Documentation:** [`agents/kimi/README.md`](agents/kimi/README.md)  
+**Configuration:** [`config/kimi-config.json`](config/kimi-config.json)
+
+Kimi K 2.5 provides:
+- Advanced language model with up to 128K context window
+- Chat completion and streaming APIs
+- Alternative reasoning engine for DeepThink operations
+- Full governance compliance with secure API key management
+
 ## Agent Mode (API-only)
 
 Validator → Planner → Executor pipeline and receipt logging: [docs/agent-mode-executor-v1.md](docs/agent-mode-executor-v1.md)
