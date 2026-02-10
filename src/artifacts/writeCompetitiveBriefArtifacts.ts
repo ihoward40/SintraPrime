@@ -18,19 +18,22 @@ function toPosix(p: string) {
 export async function writeCompetitiveBriefArtifacts(input: {
   execution_id: string;
   step_id: string;
+  baseRel?: string;
   briefMd: string;
   briefJson: unknown;
   evidenceManifest: unknown;
   layoutFlagsJson: unknown | null;
 }) {
-  const baseRel = toPosix(
-    path.join(
-      "runs",
-      "competitive-brief",
-      safeFilePart(input.execution_id),
-      safeFilePart(input.step_id)
-    )
-  );
+  const baseRel = input.baseRel
+    ? toPosix(String(input.baseRel))
+    : toPosix(
+        path.join(
+          "runs",
+          "competitive-brief",
+          safeFilePart(input.execution_id),
+          safeFilePart(input.step_id)
+        )
+      );
 
   const evidence: ArtifactRef[] = [];
 

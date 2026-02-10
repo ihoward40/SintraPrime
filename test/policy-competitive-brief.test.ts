@@ -82,3 +82,45 @@ test("policy: competitive.brief.v1 DENY: crawl fields", () => {
   assert.ok((res as any).denied);
   assert.equal((res as any).denied?.code, "COMPETITIVE_BRIEF_NO_CRAWL");
 });
+
+test("policy: competitive.brief.v1 APPROVAL_REQUIRED: targets > 3", () => {
+  const env = {
+    ...process.env,
+    AUTONOMY_MODE: "READ_ONLY_AUTONOMY",
+    BROWSER_L0_ALLOWED_HOSTS: "example.com",
+  } as any;
+
+  const plan = basePlan({
+    targets: [
+      "https://example.com/a",
+      "https://example.com/b",
+      "https://example.com/c",
+      "https://example.com/d",
+    ],
+    wideResearch: { enabled: false },
+  });
+
+  const res = checkPolicy(plan as any, env, new Date());
+  assert.equal((res as any).allowed, false);
+  assert.equal((res as any).requireApproval, true);
+  assert.equal((res as any).approval?.code, "COMPETITIVE_BRIEF_TOO_MANY_TARGETS");
+});
+
+test("policy: competitive.brief.v1 DENY: invalid screenshot mode", () => {
+  const env = {
+    ...process.env,
+    AUTONOMY_MODE: "READ_ONLY_AUTONOMY",
+    BROWSER_L0_ALLOWED_HOSTS: "example.com",
+  } as any;
+
+  const plan = basePlan({
+    targets: ["https://example.com/"],
+    screenshot: { enabled: true, mode: "relaxed" },
+    wideResearch: { enabled: false },
+  });
+
+  const res = checkPolicy(plan as any, env, new Date());
+  assert.equal((res as any).allowed, false);
+  assert.ok((res as any).denied);
+  assert.equal((res as any).denied?.code, "COMPETITIVE_BRIEF_SCREENSHOT_MODE_NOT_ALLOWED");
+});

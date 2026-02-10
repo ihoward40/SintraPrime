@@ -5,6 +5,9 @@ import { browserL0DomExtract, browserL0Navigate, browserL0Screenshot, type Brows
 import type { BrowserL0ArtifactRef } from "../browserOperator/l0.js";
 import { evidenceRollupSha256 } from "../receipts/evidenceRollup.js";
 import { writeCompetitiveBriefArtifacts } from "../artifacts/writeCompetitiveBriefArtifacts.js";
+import { computePlanHash } from "../utils/planHash.js";
+
+const COMPETITIVE_BRIEF_CACHE_VERSION = "v1";
 
 type CompetitiveBriefScreenshotInput = {
   enabled: boolean;
@@ -151,6 +154,95 @@ function computeLayoutFlags(args: { html: string; text: string; archetypes: stri
   };
 }
 
+function safeCacheKeyPart(value: string) {
+  return String(value)
+    .replace(/[^a-zA-Z0-9._-]/g, "_")
+    .slice(0, 140);
+}
+
+function buildCompetitiveBriefCacheFingerprint(args: {
+  input: CompetitiveBriefInput;
+  env: NodeJS.ProcessEnv;
+}) {
+  const screenshot = isPlainObject(args.input.screenshot) ? (args.input.screenshot as any) : { enabled: false };
+  const wideResearch = isPlainObject(args.input.wideResearch) ? (args.input.wideResearch as any) : { enabled: false };
+
+  // Normalize the cache inputs down to the things that materially affect outputs.
+  const normalized = {
+    kind: "competitive.brief.cache_key",
+    version: COMPETITIVE_BRIEF_CACHE_VERSION,
+    input: {
+      targets: Array.isArray(args.input.targets) ? args.input.targets.map(String) : [],
+      depth: args.input.depth === "normal" ? "normal" : "tight",
+      screenshot: {
+        enabled: screenshot.enabled === true,
+        mode: screenshot.mode === "strict" ? "strict" : "same_origin",
+        maxRequests: typeof screenshot.maxRequests === "number" ? screenshot.maxRequests : null,
+        fullPage: screenshot.fullPage === true,
+        viewport:
+          isPlainObject(screenshot.viewport)
+            ? {
+                width: typeof screenshot.viewport.width === "number" ? screenshot.viewport.width : null,
+                height: typeof screenshot.viewport.height === "number" ? screenshot.viewport.height : null,
+              }
+            : null,
+      },
+      wideResearch: {
+        enabled: wideResearch.enabled === true,
+        budget: isPlainObject(wideResearch.budget)
+          ? {
+              maxSubtasks: typeof wideResearch.budget.maxSubtasks === "number" ? wideResearch.budget.maxSubtasks : null,
+              maxWallSeconds: typeof wideResearch.budget.maxWallSeconds === "number" ? wideResearch.budget.maxWallSeconds : null,
+            }
+          : null,
+      },
+    },
+    // Cache must be invalidated if the allowlist or scheme policy changes.
+    browser_l0_policy_env: {
+      BROWSER_L0_ALLOWED_HOSTS: String(args.env.BROWSER_L0_ALLOWED_HOSTS ?? ""),
+      BROWSER_L0_ALLOW_HTTP: String(args.env.BROWSER_L0_ALLOW_HTTP ?? ""),
+      BROWSER_L0_ALLOW_DATA: String(args.env.BROWSER_L0_ALLOW_DATA ?? ""),
+      BROWSER_L0_MAX_REQUESTS: String(args.env.BROWSER_L0_MAX_REQUESTS ?? ""),
+      PLAYWRIGHT_BROWSER: String(args.env.PLAYWRIGHT_BROWSER ?? ""),
+      PLAYWRIGHT_HEADLESS: String(args.env.PLAYWRIGHT_HEADLESS ?? ""),
+    },
+    runtime: {
+      node: process.version,
+      platform: process.platform,
+    },
+  };
+
+  return computePlanHash(normalized);
+}
+
+function readCacheMeta(metaPath: string): null | {
+  inputs_fingerprint_sha256: string;
+  evidence: BrowserL0ArtifactRef[];
+  evidence_rollup_sha256: string;
+  generated_at: string;
+} {
+  try {
+    if (!fs.existsSync(metaPath)) return null;
+    const parsed = JSON.parse(fs.readFileSync(metaPath, "utf8"));
+    if (!isPlainObject(parsed)) return null;
+
+    const fingerprint = typeof (parsed as any).inputs_fingerprint_sha256 === "string" ? (parsed as any).inputs_fingerprint_sha256 : null;
+    const evidence = Array.isArray((parsed as any).evidence) ? ((parsed as any).evidence as any[]) : null;
+    const rollup = typeof (parsed as any).evidence_rollup_sha256 === "string" ? (parsed as any).evidence_rollup_sha256 : null;
+    const generated_at = typeof (parsed as any).generated_at === "string" ? (parsed as any).generated_at : null;
+    if (!fingerprint || !evidence || !rollup || !generated_at) return null;
+
+    return {
+      inputs_fingerprint_sha256: fingerprint,
+      evidence: evidence as any,
+      evidence_rollup_sha256: rollup,
+      generated_at,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export async function runCompetitiveBriefV1(args: {
   execution_id: string;
   step_id: string;
@@ -164,6 +256,23 @@ export async function runCompetitiveBriefV1(args: {
   const input = args.input as CompetitiveBriefInput;
   const targets = Array.isArray(input.targets) ? input.targets.map(String) : [];
   const screenshot: CompetitiveBriefScreenshotInput = isPlainObject(input.screenshot) ? (input.screenshot as any) : { enabled: false };
+
+  const inputs_fingerprint_sha256 = buildCompetitiveBriefCacheFingerprint({ input, env: process.env });
+  const cacheDirRel = path.posix.join("runs", "competitive-brief-cache", safeCacheKeyPart(inputs_fingerprint_sha256));
+  const cacheMetaAbs = path.join(process.cwd(), cacheDirRel, "cache.meta.json");
+  const cached = readCacheMeta(cacheMetaAbs);
+  if (cached && cached.inputs_fingerprint_sha256 === inputs_fingerprint_sha256) {
+    const response = {
+      execution_id: args.execution_id,
+      step_id: args.step_id,
+      cache_hit: true,
+      inputs_fingerprint_sha256,
+      cached_at: cached.generated_at,
+      evidence: cached.evidence,
+      evidence_rollup_sha256: cached.evidence_rollup_sha256,
+    };
+    return { ok: true, status: 200, response, responseJson: response };
+  }
 
   const nowIso = new Date().toISOString();
 
@@ -297,15 +406,40 @@ export async function runCompetitiveBriefV1(args: {
   const written = await writeCompetitiveBriefArtifacts({
     execution_id: args.execution_id,
     step_id: args.step_id,
+    baseRel: cacheDirRel,
     briefMd: brief_md,
     briefJson: brief_json,
     evidenceManifest: evidence_manifest,
     layoutFlagsJson: layout_flags_json,
   });
 
+  // Persist cache meta for future hits (not returned as an artifact).
+  try {
+    fs.mkdirSync(path.join(process.cwd(), cacheDirRel), { recursive: true });
+    fs.writeFileSync(
+      cacheMetaAbs,
+      JSON.stringify(
+        {
+          kind: "competitive.brief.cache_meta.v1",
+          generated_at: nowIso,
+          inputs_fingerprint_sha256,
+          evidence: written.evidence,
+          evidence_rollup_sha256: written.evidence_rollup_sha256,
+        },
+        null,
+        2
+      ) + "\n",
+      "utf8"
+    );
+  } catch {
+    // Best-effort cache only.
+  }
+
   const response = {
     execution_id: args.execution_id,
     step_id: args.step_id,
+    cache_hit: false,
+    inputs_fingerprint_sha256,
     evidence: written.evidence,
     evidence_rollup_sha256: written.evidence_rollup_sha256,
   };
