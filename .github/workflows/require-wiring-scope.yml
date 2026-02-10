@@ -14,12 +14,20 @@ jobs:
       - name: Detect runtime-adjacent changes
         id: changes
         run: |
-          git fetch origin ${{ github.base_ref }} --depth=1
-          CHANGED=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
-          echo "$CHANGED" > changed_files.txt
+          # Use the PR file list from the GitHub API.
+          # This is robust even when base/head histories have no merge-base.
+          CHANGED=$(gh api \
+            -H "Accept: application/vnd.github+json" \
+            "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" \
+            --paginate \
+            --jq '.[].filename'
+          )
+          printf "%s\n" "$CHANGED" > changed_files.txt
           echo "changed_files<<EOF" >> $GITHUB_OUTPUT
           echo "$CHANGED" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Enforce wiring scope
         run: |
