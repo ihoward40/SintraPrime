@@ -9,6 +9,17 @@
     "step_id": { "type": "string", "minLength": 1 },
     "url": { "type": "string", "minLength": 1 },
     "timeoutMs": { "type": "integer", "minimum": 1 },
-    "fullPage": { "type": "boolean" }
+    "fullPage": { "type": "boolean" },
+    "mode": { "type": "string", "enum": ["strict", "same_origin"], "default": "same_origin" },
+    "viewport": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["width", "height"],
+      "properties": {
+        "width": { "type": "integer", "minimum": 100, "maximum": 4096 },
+        "height": { "type": "integer", "minimum": 100, "maximum": 4096 }
+      }
+    },
+    "maxRequests": { "type": "integer", "minimum": 1, "maximum": 2000 }
   }
 }

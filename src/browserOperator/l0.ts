@@ -9,6 +9,13 @@ import { evidenceRollupSha256 } from "../receipts/evidenceRollup.js";
 
 export type BrowserL0ArtifactRef = ArtifactRef;
 
+export type BrowserL0ScreenshotMode = "strict" | "same_origin";
+
+export type BrowserL0Viewport = {
+  width: number;
+  height: number;
+};
+
 function envBool(name: string, def: boolean): boolean {
   const v = process.env[name];
   if (v == null) return def;
@@ -77,6 +84,8 @@ function writeJson(filePath: string, value: unknown) {
 async function withBrowserPage<T>(args: {
   url: string;
   timeoutMs: number;
+  viewport?: BrowserL0Viewport;
+  beforeGoto?: (page: import("playwright").Page) => Promise<void>;
   fn: (page: import("playwright").Page, resp: import("playwright").Response | null) => Promise<T>;
 }): Promise<T> {
   assertUrlAllowedByBrowserL0(args.url);
@@ -89,18 +98,74 @@ async function withBrowserPage<T>(args: {
   const browser = await browserType.launch({ headless, slowMo: Number.isFinite(slowMo) ? slowMo : 0 });
   const context = await browser.newContext({
     acceptDownloads: false,
-    viewport: { width: 1280, height: 720 },
+    viewport: args.viewport ?? { width: 1280, height: 720 },
     userAgent:
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
   });
 
   try {
     const page = await context.newPage();
+    if (args.beforeGoto) {
+      await args.beforeGoto(page);
+    }
     const resp = await page.goto(args.url, { waitUntil: "domcontentloaded", timeout: args.timeoutMs });
     return await args.fn(page, resp);
   } finally {
     await context.close().catch(() => void 0);
     await browser.close().catch(() => void 0);
+  }
+}
+
+export function decideBrowserL0RequestPolicy(args: {
+  targetUrl: string;
+  mode: BrowserL0ScreenshotMode;
+  requestUrl: string;
+  resourceType: string;
+  requestIndex: number;
+  maxRequests: number;
+}): { allow: true } | { allow: false; reason: string } {
+  if (args.requestIndex > args.maxRequests) {
+    return { allow: false, reason: "BROWSER_L0_MAX_REQUESTS_EXCEEDED" };
+  }
+
+  const raw = String(args.requestUrl ?? "");
+  // Always allow inline schemes; they don't touch the network.
+  if (raw.startsWith("data:") || raw.startsWith("blob:") || raw.startsWith("about:")) {
+    return { allow: true };
+  }
+
+  const type = String(args.resourceType ?? "");
+  if (type === "document") {
+    return { allow: true };
+  }
+
+  if (args.mode === "strict") {
+    return { allow: false, reason: "BROWSER_L0_STRICT_BLOCKS_SUBRESOURCES" };
+  }
+
+  // same_origin
+  let targetOrigin: string | null = null;
+  try {
+    const u = new URL(String(args.targetUrl));
+    if (u.protocol === "http:" || u.protocol === "https:") {
+      targetOrigin = u.origin;
+    }
+  } catch {
+    targetOrigin = null;
+  }
+
+  if (!targetOrigin) {
+    return { allow: false, reason: "BROWSER_L0_SAME_ORIGIN_REQUIRES_HTTP_URL" };
+  }
+
+  try {
+    const ru = new URL(raw);
+    if (ru.origin === targetOrigin) {
+      return { allow: true };
+    }
+    return { allow: false, reason: "BROWSER_L0_THIRD_PARTY_BLOCKED" };
+  } catch {
+    return { allow: false, reason: "BROWSER_L0_MALFORMED_REQUEST_URL" };
   }
 }
 
@@ -139,6 +204,9 @@ export async function browserL0Screenshot(input: {
   url: string;
   timeoutMs: number;
   fullPage?: boolean;
+  mode?: BrowserL0ScreenshotMode;
+  viewport?: BrowserL0Viewport;
+  maxRequests?: number;
 }) {
   assertUrlAllowedByBrowserL0(input.url);
   fs.mkdirSync(stepRunsDir(input.execution_id, input.step_id), { recursive: true });
@@ -165,12 +233,43 @@ export async function browserL0Screenshot(input: {
   const maxBytesRaw = process.env.BROWSER_L0_MAX_SCREENSHOT_BYTES;
   const maxBytes = maxBytesRaw && Number.isFinite(Number(maxBytesRaw)) ? Math.max(1, Number(maxBytesRaw)) : 8_000_000;
 
+  const mode: BrowserL0ScreenshotMode = input.mode === "strict" ? "strict" : "same_origin";
+
+  const maxRequestsRaw = process.env.BROWSER_L0_MAX_REQUESTS;
+  const envMaxRequests =
+    maxRequestsRaw && Number.isFinite(Number(maxRequestsRaw)) ? Math.max(1, Math.floor(Number(maxRequestsRaw))) : mode === "strict" ? 25 : 120;
+  const maxRequests =
+    typeof input.maxRequests === "number" && Number.isFinite(input.maxRequests) && input.maxRequests > 0
+      ? Math.min(envMaxRequests, Math.floor(input.maxRequests))
+      : envMaxRequests;
+
   let final_url: string | null = null;
   let pngRef: ArtifactRef | null = null;
 
   await withBrowserPage({
     url: input.url,
     timeoutMs: input.timeoutMs,
+    viewport: input.viewport,
+    beforeGoto: async (page) => {
+      let requestIndex = 0;
+      await page.route("**/*", async (route) => {
+        requestIndex += 1;
+        const req = route.request();
+        const decision = decideBrowserL0RequestPolicy({
+          targetUrl: input.url,
+          mode,
+          requestUrl: req.url(),
+          resourceType: req.resourceType(),
+          requestIndex,
+          maxRequests,
+        });
+        if (!decision.allow) {
+          await route.abort();
+          return;
+        }
+        await route.continue();
+      });
+    },
     fn: async (page) => {
       final_url = page.url();
       const buf = await page.screenshot({ fullPage: input.fullPage ?? true, type: "png" });
@@ -192,6 +291,9 @@ export async function browserL0Screenshot(input: {
     step_id: input.step_id,
     url: input.url,
     final_url,
+    screenshot_mode: mode,
+    max_requests: maxRequests,
+    viewport: input.viewport ?? { width: 1280, height: 720 },
     evidence,
     evidence_rollup_sha256,
     captured_at: new Date().toISOString(),

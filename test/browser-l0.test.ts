@@ -10,6 +10,7 @@ import { assertUrlSafeForL0 } from "../src/browser/l0/ssrfGuards.js";
 import { writeArtifactRelative } from "../src/artifacts/writeBrowserEvidence.js";
 import { browserL0DomExtract, browserL0Screenshot } from "../src/browserOperator/l0.js";
 import { assertUrlAllowedByBrowserL0 } from "../src/browserOperator/l0.js";
+import { decideBrowserL0RequestPolicy } from "../src/browserOperator/l0.js";
 
 async function canLaunchChromium(): Promise<boolean> {
   try {
@@ -142,3 +143,59 @@ test(
     }
   }
 );
+
+test("browser.l0 screenshot policy: strict blocks subresources", () => {
+  const allowDoc = decideBrowserL0RequestPolicy({
+    targetUrl: "https://allowed.test/page",
+    mode: "strict",
+    requestUrl: "https://allowed.test/page",
+    resourceType: "document",
+    requestIndex: 1,
+    maxRequests: 10,
+  });
+  assert.equal(allowDoc.allow, true);
+
+  const blockCss = decideBrowserL0RequestPolicy({
+    targetUrl: "https://allowed.test/page",
+    mode: "strict",
+    requestUrl: "https://allowed.test/style.css",
+    resourceType: "stylesheet",
+    requestIndex: 2,
+    maxRequests: 10,
+  });
+  assert.deepEqual(blockCss, { allow: false, reason: "BROWSER_L0_STRICT_BLOCKS_SUBRESOURCES" });
+});
+
+test("browser.l0 screenshot policy: same_origin allows same-origin and blocks third-party", () => {
+  const allowSame = decideBrowserL0RequestPolicy({
+    targetUrl: "https://allowed.test/page",
+    mode: "same_origin",
+    requestUrl: "https://allowed.test/app.js",
+    resourceType: "script",
+    requestIndex: 2,
+    maxRequests: 10,
+  });
+  assert.equal(allowSame.allow, true);
+
+  const blockThird = decideBrowserL0RequestPolicy({
+    targetUrl: "https://allowed.test/page",
+    mode: "same_origin",
+    requestUrl: "https://third.test/track.js",
+    resourceType: "script",
+    requestIndex: 3,
+    maxRequests: 10,
+  });
+  assert.deepEqual(blockThird, { allow: false, reason: "BROWSER_L0_THIRD_PARTY_BLOCKED" });
+});
+
+test("browser.l0 screenshot policy: enforces max requests cap", () => {
+  const r = decideBrowserL0RequestPolicy({
+    targetUrl: "https://allowed.test/page",
+    mode: "same_origin",
+    requestUrl: "https://allowed.test/app.js",
+    resourceType: "script",
+    requestIndex: 11,
+    maxRequests: 10,
+  });
+  assert.deepEqual(r, { allow: false, reason: "BROWSER_L0_MAX_REQUESTS_EXCEEDED" });
+});
