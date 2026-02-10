@@ -31,6 +31,7 @@ exports/
 # Local CI outputs (non-authoritative)
 logs/
 /artifacts/
+/artifacts/**
 
 # Generated governance reports (outputs, not inputs)
 governance/make-lint/lint-report.json
