@@ -196,7 +196,7 @@ ${updates.join('\n')}
       }
     };
 
-    return products[productName] || { error: 'Product not found' };
+    return (products as Record<string, any>)[productName] || { error: 'Product not found' };
   }
 
   /**
@@ -360,7 +360,7 @@ ${updates.join('\n')}
     const now = new Date();
     const quarter = Math.floor(now.getMonth() / 3);
     const nextQuarter = new Date(now.getFullYear(), (quarter + 1) * 3, 0);
-    return nextQuarter.toISOString().split('T')[0];
+    return nextQuarter.toISOString().slice(0, 10);
   }
 
   private getContentTopic(day: number): string {
@@ -373,7 +373,7 @@ ${updates.join('\n')}
       'Product spotlight',
       'Q&A response'
     ];
-    return topics[day % topics.length];
+    return topics[day % topics.length] ?? topics[0] ?? '';
   }
 
   private generateTimingMap(lyrics: string, bpm: number): any[] {

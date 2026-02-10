@@ -10,11 +10,13 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Detect runtime-adjacent changes
         id: changes
         run: |
-          git fetch origin ${{ github.base_ref }} --depth=1
+          git fetch origin ${{ github.base_ref }}
           CHANGED=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
           echo "$CHANGED" > changed_files.txt
           echo "changed_files<<EOF" >> $GITHUB_OUTPUT

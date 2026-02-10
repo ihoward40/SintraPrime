@@ -10,7 +10,7 @@
  * @module EcommerceAutomation
  */
 
-import { Task, TaskResult, ExecutionContext } from '../types';
+import { Task, TaskResult, ExecutionContext } from '../types/index.js';
 
 // ============================================================================
 // TYPES & INTERFACES

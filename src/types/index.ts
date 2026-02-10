@@ -2,6 +2,24 @@
  * Core type definitions for the SintraPrime autonomous agent system
  */
 
+// Legacy agent task types used by some modules under src/agents/**.
+// Kept intentionally minimal to satisfy strict typecheck.
+export interface ExecutionContext {
+  [key: string]: any;
+}
+
+export interface Task {
+  id: string;
+  [key: string]: any;
+}
+
+export interface TaskResult {
+  success: boolean;
+  data?: any;
+  output?: any;
+  error?: string;
+}
+
 export interface TaskRequest {
   id: string;
   prompt: string;
@@ -110,5 +128,5 @@ export interface Connector {
   name: string;
   type: string;
   authenticate(): Promise<void>;
-  call(method: string, args: any): Promise<any>;
+  call(method: string, endpointOrArgs: string | any, args?: any): Promise<any>;
 }

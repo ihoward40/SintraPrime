@@ -42,7 +42,14 @@ export class MetaAdsConnector implements Connector {
   /**
    * Make an API call to Meta
    */
-  async call(method: string, endpoint: string, args: any): Promise<any> {
+  async call(method: string, endpointOrArgs: string | any, maybeArgs?: any): Promise<any> {
+    const endpoint = typeof endpointOrArgs === 'string' ? endpointOrArgs : '';
+    const args = typeof endpointOrArgs === 'string' ? maybeArgs : endpointOrArgs;
+
+    if (!endpoint) {
+      throw new Error('Endpoint is required');
+    }
+
     if (!this.authenticated && endpoint !== `/${this.config.adAccountId}`) {
       throw new Error('Not authenticated. Call authenticate() first.');
     }

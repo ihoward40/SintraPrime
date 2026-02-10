@@ -17,7 +17,7 @@ export function performanceMiddleware(
   next: NextFunction
 ) {
   const start = performance.now();
-  const route = req.route?.path || req.path;
+  const route = req.route?.path ?? req.path ?? 'unknown';
   
   res.on('finish', () => {
     const duration = performance.now() - start;

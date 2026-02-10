@@ -11,6 +11,7 @@
     "build:clean": "npm run clean && tsc -p tsconfig.json",
     "build:watch": "tsc -p tsconfig.json --incremental --watch",
     "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node ./scripts/run-tests.mjs",
     "dev": "tsx src/cli/run-command.ts",
     "start": "node dist/cli/run-command.js",
     "smoke": "node ./scripts/smoke.js",
@@ -31,6 +32,8 @@
     "validate:schemas": "node ./scripts/validate-schemas.mjs",
     "deepthink": "node ./deepthink/src/deepthink.mjs",
     "ci:deepthink-gates": "node ./scripts/ci/deepthink-gates.mjs",
+    "ci:lint-md:templates": "node ./scripts/ci/lint-markdown-templates.mjs",
+    "ci:validate-json:selected": "node ./scripts/ci/validate-json-selected.mjs",
     "detect:tiers": "node ./scripts/detect-tiers.mjs --out tier_declaration.json",
     "ci:detect-tiers": "node ./scripts/detect-tiers.mjs",
     "sign:manifest": "node ./scripts/signing/sign-manifest.mjs",
@@ -38,7 +41,14 @@
     "ci:verify-signatures": "node ./scripts/ci/verify-signatures.mjs",
     "skills:revoke": "node scripts/skills-revoke-one.mjs",
     "skills:check": "node scripts/skills-check-revoked.mjs",
-    "skills:status": "node scripts/skills-status.mjs"
+    "skills:status": "node scripts/skills-status.mjs",
+    "diag:elevenlabs": "node test-elevenlabs-complete.mjs",
+    "speak:test": "tsx scripts/speak-test.ts",
+    "speak:cinematic": "tsx scripts/speak-cinematic.ts",
+    "speak:open-latest": "tsx scripts/open-latest-audio.ts",
+    "speak:voices": "tsx scripts/speech-voice-map.ts",
+    "sound:check": "tsx scripts/sound-check.ts",
+    "ops:validate-branch-cleanup-receipt": "node scripts/validate-branch-cleanup-receipt.mjs"
   },
   "dependencies": {
     "express": "^4.21.2",
@@ -60,5 +70,8 @@
     "tsx": "^4.19.2",
     "tweetnacl": "^1.0.3",
     "typescript": "^5.7.2"
+  },
+  "overrides": {
+    "@isaacs/brace-expansion": "5.0.1"
   }
 }

@@ -7,7 +7,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { generateAnalysisReport, summarizeDeepThinkOutput, isAIAvailable } from '../ai/client';
+import { generateAnalysisReport, summarizeDeepThinkOutput, isAIAvailable } from '../ai/client.js';
 
 async function main() {
   const args = process.argv.slice(2);
@@ -39,8 +39,14 @@ async function main() {
   }
 
   const inputPath = args[inputIndex + 1];
-  const outputPath = outputIndex !== -1 ? args[outputIndex + 1] : null;
-  const format = formatIndex !== -1 ? args[formatIndex + 1] as 'markdown' | 'text' : 'markdown';
+  if (!inputPath) {
+    console.error('Error: --input argument requires a path');
+    process.exit(1);
+  }
+
+  const outputPath = outputIndex !== -1 ? (args[outputIndex + 1] ?? null) : null;
+  const formatArg = formatIndex !== -1 ? args[formatIndex + 1] : undefined;
+  const format: 'markdown' | 'text' = formatArg === 'text' ? 'text' : 'markdown';
 
   // Read input file
   if (!fs.existsSync(inputPath)) {
