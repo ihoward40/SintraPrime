@@ -9,6 +9,7 @@ import { chromium } from "playwright";
 import { assertUrlSafeForL0 } from "../src/browser/l0/ssrfGuards.js";
 import { writeArtifactRelative } from "../src/artifacts/writeBrowserEvidence.js";
 import { browserL0DomExtract, browserL0Screenshot } from "../src/browserOperator/l0.js";
+import { assertUrlAllowedByBrowserL0 } from "../src/browserOperator/l0.js";
 
 async function canLaunchChromium(): Promise<boolean> {
   try {
@@ -29,6 +30,24 @@ test("browser.l0 ssrfGuards: blocks localhost + http", () => {
   assert.throws(() => {
     assertUrlSafeForL0("https://localhost/", { allowedSchemes: ["https:"], allowedHosts: ["localhost"] });
   });
+});
+
+test("browser.l0 runtime: deny-by-default when BROWSER_L0_ALLOWED_HOSTS is empty", () => {
+  const prior = process.env.BROWSER_L0_ALLOWED_HOSTS;
+  try {
+    process.env.BROWSER_L0_ALLOWED_HOSTS = "";
+    assert.throws(
+      () => {
+        assertUrlAllowedByBrowserL0("https://example.com/");
+      },
+      (err: any) => {
+        return err && typeof err === "object" && (err as any).code === "HOST_NOT_ALLOWED";
+      }
+    );
+  } finally {
+    if (prior === undefined) delete process.env.BROWSER_L0_ALLOWED_HOSTS;
+    else process.env.BROWSER_L0_ALLOWED_HOSTS = prior;
+  }
 });
 
 test("browser.l0 writeArtifactRelative: returns sha256 + bytes", () => {

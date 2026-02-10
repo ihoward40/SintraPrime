@@ -9,6 +9,41 @@ import { evidenceRollupSha256 } from "../receipts/evidenceRollup.js";
 
 export type BrowserL0ArtifactRef = ArtifactRef;
 
+function envBool(name: string, def: boolean): boolean {
+  const v = process.env[name];
+  if (v == null) return def;
+  return ["1", "true", "yes", "on"].includes(String(v).toLowerCase());
+}
+
+function parseHostPatterns(raw?: string): string[] {
+  if (!raw) return [];
+  return raw
+    .split(",")
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+export function getBrowserL0Config() {
+  const allowData = envBool("BROWSER_L0_ALLOW_DATA", true);
+  const allowHttp = envBool("BROWSER_L0_ALLOW_HTTP", false);
+  const allowedHosts = parseHostPatterns(process.env.BROWSER_L0_ALLOWED_HOSTS);
+
+  const allowedSchemes = new Set<string>(["https:"]);
+  if (allowHttp) allowedSchemes.add("http:");
+  if (allowData) allowedSchemes.add("data:");
+
+  return { allowData, allowHttp, allowedSchemes, allowedHosts };
+}
+
+export function assertUrlAllowedByBrowserL0(rawUrl: string) {
+  const cfg = getBrowserL0Config();
+  assertUrlSafeForL0(rawUrl, {
+    allowedSchemes: Array.from(cfg.allowedSchemes),
+    allowedHosts: cfg.allowedHosts,
+    requireAllowedHosts: true,
+  });
+}
+
 function pickBrowser(name: string): BrowserType {
   const n = String(name || "chromium").trim().toLowerCase();
   if (n === "firefox") return firefox;
@@ -44,10 +79,7 @@ async function withBrowserPage<T>(args: {
   timeoutMs: number;
   fn: (page: import("playwright").Page, resp: import("playwright").Response | null) => Promise<T>;
 }): Promise<T> {
-  assertUrlSafeForL0(args.url, {
-    allowedSchemes: ["https:", "data:"],
-    requireAllowedHosts: false,
-  });
+  assertUrlAllowedByBrowserL0(args.url);
 
   const browserType = pickBrowser(String(process.env.PLAYWRIGHT_BROWSER ?? "chromium"));
   const headless = String(process.env.PLAYWRIGHT_HEADLESS ?? "true").trim().toLowerCase() !== "false";
@@ -78,6 +110,7 @@ export async function browserL0Navigate(input: {
   url: string;
   timeoutMs: number;
 }) {
+  assertUrlAllowedByBrowserL0(input.url);
   const out = await withBrowserPage({
     url: input.url,
     timeoutMs: input.timeoutMs,
@@ -107,6 +140,7 @@ export async function browserL0Screenshot(input: {
   timeoutMs: number;
   fullPage?: boolean;
 }) {
+  assertUrlAllowedByBrowserL0(input.url);
   fs.mkdirSync(stepRunsDir(input.execution_id, input.step_id), { recursive: true });
 
   const relPng = toPosix(
@@ -187,6 +221,7 @@ export async function browserL0DomExtract(input: {
   timeoutMs: number;
   maxChars?: number;
 }) {
+  assertUrlAllowedByBrowserL0(input.url);
   fs.mkdirSync(stepRunsDir(input.execution_id, input.step_id), { recursive: true });
 
   const relHtml = toPosix(

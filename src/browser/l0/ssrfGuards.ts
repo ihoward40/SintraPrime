@@ -46,7 +46,7 @@ function hostMatchesPattern(host: string, pattern: string): boolean {
   if (p.startsWith("*.")) {
     const root = p.slice(2);
     if (!root) return false;
-    return host.endsWith(`.${root}`);
+    return host === root || host.endsWith(`.${root}`);
   }
   return false;
 }
