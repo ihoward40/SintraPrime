@@ -1,120 +1,69 @@
 // scripts/ci/require-policy-registry-for-schemas.mjs
-// Contract: no governed action schema may exist without a matching POLICY_REGISTRY entry.
-// Governed action schemas are: schemas/**/<action>.vN.json, excluding library dirs.
-//
-// Usage:
-//   node ./scripts/ci/require-policy-registry-for-schemas.mjs
-
 import fs from "node:fs";
 import path from "node:path";
+import { repoRootFromHere, exists, readJson } from "./schema-policy-registry-matcher.mjs";
 
-import {
-  isGovernedActionSchemaPath,
-  actionFromGovernedSchemaPath,
-} from "./schema-policy-registry-matcher.mjs";
+const root = repoRootFromHere();
 
-function walkFilesAbs(rootAbs) {
+const SCHEMAS_DIR = path.join(root, "schemas");
+const SNAPSHOT_PATH = path.join(root, "src", "policy", "policyRegistry.snapshot.json");
+
+function walk(dir) {
   const out = [];
-  const stack = [rootAbs];
-
-  while (stack.length) {
-    const cur = stack.pop();
-    const entries = fs.readdirSync(cur, { withFileTypes: true });
-    for (const e of entries) {
-      const abs = path.join(cur, e.name);
-      if (e.isDirectory()) {
-        if (e.name === "node_modules" || e.name === ".git") continue;
-        stack.push(abs);
-        continue;
-      }
-      if (e.isFile()) out.push(abs);
-    }
+  for (const ent of fs.readdirSync(dir, { withFileTypes: true })) {
+    const p = path.join(dir, ent.name);
+    if (ent.isDirectory()) out.push(...walk(p));
+    else out.push(p);
   }
-
   return out;
 }
 
-function toRepoPathPosix(repoRootAbs, fileAbs) {
-  const rel = path.relative(repoRootAbs, fileAbs);
-  return rel.split(path.sep).join("/");
+function actionNameFromSchemaPath(absPath) {
+  const rel = absPath.slice(root.length + 1).replaceAll("\\\\", "/");
+  const m = rel.match(/^schemas\/[^/]+\/(.+)\.json$/);
+  return m ? m[1] : null;
 }
 
-function loadPolicyRegistryFromSnapshot(repoRootAbs) {
-  const p = path.join(repoRootAbs, "src", "policy", "policyRegistry.snapshot.json");
-  if (!fs.existsSync(p)) {
-    console.error("Failed loading policy registry snapshot:");
-    console.error(`  Missing file: ${toRepoPathPosix(repoRootAbs, p)}`);
-    console.error("Expected a JSON file containing either:");
-    console.error("  - an array of entries, OR");
-    console.error("  - an object with { policy_registry: [...] }");
-    process.exit(2);
-  }
+function covers(registry, action) {
+  const actions = registry.actions || [];
+  const prefixes = registry.prefixes || [];
 
-  try {
-    const raw = JSON.parse(fs.readFileSync(p, "utf8"));
-    if (Array.isArray(raw)) return raw;
-    const reg = raw?.policy_registry;
-    if (Array.isArray(reg)) return reg;
-    throw new Error("policy registry snapshot invalid: expected array or { policy_registry: array }");
-  } catch (e) {
-    console.error("Failed parsing policy registry snapshot:");
-    console.error(`  ${toRepoPathPosix(repoRootAbs, p)}`);
-    console.error(String(e));
-    process.exit(2);
-  }
-}
+  if (actions.some((a) => a === action || a?.id === action)) return true;
+  if (prefixes.some((p) => (typeof p === "string" ? action.startsWith(p) : action.startsWith(p?.prefix)))) return true;
 
-function registryCoversAction(registry, action) {
-  for (const e of registry) {
-    if (!e || typeof e !== "object") continue;
-    if (e.kind === "action" && e.action === action) return true;
-    if (e.kind === "prefix" && typeof e.prefix === "string" && action.startsWith(e.prefix)) return true;
-  }
   return false;
 }
 
-const repoRootAbs = process.cwd();
-
-const schemaRootAbs = path.join(repoRootAbs, "schemas");
-if (!fs.existsSync(schemaRootAbs)) {
+if (!exists(SCHEMAS_DIR)) {
   console.log("OK: no schemas/ directory present");
   process.exit(0);
 }
 
-const allFilesAbs = walkFilesAbs(schemaRootAbs);
-const schemaRepoPaths = allFilesAbs
-  .map((abs) => toRepoPathPosix(repoRootAbs, abs))
-  .filter((p) => p.endsWith(".json"));
-
-const governedSchemas = schemaRepoPaths.filter(isGovernedActionSchemaPath);
-const governedActions = [...new Set(governedSchemas.map(actionFromGovernedSchemaPath))].sort();
-
-if (governedActions.length === 0) {
-  console.log("OK: no governed action schemas found under schemas/");
-  process.exit(0);
+if (!exists(SNAPSHOT_PATH)) {
+  console.error(`FAIL: Missing policy registry snapshot: ${SNAPSHOT_PATH}`);
+  process.exit(1);
 }
 
-const POLICY_REGISTRY = loadPolicyRegistryFromSnapshot(repoRootAbs);
+const registry = readJson(SNAPSHOT_PATH);
+
+const schemaFiles = walk(SCHEMAS_DIR)
+  .filter((p) => p.endsWith(".json"))
+  .filter((p) => /\.v\d+\.json$/i.test(path.basename(p)));
 
 const missing = [];
-for (const action of governedActions) {
-  if (!registryCoversAction(POLICY_REGISTRY, action)) {
-    const files = governedSchemas.filter((p) => actionFromGovernedSchemaPath(p) === action);
-    missing.push({ action, files });
-  }
+for (const f of schemaFiles) {
+  const action = actionNameFromSchemaPath(f);
+  if (!action) continue;
+  if (action.startsWith("_defs/") || action.includes("/_defs/")) continue;
+
+  if (!covers(registry, action)) missing.push({ action, file: f.slice(root.length + 1) });
 }
 
 if (missing.length) {
   console.error("Missing POLICY_REGISTRY coverage:");
-  for (const m of missing) {
-    console.error(`- action: ${m.action}`);
-    for (const f of m.files) {
-      console.error(`  - ${f}`);
-    }
-  }
-  console.error("Fix: add a matching entry in src/policy/policyRegistry.snapshot.json (kind: 'action') or a covering prefix rule (kind: 'prefix').");
+  for (const m of missing) console.error(`- ${m.action}\n  - ${m.file}`);
   process.exit(1);
 }
 
-console.log(`OK: POLICY_REGISTRY covers ${governedActions.length} governed schema action(s)`);
+console.log(`OK: POLICY_REGISTRY covers ${schemaFiles.length} schema file(s) via snapshot.`);
 process.exit(0);

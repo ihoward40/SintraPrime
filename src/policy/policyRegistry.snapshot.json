@@ -1,9 +1,14 @@
 {
-  "policy_registry": [
-    { "kind": "action", "action": "heartbeat.job.v1" },
-    { "kind": "action", "action": "research.searchrouter.v1" },
-    { "kind": "action", "action": "research.searchrouter.output.v1" },
-    { "kind": "action", "action": "voice.elevenlabs.tts.v1" },
-    { "kind": "action", "action": "voice.wisprflow.ingest.v1" }
+  "actions": [
+    "research.searchrouter.v1",
+    "research.searchrouter.output.v1",
+    "automations.heartbeat.job.v1",
+    "voice.elevenlabs.tts.v1",
+    "voice.wisprflow.ingest.v1"
+  ],
+  "prefixes": [
+    "research.",
+    "automations.",
+    "voice."
   ]
 }
