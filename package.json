@@ -16,6 +16,7 @@
     "ci:lint-md:templates": "node ./scripts/ci/lint-markdown-templates.mjs",
     "ci:validate-json:selected": "node ./scripts/ci/validate-json-selected.mjs",
     "ci:no-policy-code-literals": "node ./scripts/ci/no-policy-code-literals.mjs",
+    "ci:strict-policy-coverage": "node ./scripts/ci/strict-policy-coverage.mjs",
     "dev": "tsx src/cli/run-command.ts",
     "start": "node dist/cli/run-command.js",
     "smoke": "node ./scripts/smoke.js",

@@ -60,7 +60,7 @@ jobs:
         run: node --import tsx ./scripts/ci/require-vendor-checklist-ref.mjs --write-required-hits .tmp/required-policy-hits.json
 
       - name: Required hits from policy registry (strict, registry-derived)
-        run: node --import tsx ./scripts/ci/generate-required-policy-hits-from-registry.mjs --out .tmp/required-policy-hits.registry.json
+        run: node ./scripts/ci/generate-required-policy-hits-from-registry.mjs --out .tmp/required-policy-hits.registry.json
 
       - name: Tests
         env:
@@ -72,20 +72,23 @@ jobs:
 
       - name: Verify STRICT policy coverage
         if: github.event_name == 'pull_request'
-        run: node ./scripts/ci/verify-policy-coverage.mjs --required fixtures/policy-coverage-required.hits.json --required .tmp/required-policy-hits.json --required .tmp/required-policy-hits.registry.json --coverage .tmp/policy-coverage.log --write-merged-required .tmp/required-policy-hits.resolved.json
+        run: node ./scripts/ci/verify-policy-coverage.mjs --required fixtures/policy-coverage-required.hits.json --required .tmp/required-policy-hits.registry.json --coverage .tmp/policy-coverage.log
+
+      - name: Receipts context
+        if: always()
+        run: |
+          echo "RECEIPTS_CONTEXT repo=${{ github.repository }} pr=${{ github.event.pull_request.number }} sha=${{ github.sha }} run=${{ github.run_id }} attempt=${{ github.run_attempt }}"
 
       - name: Upload STRICT policy coverage receipts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: policy-coverage-receipts-pr${{ github.event.pull_request.number }}-${{ github.sha }}
+          name: policy-coverage-receipts-pr${{ github.event.pull_request.number }}-${{ github.sha }}-run${{ github.run_id }}-a${{ github.run_attempt }}
           retention-days: 7
           if-no-files-found: ignore
           path: |
             .tmp/policy-coverage.log
-            .tmp/required-policy-hits.json
             .tmp/required-policy-hits.registry.json
-            .tmp/required-policy-hits.resolved.json
             .tmp/required-policy-hits.registry.meta.json
             .tmp/verify-policy-coverage.summary.json
       - name: DeepThink gates
