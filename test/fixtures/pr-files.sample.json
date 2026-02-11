@@ -1,0 +1,6 @@
+[
+  { "filename": "README.md", "status": "modified" },
+  { "filename": "docs/DEPLOYMENT_GUIDE.md", "status": "modified" },
+  { "filename": "src/policy/checkPolicy.ts", "status": "modified" },
+  { "filename": "scripts/ci/no-policy-code-literals.mjs", "status": "modified" }
+]

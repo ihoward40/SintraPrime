@@ -4,6 +4,10 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
 
+permissions:
+  contents: read
+  pull-requests: read
+
 jobs:
   wiring-scope-check:
     runs-on: ubuntu-latest
@@ -11,35 +15,61 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Detect runtime-adjacent changes
-        id: changes
-        run: |
-          # Use the PR file list from the GitHub API.
-          # This is robust even when base/head histories have no merge-base.
-          CHANGED=$(gh api \
-            -H "Accept: application/vnd.github+json" \
-            "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" \
-            --paginate \
-            --jq '.[].filename'
-          )
-          printf "%s\n" "$CHANGED" > changed_files.txt
-          echo "changed_files<<EOF" >> $GITHUB_OUTPUT
-          echo "$CHANGED" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
 
-      - name: Enforce wiring scope
+      - name: Fetch PR files (paginated)
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ github.token }}
+          script: |
+            const fs = require('node:fs');
+            fs.mkdirSync('.tmp', { recursive: true });
+
+            const pull_number = context.payload.pull_request.number;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+
+            let files;
+            try {
+              files = await github.paginate(github.rest.pulls.listFiles, {
+                owner,
+                repo,
+                pull_number,
+                per_page: 100,
+              });
+            } catch (err) {
+              core.setFailed(
+                `Could not fetch PR file list from GitHub API (required for wiring-scope-check): ${err?.message || err}`,
+              );
+              return;
+            }
+
+            fs.writeFileSync('.tmp/pr-files.json', JSON.stringify(files, null, 2));
+            core.info(`Fetched ${files.length} PR files for ${owner}/${repo}#${pull_number}`);
+
+      - name: Enforce wiring scope (shared script)
         run: |
-          set -e
-          RUNTIME_REGEX='^(agent-mode-engine/|src/|scripts/|make/|notion/)'
-          if grep -E "$RUNTIME_REGEX" changed_files.txt >/dev/null; then
-            if [ ! -f docs/governance/wiring-scope.md ]; then
-              echo "ERROR: Runtime-adjacent changes detected but wiring-scope.md is missing."
-              echo "Add docs/governance/wiring-scope.md and declare scope explicitly."
-              exit 1
-            fi
-          fi
+          set -euo pipefail
+          node ./scripts/ci/require-wiring-scope-from-pr-files.mjs | tee .tmp/wiring-scope.out
+          # “CI lies sometimes” guardrail: ensure we extracted at least one file.
+          COUNT="$(grep -Eo 'WIRING_SCOPE_CHANGED_FILES_COUNT=[0-9]+' .tmp/wiring-scope.out | tail -n 1 | cut -d= -f2)"
+          test "${COUNT:-0}" -gt 0
+          echo "WIRING_SCOPE_CONTEXT repo=${{ github.repository }} pr=${{ github.event.pull_request.number }} changed_files_count=${COUNT}"
+          echo "::notice title=Wiring Scope Context::repo=${{ github.repository }} pr=${{ github.event.pull_request.number }} files=${COUNT}"
+        env:
+          PR_FILES_JSON_PATH: .tmp/pr-files.json
+          RUNTIME_ADJACENT_PREFIXES: |
+            agent-mode-engine
+            src
+            scripts
+            make
+            notion
+          WIRING_SCOPE_DOC_PATH: docs/governance/wiring-scope.md
+          WIRING_SCOPE_REPO: ${{ github.repository }}
+          WIRING_SCOPE_PR_NUMBER: ${{ github.event.pull_request.number }}
 
       - name: Pass
         run: echo "Governance wiring scope check passed."
