@@ -59,6 +59,9 @@ jobs:
           PR_BODY: ${{ github.event.pull_request.body }}
         run: node --import tsx ./scripts/ci/require-vendor-checklist-ref.mjs --write-required-hits .tmp/required-policy-hits.json
 
+      - name: Required hits from policy registry (strict, registry-derived)
+        run: node --import tsx ./scripts/ci/generate-required-policy-hits-from-registry.mjs --out .tmp/required-policy-hits.registry.json
+
       - name: Tests
         env:
           POLICY_COVERAGE_FILE: .tmp/policy-coverage.log
@@ -69,7 +72,7 @@ jobs:
 
       - name: Verify STRICT policy coverage
         if: github.event_name == 'pull_request'
-        run: node ./scripts/ci/verify-policy-coverage.mjs --required .tmp/required-policy-hits.json --coverage .tmp/policy-coverage.log
+        run: node ./scripts/ci/verify-policy-coverage.mjs --required .tmp/required-policy-hits.json --required .tmp/required-policy-hits.registry.json --coverage .tmp/policy-coverage.log
       - name: DeepThink gates
         run: npm run -s ci:deepthink-gates
 
