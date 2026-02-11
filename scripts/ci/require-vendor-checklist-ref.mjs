@@ -2,6 +2,11 @@ import { execSync } from "node:child_process";
 import path from "node:path";
 import fs from "node:fs";
 
+import {
+  isGovernedActionSchemaPath,
+  actionFromGovernedSchemaPath,
+} from "./vendor-gate-schema-matcher.mjs";
+
 function sh(cmd) {
   return execSync(cmd, { stdio: ["ignore", "pipe", "pipe"] }).toString("utf8");
 }
@@ -139,21 +144,20 @@ for (const line of diffLines) {
   if (p) changedPaths.push(p);
 }
 
-const isSchemaV1 = (p) =>
-  p?.startsWith("schemas/") && /(\.v1(\.[a-z0-9_-]+)?\.json)$/i.test(p);
-
 const isPolicyTest = (p) => {
   if (!p?.startsWith("test/")) return false;
   const base = path.posix.basename(p);
   return /^policy-.*\.test\.ts$/i.test(base);
 };
 
-const schemaChanges = changedPaths.filter(isSchemaV1);
+const schemaChanges = changedPaths.filter(isGovernedActionSchemaPath);
 if (schemaChanges.length === 0) {
   // STRICT mode: safe no-op when nothing changed.
   writeRequiredHitsFile([]);
   process.exit(0);
 }
+
+const changedActions = [...new Set(schemaChanges.map(actionFromGovernedSchemaPath))].sort();
 
 // Rule 1: PR body references checklist doc
 const hasChecklistRef =
@@ -163,6 +167,8 @@ if (!hasChecklistRef) {
   console.error("❌ Vendor schema(s) changed, but PR body does not reference required checklist.");
   console.error("Schema files:");
   for (const p of schemaChanges) console.error(` - ${p}`);
+  console.error("Actions derived:");
+  for (const a of changedActions) console.error(` - ${a}`);
   console.error("");
   console.error("Fix: add this line to the PR description/body:");
   console.error(` - ${CHECKLIST_NEEDLE}`);
@@ -175,6 +181,8 @@ if (policyTestChanges.length === 0) {
   console.error("❌ Vendor schema(s) changed, but no policy test file was added/changed.");
   console.error("Schema files:");
   for (const p of schemaChanges) console.error(` - ${p}`);
+  console.error("Actions derived:");
+  for (const a of changedActions) console.error(` - ${a}`);
   console.error("");
   console.error("Required: add or modify at least one file matching:");
   console.error(" - test/policy-*.test.ts");
@@ -195,7 +203,7 @@ for (const testPath of policyTestChanges) {
 }
 
 // Determine action names from schema filenames
-const actions = [...new Set(schemaChanges.map((p) => path.posix.basename(p).replace(/\.json$/i, "")))];
+const actions = changedActions;
 
 // Rule 2.5: schema file must self-identify its action (prevents rename drift)
 const schemaMarkerMismatches = [];
@@ -216,13 +224,16 @@ for (const schemaPath of schemaChanges) {
 if (schemaMarkerMismatches.length > 0) {
   console.error("❌ Vendor schema(s) changed, but internal schema marker does not match filename-derived action.");
   console.error("");
+  console.error("Actions derived:");
+  for (const a of changedActions) console.error(` - ${a}`);
+  console.error("");
   for (const m of schemaMarkerMismatches) {
     console.error(` - ${m.schemaPath}`);
     console.error(`   expected: schema=\"${m.action}\"`);
     console.error(`   found:    schema=\"${m.marker}\"`);
   }
   console.error("");
-  console.error("Fix: ensure each changed schemas/**/<action>.v1*.json contains top-level:");
+  console.error("Fix: ensure each changed schemas/**/<action>.vN.json contains top-level:");
   console.error('  "schema": "<action>"');
   process.exit(1);
 }
@@ -345,6 +356,9 @@ if (failures.length > 0) {
   console.error("");
   console.error("Schemas changed:");
   for (const p of schemaChanges) console.error(` - ${p}`);
+  console.error("");
+  console.error("Actions derived:");
+  for (const a of changedActions) console.error(` - ${a}`);
   console.error("");
   console.error("Failures:");
   for (const f of failures) {
