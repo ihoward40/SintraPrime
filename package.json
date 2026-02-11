@@ -12,6 +12,7 @@
     "build:watch": "tsc -p tsconfig.json --incremental --watch",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "node --import tsx --test ./test/*.test.ts ./test/*.test.mjs",
+    "ci:print-required-checks": "node ./scripts/ci/print-required-checks.mjs --branch master",
     "ci:lint-md:templates": "node ./scripts/ci/lint-markdown-templates.mjs",
     "ci:validate-json:selected": "node ./scripts/ci/validate-json-selected.mjs",
     "ci:no-policy-code-literals": "node ./scripts/ci/no-policy-code-literals.mjs",

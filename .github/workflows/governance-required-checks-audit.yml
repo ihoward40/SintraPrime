@@ -1,0 +1,34 @@
+name: governance/required-checks-audit
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  administration: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Print required checks (master)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          node ./scripts/ci/print-required-checks.mjs --branch master | tee required-checks.txt
+          strict=$(node -e "fetch('https://api.github.com/repos/${{ github.repository }}/branches/master/protection/required_status_checks',{headers:{Authorization:'Bearer ${{ secrets.GITHUB_TOKEN }}',Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'}}).then(r=>r.json()).then(j=>console.log(Boolean(j&&j.strict)))")
+          contexts=$(node -e "fetch('https://api.github.com/repos/${{ github.repository }}/branches/master/protection/required_status_checks',{headers:{Authorization:'Bearer ${{ secrets.GITHUB_TOKEN }}',Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'}}).then(r=>r.json()).then(j=>console.log((Array.isArray(j&&j.contexts)?j.contexts:[]).join(',')))")
+          echo "REQUIRED_CHECKS_CONTEXT repo=${{ github.repository }} branch=master strict=${strict} contexts=${contexts}"
+
+      - name: Upload audit output
+        uses: actions/upload-artifact@v4
+        with:
+          name: required-checks-master
+          path: required-checks.txt
+          if-no-files-found: error
