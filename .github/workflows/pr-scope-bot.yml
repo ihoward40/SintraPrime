@@ -46,17 +46,17 @@ jobs:
             const scopeHash = process.env.SCOPE_HASH || "(missing)";
             const diff = process.env.DIFF || "- (no file changes detected)";
 
-            const body = `
-### Governance Wiring Scope Summary
-
-**Scope Hash:** \`${scopeHash}\`
-
-**Files changed in this PR:**
-${diff}
-
-> This comment is generated automatically to bind declared wiring intent
-> to the concrete changes under review.
-`;
+            const body = [
+              "### Governance Wiring Scope Summary",
+              "",
+              `**Scope Hash:** \`${scopeHash}\``,
+              "",
+              "**Files changed in this PR:**",
+              String(diff),
+              "",
+              "> This comment is generated automatically to bind declared wiring intent",
+              "> to the concrete changes under review.",
+            ].join("\n");
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
