@@ -6,12 +6,15 @@ on:
 
 jobs:
   smoke:
+    name: ${{ github.event_name == 'pull_request' && 'ci/smoke (pull_request)' || 'ci/smoke (push)' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -39,8 +42,28 @@ jobs:
           npm run -s ci:lint-md:templates
           npm run -s ci:validate-json:selected
 
+      - name: Policy code literals guard
+        run: npm run -s ci:no-policy-code-literals
+
+      - name: Vendor adapter governance (static gate + required hits)
+        if: github.event_name == 'pull_request'
+        env:
+          GITHUB_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          GITHUB_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: node --import tsx ./scripts/ci/require-vendor-checklist-ref.mjs --write-required-hits .tmp/required-policy-hits.json
+
       - name: Tests
-        run: npm test
+        env:
+          POLICY_COVERAGE_FILE: .tmp/policy-coverage.log
+          POLICY_COVERAGE_STRICT: "1"
+        run: |
+          rm -f .tmp/policy-coverage.log
+          npm test
+
+      - name: Verify STRICT policy coverage
+        if: github.event_name == 'pull_request'
+        run: node ./scripts/ci/verify-policy-coverage.mjs --required .tmp/required-policy-hits.json --coverage .tmp/policy-coverage.log
       - name: DeepThink gates
         run: npm run -s ci:deepthink-gates
 

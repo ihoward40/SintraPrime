@@ -10,6 +10,7 @@ permissions:
 
 jobs:
   wiring-scope-check:
+    name: governance/wiring-scope
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
