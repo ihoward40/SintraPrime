@@ -34,8 +34,8 @@ test("schema-policy-registry matcher: exempts library schema dirs", () => {
 });
 
 test("schema-policy-registry matcher: derives action from filename", () => {
-  assert.equal(actionFromGovernedSchemaPath("schemas/browser/browser.l0.screenshot.v1.json"), "browser.l0.screenshot");
-  assert.equal(actionFromGovernedSchemaPath("schemas/browser/foo_bar-1.v2.json"), "foo_bar-1");
+  assert.equal(actionFromGovernedSchemaPath("schemas/browser/browser.l0.screenshot.v1.json"), "browser.l0.screenshot.v1");
+  assert.equal(actionFromGovernedSchemaPath("schemas/browser/foo_bar-1.v2.json"), "foo_bar-1.v2");
 
   assert.throws(
     () => actionFromGovernedSchemaPath("schemas/_defs/browser.l0.screenshot.v1.json"),

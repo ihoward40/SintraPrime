@@ -36,10 +36,9 @@ export function actionFromGovernedSchemaPath(p) {
   }
   const s = normalizeRepoPath(p);
   const file = s.split("/").pop();
-  // isGovernedActionSchemaPath guarantees this match.
-  const m = file.match(/^(?<action>[a-z0-9][a-z0-9._-]*)\.v[0-9]+\.json$/);
-  if (!m?.groups?.action) {
+  // Derived action is the filename without the .json extension (keeps .vN).
+  if (!file || !file.endsWith(".json")) {
     throw new Error(`Could not derive action from schema path: ${p}`);
   }
-  return m.groups.action;
+  return file.slice(0, -".json".length);
 }
