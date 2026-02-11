@@ -2,6 +2,9 @@ name: governance/required-checks-audit
 
 on:
   workflow_dispatch: {}
+  schedule:
+    # Weekly drift detector (UTC)
+    - cron: "0 9 * * 1"
 
 permissions:
   contents: read
@@ -21,14 +24,19 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          node ./scripts/ci/print-required-checks.mjs --branch master | tee required-checks.txt
-          strict=$(node -e "fetch('https://api.github.com/repos/${{ github.repository }}/branches/master/protection/required_status_checks',{headers:{Authorization:'Bearer ${{ secrets.GITHUB_TOKEN }}',Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'}}).then(r=>r.json()).then(j=>console.log(Boolean(j&&j.strict)))")
-          contexts=$(node -e "fetch('https://api.github.com/repos/${{ github.repository }}/branches/master/protection/required_status_checks',{headers:{Authorization:'Bearer ${{ secrets.GITHUB_TOKEN }}',Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'}}).then(r=>r.json()).then(j=>console.log((Array.isArray(j&&j.contexts)?j.contexts:[]).join(',')))")
+          set -euo pipefail
+          node ./scripts/ci/print-required-checks.mjs --branch master --json-out required-checks.json \
+            | tee required-checks.txt \
+            || { echo "::error::REQUIRED_CHECKS_AUDIT_FAILED repo=${{ github.repository }} branch=master"; exit 1; }
+          strict=$(node -e "const fs=require('fs');const j=JSON.parse(fs.readFileSync('required-checks.json','utf8'));process.stdout.write(String(Boolean(j&&j.strict)))")
+          contexts=$(node -e "const fs=require('fs');const j=JSON.parse(fs.readFileSync('required-checks.json','utf8'));process.stdout.write((Array.isArray(j&&j.contexts)?j.contexts:[]).join(','))")
           echo "REQUIRED_CHECKS_CONTEXT repo=${{ github.repository }} branch=master strict=${strict} contexts=${contexts}"
 
       - name: Upload audit output
         uses: actions/upload-artifact@v4
         with:
           name: required-checks-master
-          path: required-checks.txt
+          path: |
+            required-checks.txt
+            required-checks.json
           if-no-files-found: error

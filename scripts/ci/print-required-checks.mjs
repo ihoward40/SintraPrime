@@ -7,11 +7,12 @@
 import { execSync } from "node:child_process";
 
 function parseArgs(argv) {
-  const out = { branch: "master" };
+  const out = { branch: "master", jsonOut: null };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === "--branch") out.branch = argv[i + 1] || out.branch;
     if (a === "--repo") out.repo = argv[i + 1];
+    if (a === "--json-out") out.jsonOut = argv[i + 1] || out.jsonOut;
     if (a === "--help" || a === "-h") out.help = true;
   }
   return out;
@@ -57,7 +58,9 @@ function getRepo() {
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   if (args.help) {
-    console.log("Usage: node ./scripts/ci/print-required-checks.mjs [--branch <branch>] [--repo <owner/repo>]");
+    console.log(
+      "Usage: node ./scripts/ci/print-required-checks.mjs [--branch <branch>] [--repo <owner/repo>] [--json-out <path>]"
+    );
     console.log("Env: GH_TOKEN or GITHUB_TOKEN required (needs permission to read branch protection).\n");
     process.exit(0);
   }
@@ -90,6 +93,18 @@ async function main() {
   }
 
   const data = await res.json();
+
+  if (args.jsonOut) {
+    const fs = await import("node:fs");
+    const path = await import("node:path");
+
+    const outPath = String(args.jsonOut);
+    if (!outPath || outPath.startsWith("--")) {
+      die("❌ --json-out requires a file path argument.");
+    }
+    fs.mkdirSync(path.dirname(outPath), { recursive: true });
+    fs.writeFileSync(outPath, JSON.stringify(data, null, 2) + "\n", "utf8");
+  }
 
   const strict = Boolean(data?.strict);
   const contexts = Array.isArray(data?.contexts) ? data.contexts : [];
