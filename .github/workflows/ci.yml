@@ -5,8 +5,9 @@ on:
   pull_request:
 
 jobs:
-  smoke:
-    name: ${{ github.event_name == 'pull_request' && 'ci/smoke (pull_request)' || 'ci/smoke (push)' }}
+  smoke-pr:
+    if: github.event_name == 'pull_request'
+    name: smoke-pr
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -64,6 +65,83 @@ jobs:
       - name: Verify STRICT policy coverage
         if: github.event_name == 'pull_request'
         run: node ./scripts/ci/verify-policy-coverage.mjs --required .tmp/required-policy-hits.json --coverage .tmp/policy-coverage.log
+      - name: DeepThink gates
+        run: npm run -s ci:deepthink-gates
+
+      - name: Verify signatures (Tier 1 if present)
+        run: npm run -s ci:verify-signatures
+
+      - name: Detect derived tiers
+        run: npm run -s ci:detect-tiers
+
+      - name: Start mock server
+        env:
+          WEBHOOK_SECRET: test-secret
+          MOCK_INCLUDE_THREADID: "1"
+          MOCK_PORT: "8787"
+        run: |
+          node ./scripts/mock-server.js &
+          sleep 1
+          curl -sSf http://localhost:8787/status/200 >/dev/null
+
+      - name: Smoke vectors (strict)
+        env:
+          WEBHOOK_SECRET: test-secret
+          STRICT_AGENT_OUTPUT: "1"
+          VALIDATION_WEBHOOK_URL: http://localhost:8787/validation
+          PLANNER_WEBHOOK_URL: http://localhost:8787/planner
+          THREAD_ID: local_test_001
+        run: npm run smoke:vectors:trim
+
+  smoke-push:
+    if: github.event_name == 'push'
+    name: smoke-push
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-
+
+      - name: Install Playwright browsers (Chromium)
+        run: npx playwright install --with-deps chromium
+
+      - name: Required checks (AGENTS)
+        run: |
+          npm run -s typecheck
+          npm run -s ci:lint-md:templates
+          npm run -s ci:validate-json:selected
+
+      - name: Policy code literals guard
+        run: npm run -s ci:no-policy-code-literals
+
+      - name: Tests
+        env:
+          POLICY_COVERAGE_FILE: .tmp/policy-coverage.log
+          POLICY_COVERAGE_STRICT: "1"
+        run: |
+          rm -f .tmp/policy-coverage.log
+          npm test
+
       - name: DeepThink gates
         run: npm run -s ci:deepthink-gates
 

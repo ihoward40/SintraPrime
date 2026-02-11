@@ -1,4 +1,4 @@
-name: Require Governance Wiring Scope
+name: governance
 
 on:
   pull_request:
@@ -9,8 +9,8 @@ permissions:
   pull-requests: read
 
 jobs:
-  wiring-scope-check:
-    name: governance/wiring-scope
+  wiring-scope:
+    name: wiring-scope
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
