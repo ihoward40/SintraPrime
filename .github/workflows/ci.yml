@@ -48,6 +48,9 @@ jobs:
       - name: Policy code literals guard
         run: npm run -s ci:no-policy-code-literals
 
+      - name: Policy registry covers governed schemas
+        run: node --import tsx ./scripts/ci/require-policy-registry-for-schemas.mjs
+
       - name: Vendor adapter governance (static gate + required hits)
         if: github.event_name == 'pull_request'
         env:
