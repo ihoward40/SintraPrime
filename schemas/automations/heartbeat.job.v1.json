@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "schemas/automations/heartbeat.job.v1.json",
+  "title": "Heartbeat scheduled job (v1)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "intent",
+    "schedule",
+    "task",
+    "touches_connectors",
+    "touches_external_apis",
+    "created_at",
+    "requested_by"
+  ],
+  "properties": {
+    "job_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Deterministic content-addressed id (preferred). If omitted or set to 'auto' at input time, the CLI computes a deterministic id."
+    },
+    "intent": {
+      "const": "job.schedule"
+    },
+    "schedule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "timezone"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": ["interval", "cron"]
+        },
+        "interval_seconds": {
+          "type": "integer",
+          "minimum": 60
+        },
+        "cron": {
+          "type": "string",
+          "minLength": 1
+        },
+        "timezone": {
+          "type": "string",
+          "minLength": 1,
+          "description": "IANA timezone, e.g. America/New_York"
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "kind": { "const": "interval" } }, "required": ["kind"] },
+          "then": { "required": ["interval_seconds"], "not": { "required": ["cron"] } }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "cron" } }, "required": ["kind"] },
+          "then": { "required": ["cron"], "not": { "required": ["interval_seconds"] } }
+        }
+      ]
+    },
+    "task": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["action", "payload"],
+      "properties": {
+        "action": {
+          "type": "string",
+          "minLength": 1,
+          "description": "e.g. heartbeat.check, research.run, email.digest"
+        },
+        "payload": {
+          "type": "object",
+          "description": "Opaque payload for the task",
+          "additionalProperties": true
+        }
+      }
+    },
+    "touches_connectors": {
+      "type": "boolean",
+      "description": "Declarative flag for policy gate (R2)"
+    },
+    "touches_external_apis": {
+      "type": "boolean",
+      "description": "Declarative flag for policy gate (R2)"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "requested_by": {
+      "type": "string",
+      "minLength": 1
+    },
+    "notes": {
+      "type": "string"
+    },
+    "max_runtime_seconds": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "retry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["max_attempts", "backoff_seconds"],
+      "properties": {
+        "max_attempts": { "type": "integer", "minimum": 1 },
+        "backoff_seconds": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}

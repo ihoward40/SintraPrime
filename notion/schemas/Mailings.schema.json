@@ -1,0 +1,8 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"$id": "sintraprime://schemas/mailings.schema.json",
+	"title": "Mailings",
+	"description": "Schema placeholder for Mailings records (must be valid JSON Schema for CI verification).",
+	"type": "object",
+	"additionalProperties": true
+}

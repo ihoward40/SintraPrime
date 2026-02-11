@@ -201,6 +201,106 @@ function parseApproveCommand(command: string): { execution_id: string } | null {
   return { execution_id };
 }
 
+function parseJobScheduleCommand(command: string): { job: any } | null {
+  const trimmed = String(command ?? "").trim();
+  const m = trimmed.match(/^\/job\s+schedule\s+([\s\S]+)$/i);
+  if (!m) return null;
+
+  const raw = String(m[1] ?? "").trim();
+  if (!raw) throw new Error("Usage: /job schedule <json>");
+
+  let job: any;
+  try {
+    job = JSON.parse(raw);
+  } catch {
+    throw new Error("/job schedule expects a single JSON object argument");
+  }
+  if (!job || typeof job !== "object" || Array.isArray(job)) {
+    throw new Error("/job schedule JSON must be an object");
+  }
+  return { job };
+}
+
+function normalizeHeartbeatJobSpecForId(job: any): Record<string, unknown> {
+  const schedule: any = job?.schedule ?? {};
+  const kind = String(schedule.kind ?? "");
+
+  const scheduleIdentity: Record<string, unknown> = {
+    kind,
+    timezone: typeof schedule.timezone === "string" ? schedule.timezone : "UTC",
+  };
+
+  if (kind === "interval") {
+    scheduleIdentity.interval_seconds = schedule.interval_seconds;
+  } else if (kind === "cron") {
+    scheduleIdentity.cron = schedule.cron;
+  }
+
+  const task: any = job?.task ?? {};
+  const taskIdentity: Record<string, unknown> = {
+    action: task.action,
+  };
+  if (task.payload !== undefined) {
+    taskIdentity.payload = task.payload;
+  }
+
+  return {
+    intent: job?.intent,
+    schedule: scheduleIdentity,
+    task: taskIdentity,
+    touches_connectors: job?.touches_connectors === true,
+    touches_external_apis: job?.touches_external_apis === true,
+  };
+}
+
+function computeNextRunAtFromJob(job: any, at: Date): Date {
+  const schedule = job?.schedule ?? {};
+  const kind = typeof schedule?.kind === "string" ? schedule.kind : "";
+
+  if (kind === "interval") {
+    const sec = Number(schedule?.interval_seconds);
+    const intervalSeconds = Number.isFinite(sec) && sec > 0 ? sec : 3600;
+    return new Date(at.getTime() + intervalSeconds * 1000);
+  }
+
+  if (kind === "cron") {
+    // Minimal cron support: "m h * * *" only.
+    const cron = typeof schedule?.cron === "string" ? schedule.cron.trim() : "";
+    const parts = cron.split(/\s+/);
+    if (parts.length >= 2) {
+      const minute = Number(parts[0]);
+      const hour = Number(parts[1]);
+      if (Number.isFinite(minute) && Number.isFinite(hour)) {
+        const next = new Date(at);
+        next.setUTCSeconds(0, 0);
+        next.setUTCMinutes(minute);
+        next.setUTCHours(hour);
+        if (next.getTime() <= at.getTime()) {
+          next.setUTCDate(next.getUTCDate() + 1);
+        }
+        return next;
+      }
+    }
+  }
+
+  return new Date(at.getTime() + 3600 * 1000);
+}
+
+function loadJobsRegistryForWrite(registryPath: string): any[] {
+  try {
+    if (!fs.existsSync(registryPath)) return [];
+    const raw = JSON.parse(fs.readFileSync(registryPath, "utf8"));
+    return Array.isArray(raw) ? raw : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeJobsRegistry(registryPath: string, jobs: any[]) {
+  fs.mkdirSync(path.dirname(registryPath), { recursive: true });
+  fs.writeFileSync(registryPath, JSON.stringify(jobs, null, 2) + "\n", { encoding: "utf8" });
+}
+
 type TemplateRegistryEntry = {
   description?: string;
   plan: unknown;
@@ -1538,6 +1638,107 @@ async function run() {
       })
     );
     process.exit(0);
+  }
+
+  // Tier 5.35: local job scheduling command. Offline-safe; no webhooks.
+  const jobSchedule = parseJobScheduleCommand(command);
+  if (jobSchedule) {
+    const now = new Date();
+    const normalized = normalizeHeartbeatJobSpecForId(jobSchedule.job);
+    const identitySha = stableFingerprint(normalized);
+    const job_id = `job_${identitySha.slice(0, 24)}`;
+
+    const touches_connectors = jobSchedule.job?.touches_connectors === true;
+    const touches_external_apis = jobSchedule.job?.touches_external_apis === true;
+    const gate_required = touches_connectors || touches_external_apis ? "R2" : "R0";
+
+    const next_run_at = computeNextRunAtFromJob(jobSchedule.job, now);
+    const registryPath = path.join(process.cwd(), "jobs", "registry.json");
+
+    let registry_action: string | null = null;
+    if (gate_required === "R0") {
+      const jobs = loadJobsRegistryForWrite(registryPath);
+      const desired = {
+        job_id,
+        job_identity_sha256: identitySha,
+        created_at: now.toISOString(),
+        updated_at: now.toISOString(),
+        next_run_at: next_run_at.toISOString(),
+        spec: jobSchedule.job,
+      };
+
+      const idx = jobs.findIndex((j: any) => j && typeof j === "object" && j.job_id === job_id);
+      if (idx < 0) {
+        jobs.push(desired);
+        registry_action = "created";
+      } else {
+        const existing = jobs[idx];
+        const existingSig = existing?.job_identity_sha256 ?? stableFingerprint(existing);
+        if (existingSig === identitySha) {
+          registry_action = "noop_exists";
+        } else {
+          jobs[idx] = { ...desired, created_at: existing?.created_at ?? desired.created_at };
+          registry_action = "replaced";
+        }
+      }
+      writeJobsRegistry(registryPath, jobs);
+    }
+
+    const execution_id = `exec_job_schedule_${now.toISOString().replace(/[-:.TZ]/g, "").slice(0, 14)}_${job_id}`;
+
+    const gate_result = gate_required === "R0" ? "NOT_REQUIRED" : "PENDING";
+    const status = gate_required === "R0" ? "success" : "awaiting_approval";
+
+    const receiptExtra: any = {
+      command_intent: {
+        command: "job.schedule",
+        args: {
+          job: jobSchedule.job,
+        },
+      },
+      job_id,
+      job_identity_sha256: identitySha,
+      next_run_at: next_run_at.toISOString(),
+      registry_action,
+      policy_resolution: {
+        gate_required,
+        gate_result,
+        touches_connectors,
+        touches_external_apis,
+      },
+    };
+
+    await persistRun({
+      kind: "job.schedule",
+      execution_id,
+      threadId: process.env.THREAD_ID ?? null,
+      goal: "job.schedule",
+      dry_run: true,
+      started_at: now.toISOString(),
+      finished_at: now.toISOString(),
+      status,
+      steps: [],
+      receipt: receiptExtra,
+    } as any);
+
+    console.log(
+      JSON.stringify(
+        {
+          ok: gate_required === "R0",
+          status,
+          execution_id,
+          job_id,
+          gate_required,
+          gate_result,
+          registry_action,
+          next_run_at: receiptExtra.next_run_at,
+        },
+        null,
+        2
+      )
+    );
+
+    process.exit(gate_required === "R0" ? 0 : 4);
   }
 
   // Tier 5.3: local approval command. No re-planning, no agents.

@@ -1,0 +1,8 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"$id": "sintraprime://schemas/foia_requests.schema.json",
+	"title": "FOIA Requests",
+	"description": "Schema placeholder for FOIA Requests records (must be valid JSON Schema for CI verification).",
+	"type": "object",
+	"additionalProperties": true
+}

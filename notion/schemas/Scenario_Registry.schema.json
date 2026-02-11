@@ -1,0 +1,8 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"$id": "sintraprime://schemas/scenario_registry.schema.json",
+	"title": "Scenario Registry",
+	"description": "Schema placeholder for Scenario Registry records (must be valid JSON Schema for CI verification).",
+	"type": "object",
+	"additionalProperties": true
+}

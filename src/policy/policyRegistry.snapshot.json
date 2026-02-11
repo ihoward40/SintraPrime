@@ -1,0 +1,14 @@
+{
+  "actions": [
+    "research.searchrouter.v1",
+    "research.searchrouter.output.v1",
+    "automations.heartbeat.job.v1",
+    "voice.elevenlabs.tts.v1",
+    "voice.wisprflow.ingest.v1"
+  ],
+  "prefixes": [
+    "research.",
+    "automations.",
+    "voice."
+  ]
+}

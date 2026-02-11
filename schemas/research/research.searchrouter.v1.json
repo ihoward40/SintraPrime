@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "schema": "research.searchrouter.v1",
+  "title": "research.searchrouter.v1 input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["intent", "query", "mode", "policy_context"],
+  "properties": {
+    "intent": { "type": "string", "enum": ["web_search", "source_lookup"] },
+    "query": { "type": "string", "minLength": 1 },
+    "mode": { "type": "string", "enum": ["quick", "deep"] },
+    "strategy": {
+      "type": "string",
+      "enum": ["single_pass", "iterative", "wide_research"],
+      "default": "single_pass"
+    },
+    "policy_context": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "tier", "risk_tags", "budget_class"],
+      "properties": {
+        "mode": { "type": "string", "minLength": 1 },
+        "tier": { "type": "string", "enum": ["T0", "T1", "T2", "T3"] },
+        "risk_tags": { "type": "array", "items": { "type": "string" } },
+        "budget_class": { "type": "string", "enum": ["LOW", "MEDIUM", "HIGH"] }
+      }
+    },
+    "constraints": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "domains_allowlist": { "type": "array", "items": { "type": "string" } },
+        "recency_days": { "type": "integer", "minimum": 0, "maximum": 3650 }
+      }
+    },
+    "deep_trigger": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "explicit_phrase_present": { "type": "boolean" },
+        "approved_gate_id": { "type": "string" }
+      }
+    }
+  }
+}

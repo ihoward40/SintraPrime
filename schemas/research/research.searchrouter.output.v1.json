@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "schema": "research.searchrouter.output.v1",
+  "title": "research.searchrouter.output.v1 output",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["provider", "mode", "results", "result_count", "sources"],
+  "properties": {
+    "provider": { "type": "string", "minLength": 1 },
+    "mode": { "type": "string", "enum": ["quick", "deep"] },
+    "model": { "type": "string" },
+    "result_count": { "type": "integer", "minimum": 0 },
+    "results": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["title", "snippet", "url"],
+        "properties": {
+          "title": { "type": "string" },
+          "snippet": { "type": "string" },
+          "url": { "type": "string" },
+          "published_at": { "type": "string" }
+        }
+      }
+    },
+    "sources": { "type": "array", "items": { "type": "string" } },
+    "generated_at": { "type": "string" }
+  }
+}

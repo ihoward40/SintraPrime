@@ -1,0 +1,10 @@
+{
+  "tool_id": "research.searchrouter.v1",
+  "display_name": "SearchRouter",
+  "description": "Policy-aware search router with quick/deep modes and receipt emission.",
+  "input_schema": "research.searchrouter.v1",
+  "output_schema": "research.searchrouter.output.v1",
+  "budgets": ["LOW", "MEDIUM", "HIGH"],
+  "risk_tags": ["RESEARCH", "WEB"],
+  "gates": ["BUDGET_GUARD", "R2_APPROVAL_FOR_DEEP"]
+}

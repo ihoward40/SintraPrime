@@ -1,91 +1,34 @@
-# Governance Wiring Scope Declaration
+# Wiring Scope
 
-**Status:** Draft (Required for any wiring change)
-**Change Type:** ☐ New wiring ☐ Modification ☐ Removal
-**Branch:** feature/governance-specs-to-runtime
-**Scope Hash (SHA-256):** ____________________
-**Prepared By:** ____________________
-**Date (UTC):** ____________________
+## PR: pr/searchrouter-job-schedule
 
----
+### Summary
+Wires runtime behavior for:
+- SearchRouter tool execution + receipt projection
+- /job schedule offline-safe handler + smoke vector
+- Plain-Node policy registry coverage gate (snapshot-based)
 
-## 1. Purpose of This Change
+### Paths in scope
+- src/cli/run-command.ts
+- src/research/searchrouter.ts
+- src/tools/searchrouter/**
+- scripts/smoke/smoke-job-schedule.mjs
+- scripts/ci/verify-ajv-compile-ops-schemas.mjs
+- scripts/ci/require-policy-registry-for-schemas.mjs
+- scripts/ci/schema-policy-registry-matcher.mjs
+- src/policy/policyRegistry.snapshot.json
+- schemas/research/**
+- schemas/automations/heartbeat.job.v1.json
+- notion/schemas/** (AJV hygiene: legacy JSON made valid)
 
-Describe *why* this wiring is proposed and what problem it solves.
-Keep this factual and bounded. No outcomes or promises.
+### Scope notes
+- Policy coverage gate is plain-Node snapshot only (`policyRegistry.snapshot.json` is `{ actions, prefixes }`).
+- Full TS governance registry stays PR #1/mainline.
 
----
+### CI receipts
+```bash
+node scripts/ci/require-policy-registry-for-schemas.mjs; echo $LASTEXITCODE
+node scripts/ci/verify-ajv-compile-ops-schemas.mjs; echo $LASTEXITCODE
+node scripts/smoke/smoke-job-schedule.mjs; echo $LASTEXITCODE
 
-## 2. Specifications Being Wired
-
-List the exact spec(s), schema(s), or template(s) being connected to runtime behavior.
-
-- Spec / Schema Name:
-- File Path:
-- Version / Hash (if applicable):
-
----
-
-## 3. Execution Paths Affected (Explicit)
-
-List every execution path that will change.
-
-- Path / Module:
-- Before:
-- After:
-
----
-
-## 4. Execution Paths Explicitly **Not** Affected
-
-List related paths that are intentionally untouched.
-
-- Path / Module:
-- Reason for non-impact:
-
----
-
-## 5. Authority Impact Assessment
-
-☐ No authority expansion  
-☐ Authority expansion (explain below)
-
-If any authority is expanded, specify:
-- Previous authority boundary:
-- New authority boundary:
-- Mitigations / controls:
-
----
-
-## 6. Safety & Restraint Controls
-
-Describe controls that prevent overreach.
-
-- Refusal logging impact:
-- Demo/Observe mode protections:
-- Kill switches / guards:
-
----
-
-## 7. Backward Compatibility
-
-☐ Existing runs unaffected  
-☐ Existing runs affected (explain)
-
----
-
-## 8. Validation & Evidence
-
-- Tests added or updated:
-- Manual verification steps:
-- Evidence artifacts produced:
-
----
-
-## 9. Non-Regression Statement
-
-> This change does not silently activate previously inert specifications and does not
-> alter governance semantics beyond what is explicitly described above.
-
-**Signature:** ____________________  
-**Role:** ____________________
+```
