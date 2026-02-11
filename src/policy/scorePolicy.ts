@@ -1,4 +1,5 @@
 import type { ScoreFeatures } from "./extractScoreFeatures.js";
+import { CODES_POLICY_SCORE } from "./policyRegistry.js";
 
 type Reason = { code: string; weight: number; detail: string };
 
@@ -18,7 +19,7 @@ export function scorePolicy(input: {
       0,
       "LOW",
       "BLOCK",
-      [{ code: "POLICY_DENIED", weight: -999, detail: "Policy simulation denied execution" }],
+      [{ code: CODES_POLICY_SCORE.POLICY_DENIED, weight: -999, detail: "Policy simulation denied execution" }],
       input
     );
   }
@@ -33,7 +34,7 @@ export function scorePolicy(input: {
       "BLOCK",
       [
         {
-          code: "UNRESOLVED_CAPABILITY",
+          code: CODES_POLICY_SCORE.UNRESOLVED_CAPABILITY,
           weight: -999,
           detail: `No agent provides: ${unresolved.join(",")}`,
         },
@@ -47,7 +48,7 @@ export function scorePolicy(input: {
       0,
       "LOW",
       "BLOCK",
-      [{ code: "UNKNOWN_DOMAIN", weight: -999, detail: "At least one step URL could not be parsed" }],
+      [{ code: CODES_POLICY_SCORE.UNKNOWN_DOMAIN, weight: -999, detail: "At least one step URL could not be parsed" }],
       input
     );
   }
@@ -58,20 +59,24 @@ export function scorePolicy(input: {
   // Read-only vs writes
   if (input.features.writes === 0) {
     score += 25;
-    reasons.push({ code: "READ_ONLY", weight: 25, detail: "All steps read_only=true" });
+    reasons.push({ code: CODES_POLICY_SCORE.READ_ONLY, weight: 25, detail: "All steps read_only=true" });
   } else {
     score -= 20;
     reasons.push({
-      code: "WRITE_PRESENT",
+      code: CODES_POLICY_SCORE.WRITE_PRESENT,
       weight: -20,
       detail: "Contains write steps (approval-gated or denied by autonomy)",
     });
     if (input.features.approval_required) {
       score += 10;
-      reasons.push({ code: "APPROVAL_GATED_WRITE", weight: 10, detail: "Write is behind approval boundary" });
+      reasons.push({
+        code: CODES_POLICY_SCORE.APPROVAL_GATED_WRITE,
+        weight: 10,
+        detail: "Write is behind approval boundary",
+      });
       score -= 10;
       reasons.push({
-        code: "PRESTATE_REQUIRED",
+        code: CODES_POLICY_SCORE.PRESTATE_REQUIRED,
         weight: -10,
         detail: "Prestate capture required before approval to avoid stale plan",
       });
@@ -81,7 +86,7 @@ export function scorePolicy(input: {
   // Domains sanity
   score += 10;
   reasons.push({
-    code: "DOMAIN_ALLOWLIST_MATCH",
+    code: CODES_POLICY_SCORE.DOMAIN_ALLOWLIST_MATCH,
     weight: 10,
     detail: "Domains parse cleanly (further allowlist check is in policy)",
   });
@@ -89,35 +94,59 @@ export function scorePolicy(input: {
   // Step count
   if (input.features.steps <= 5) {
     score += 5;
-    reasons.push({ code: "LOW_STEP_COUNT", weight: 5, detail: `steps=${input.features.steps} <= 5` });
+    reasons.push({
+      code: CODES_POLICY_SCORE.LOW_STEP_COUNT,
+      weight: 5,
+      detail: `steps=${input.features.steps} <= 5`,
+    });
   }
 
   // Timeouts capped
   if (input.features.timeouts_capped === true) {
     score += 5;
-    reasons.push({ code: "TIMEOUTS_CAPPED", weight: 5, detail: "All timeouts <= policy cap" });
+    reasons.push({
+      code: CODES_POLICY_SCORE.TIMEOUTS_CAPPED,
+      weight: 5,
+      detail: "All timeouts <= policy cap",
+    });
   }
 
   // Agent versions pinned
   if (input.features.agent_versions_pinned === true) {
     score += 5;
-    reasons.push({ code: "AGENT_VERSION_PINNED", weight: 5, detail: "agent_versions pinned" });
+    reasons.push({
+      code: CODES_POLICY_SCORE.AGENT_VERSION_PINNED,
+      weight: 5,
+      detail: "agent_versions pinned",
+    });
   }
 
   // Capabilities resolved
   if (input.features.capabilities.length && input.features.capabilities_resolved === true) {
     score += 5;
-    reasons.push({ code: "CAPABILITIES_RESOLVED", weight: 5, detail: "All required_capabilities have providers" });
+    reasons.push({
+      code: CODES_POLICY_SCORE.CAPABILITIES_RESOLVED,
+      weight: 5,
+      detail: "All required_capabilities have providers",
+    });
   }
 
   // Observability penalties
   if (input.obs?.planner_retry) {
     score -= 8;
-    reasons.push({ code: "RETRY_OCCURRED", weight: -8, detail: "Planner retry occurred (variance detected)" });
+    reasons.push({
+      code: CODES_POLICY_SCORE.RETRY_OCCURRED,
+      weight: -8,
+      detail: "Planner retry occurred (variance detected)",
+    });
   }
   if (input.obs?.schema_tolerance_used) {
     score -= 6;
-    reasons.push({ code: "SCHEMA_TOLERANCE_USED", weight: -6, detail: "Non-strict parsing tolerance used" });
+    reasons.push({
+      code: CODES_POLICY_SCORE.SCHEMA_TOLERANCE_USED,
+      weight: -6,
+      detail: "Non-strict parsing tolerance used",
+    });
   }
 
   // Clamp
