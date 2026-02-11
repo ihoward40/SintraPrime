@@ -20,6 +20,7 @@ export const ExecutionStepSchema = z.object({
     "MakeAdapter",
     "SlackAdapter",
     "BuildMyAgentAdapter",
+    "BrowserOperatorAdapter",
   ]),
   method: z.enum(["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"]),
   read_only: z.boolean().optional(),

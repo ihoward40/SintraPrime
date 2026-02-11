@@ -12,6 +12,8 @@ import { computePlanHash } from "../utils/planHash.js";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
+import { tryBuildBrowserOperatorPlan } from "./runBrowserOperator.js";
 import { normalizeCommand } from "../dsl/normalizeCommand.js";
 import { writeIntakeArtifact } from "../artifacts/writeIntakeArtifact.js";
 import { writeNotionReadArtifact } from "../artifacts/writeNotionReadArtifact.js";
@@ -2384,6 +2386,18 @@ async function run() {
 
       plannerOut = PlannerOutputSchema.parse(plan);
       forwardedCommand = command;
+    }
+  }
+
+  // Local read-only fast-path: governed browser operator.
+  // Syntax:
+  // - /browser operator <url_or_path> {"actions":[...]}
+  // - /browser operator ./fixtures/browser_operator/demo.html {"actions":[...]}
+  if (!plannerOut) {
+    const built = tryBuildBrowserOperatorPlan(command, threadId);
+    if (built) {
+      plannerOut = PlannerOutputSchema.parse(built.plan);
+      forwardedCommand = built.forwardedCommand;
     }
   }
 

@@ -7,7 +7,9 @@ import { notionLiveGet, notionLiveWhoAmI } from "../adapters/notionLiveRead.js";
 import { notionLivePatchWithIdempotency } from "../adapters/notionLiveWrite.js";
 import { writeNotionLiveWriteArtifact } from "../artifacts/writeNotionLiveWriteArtifact.js";
 import { writeDocsCaptureArtifact } from "../artifacts/writeDocsCaptureArtifact.js";
+import { writeBrowserOperatorArtifact } from "../artifacts/writeBrowserOperatorArtifact.js";
 import { getIdempotencyRecord, writeIdempotencyRecord } from "../idempotency/idempotencyLedger.js";
+import { runBrowserOperatorStep } from "../browserOperator/runBrowserOperator.js";
 
 type RunStatus =
   | "running"
@@ -231,6 +233,51 @@ async function executeStep(step: ExecutionStep, timeoutMs: number) {
   } finally {
     clearTimeout(timeout);
   }
+}
+
+async function executeBrowserOperator(step: ExecutionStep, execution_id: string) {
+  const out = await runBrowserOperatorStep({
+    execution_id,
+    step_id: step.step_id,
+    url: step.url,
+    payload: (step as any).payload,
+  });
+
+  if (out.ok && out.status >= 200 && out.status < 300) {
+    try {
+      const responseObj = (out.responseJson && typeof out.responseJson === "object") ? (out.responseJson as any) : null;
+      const outputs = responseObj && responseObj.outputs && typeof responseObj.outputs === "object" ? responseObj.outputs : {};
+      const screenshots = Array.isArray(out.screenshots) ? out.screenshots : [];
+
+      let mode: "offline" | "network" = "offline";
+      try {
+        const proto = new URL(step.url).protocol;
+        mode = proto === "http:" || proto === "https:" ? "network" : "offline";
+      } catch {
+        // Default offline (best-effort)
+      }
+
+      writeBrowserOperatorArtifact({
+        execution_id,
+        step_id: step.step_id,
+        url: step.url,
+        mode,
+        http_status: out.status,
+        outputs,
+        screenshots,
+      });
+    } catch {
+      // Best-effort only; do not fail the step.
+    }
+  }
+
+  return {
+    ok: out.ok,
+    status: out.status,
+    response: out.response,
+    responseJson: out.responseJson,
+    screenshots: out.screenshots ?? [],
+  };
 }
 
 async function executeDocsCaptureStep(step: ExecutionStep, timeoutMs: number, execution_id: string) {
@@ -462,9 +509,18 @@ export async function executePlan(rawPlan: unknown, opts: ExecutePlanOptions = {
                     })()
                 : step.action === "docs.capture"
                   ? await executeDocsCaptureStep(step, timeoutMs, plan.execution_id)
+                  : step.action === "browser.operator" || step.action.startsWith("browser.operator.") || step.adapter === "BrowserOperatorAdapter"
+                    ? await executeBrowserOperator(step, plan.execution_id)
                 : await executeStep(step, timeoutMs);
           stepLog.http_status = out.status;
           stepLog.response = out.response;
+
+          if ((out as any).screenshots && Array.isArray((out as any).screenshots) && (out as any).screenshots.length) {
+            stepLog.watch = {
+              enabled: true,
+              screenshots: (out as any).screenshots,
+            };
+          }
 
           const statusOk = step.expects.http_status.includes(out.status);
           stepLog.expectations.http_status_ok = statusOk;
