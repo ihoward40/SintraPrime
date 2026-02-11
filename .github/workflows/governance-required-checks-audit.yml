@@ -23,6 +23,8 @@ jobs:
       - name: Print required checks (master)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EXPECTED_CONTEXTS: governance/wiring-scope,ci/smoke-pr
+          EXPECTED_APP_ID: "15368"
         run: |
           set -euo pipefail
           node ./scripts/ci/print-required-checks.mjs --branch master --json-out required-checks.json \
