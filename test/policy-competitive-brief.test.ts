@@ -13,6 +13,7 @@ function basePlan(payload: any) {
     agent_versions: { validator: "test", planner: "test" },
     assumptions: [],
     required_secrets: [],
+    required_capabilities: ["browser:l0"],
     steps: [
       {
         step_id: "s1",
@@ -27,6 +28,84 @@ function basePlan(payload: any) {
     ],
   };
 }
+
+test("policy: competitive.brief.v1 DENY: missing browser:l0 capability", () => {
+  const env = {
+    ...process.env,
+    AUTONOMY_MODE: "READ_ONLY_AUTONOMY",
+    BROWSER_L0_ALLOWED_HOSTS: "example.com",
+  } as any;
+
+  const plan: any = basePlan({ targets: ["https://example.com/"] });
+  delete plan.required_capabilities;
+
+  const res = checkPolicy(plan as any, env, new Date());
+  assert.equal((res as any).allowed, false);
+  assert.ok((res as any).denied);
+  assert.equal((res as any).denied?.code, "CAPABILITY_MISSING");
+});
+
+test("policy: competitive.brief.v1 DENY: requires read_only=true", () => {
+  const env = {
+    ...process.env,
+    AUTONOMY_MODE: "OFF",
+    BROWSER_L0_ALLOWED_HOSTS: "example.com",
+  } as any;
+
+  const plan: any = basePlan({ targets: ["https://example.com/"] });
+  plan.steps[0].read_only = false;
+
+  const res = checkPolicy(plan as any, env, new Date());
+  assert.equal((res as any).allowed, false);
+  assert.ok((res as any).denied);
+  assert.equal((res as any).denied?.code, "COMPETITIVE_BRIEF_REQUIRES_READ_ONLY");
+});
+
+test("policy: competitive.brief.v1 DENY: method not allowed", () => {
+  const env = {
+    ...process.env,
+    AUTONOMY_MODE: "READ_ONLY_AUTONOMY",
+    BROWSER_L0_ALLOWED_HOSTS: "example.com",
+  } as any;
+
+  const plan: any = basePlan({ targets: ["https://example.com/"] });
+  plan.steps[0].method = "POST";
+
+  const res = checkPolicy(plan as any, env, new Date());
+  assert.equal((res as any).allowed, false);
+  assert.ok((res as any).denied);
+  assert.equal((res as any).denied?.code, "COMPETITIVE_BRIEF_METHOD_NOT_ALLOWED");
+});
+
+test("policy: competitive.brief.v1 DENY: payload invalid", () => {
+  const env = {
+    ...process.env,
+    AUTONOMY_MODE: "READ_ONLY_AUTONOMY",
+    BROWSER_L0_ALLOWED_HOSTS: "example.com",
+  } as any;
+
+  const plan: any = basePlan(null);
+
+  const res = checkPolicy(plan as any, env, new Date());
+  assert.equal((res as any).allowed, false);
+  assert.ok((res as any).denied);
+  assert.equal((res as any).denied?.code, "COMPETITIVE_BRIEF_PAYLOAD_INVALID");
+});
+
+test("policy: competitive.brief.v1 DENY: targets required", () => {
+  const env = {
+    ...process.env,
+    AUTONOMY_MODE: "READ_ONLY_AUTONOMY",
+    BROWSER_L0_ALLOWED_HOSTS: "example.com",
+  } as any;
+
+  const plan: any = basePlan({});
+
+  const res = checkPolicy(plan as any, env, new Date());
+  assert.equal((res as any).allowed, false);
+  assert.ok((res as any).denied);
+  assert.equal((res as any).denied?.code, "COMPETITIVE_BRIEF_TARGETS_REQUIRED");
+});
 
 test("policy: competitive.brief.v1 ALLOW: <=3 targets, wideResearch disabled", () => {
   const env = {
@@ -80,7 +159,46 @@ test("policy: competitive.brief.v1 DENY: crawl fields", () => {
   const res = checkPolicy(plan as any, env, new Date());
   assert.equal((res as any).allowed, false);
   assert.ok((res as any).denied);
-  assert.equal((res as any).denied?.code, "COMPETITIVE_BRIEF_NO_CRAWL");
+  assert.equal((res as any).denied?.code, "COMPETITIVE_BRIEF_NO_CRAWL_FIELDS_ALLOWED");
+});
+
+test("policy: competitive.brief.v1 DENY: screenshot maxRequests too high vs env", () => {
+  const env = {
+    ...process.env,
+    AUTONOMY_MODE: "READ_ONLY_AUTONOMY",
+    BROWSER_L0_ALLOWED_HOSTS: "example.com",
+    BROWSER_L0_MAX_REQUESTS: "10",
+  } as any;
+
+  const plan = basePlan({
+    targets: ["https://example.com/"],
+    screenshot: { enabled: true, mode: "same_origin", maxRequests: 999 },
+    wideResearch: { enabled: false },
+  });
+
+  const res = checkPolicy(plan as any, env, new Date());
+  assert.equal((res as any).allowed, false);
+  assert.ok((res as any).denied);
+  assert.equal((res as any).denied?.code, "COMPETITIVE_BRIEF_SCREENSHOT_MAX_REQUESTS_TOO_HIGH");
+});
+
+test("policy: competitive.brief.v1 DENY: screenshot maxRequests invalid", () => {
+  const env = {
+    ...process.env,
+    AUTONOMY_MODE: "READ_ONLY_AUTONOMY",
+    BROWSER_L0_ALLOWED_HOSTS: "example.com",
+  } as any;
+
+  const plan = basePlan({
+    targets: ["https://example.com/"],
+    screenshot: { enabled: true, mode: "same_origin", maxRequests: 0 },
+    wideResearch: { enabled: false },
+  });
+
+  const res = checkPolicy(plan as any, env, new Date());
+  assert.equal((res as any).allowed, false);
+  assert.ok((res as any).denied);
+  assert.equal((res as any).denied?.code, "COMPETITIVE_BRIEF_SCREENSHOT_MAX_REQUESTS_INVALID");
 });
 
 test("policy: competitive.brief.v1 APPROVAL_REQUIRED: targets > 3", () => {
@@ -123,4 +241,77 @@ test("policy: competitive.brief.v1 DENY: invalid screenshot mode", () => {
   assert.equal((res as any).allowed, false);
   assert.ok((res as any).denied);
   assert.equal((res as any).denied?.code, "COMPETITIVE_BRIEF_SCREENSHOT_MODE_NOT_ALLOWED");
+});
+
+test("policy: competitive.brief.v1 DENY: SCHEME_NOT_ALLOWED (http target)", () => {
+  const env = {
+    ...process.env,
+    AUTONOMY_MODE: "READ_ONLY_AUTONOMY",
+    BROWSER_L0_ALLOW_HTTP: "0",
+    BROWSER_L0_ALLOWED_HOSTS: "example.com",
+  } as any;
+
+  const plan = basePlan({
+    targets: ["http://example.com/"],
+    wideResearch: { enabled: false },
+  });
+
+  const res = checkPolicy(plan as any, env, new Date());
+  assert.equal((res as any).allowed, false);
+  assert.ok((res as any).denied);
+  assert.equal((res as any).denied?.code, "SCHEME_NOT_ALLOWED");
+});
+
+test("policy: competitive.brief.v1 DENY: HOST_NOT_ALLOWED (target not allowlisted)", () => {
+  const env = {
+    ...process.env,
+    AUTONOMY_MODE: "READ_ONLY_AUTONOMY",
+    // Intentionally omit BROWSER_L0_ALLOWED_HOSTS
+  } as any;
+
+  const plan = basePlan({
+    targets: ["https://example.com/"],
+    wideResearch: { enabled: false },
+  });
+
+  const res = checkPolicy(plan as any, env, new Date());
+  assert.equal((res as any).allowed, false);
+  assert.ok((res as any).denied);
+  assert.equal((res as any).denied?.code, "HOST_NOT_ALLOWED");
+});
+
+test("policy: competitive.brief.v1 DENY: SSRF_GUARD_BLOCKED (localhost target)", () => {
+  const env = {
+    ...process.env,
+    AUTONOMY_MODE: "READ_ONLY_AUTONOMY",
+    BROWSER_L0_ALLOWED_HOSTS: "localhost",
+  } as any;
+
+  const plan = basePlan({
+    targets: ["https://localhost/"],
+    wideResearch: { enabled: false },
+  });
+
+  const res = checkPolicy(plan as any, env, new Date());
+  assert.equal((res as any).allowed, false);
+  assert.ok((res as any).denied);
+  assert.equal((res as any).denied?.code, "SSRF_GUARD_BLOCKED");
+});
+
+test("policy: competitive.brief.v1 DENY: bad target URL", () => {
+  const env = {
+    ...process.env,
+    AUTONOMY_MODE: "READ_ONLY_AUTONOMY",
+    BROWSER_L0_ALLOWED_HOSTS: "example.com",
+  } as any;
+
+  const plan = basePlan({
+    targets: ["not a url"],
+    wideResearch: { enabled: false },
+  });
+
+  const res = checkPolicy(plan as any, env, new Date());
+  assert.equal((res as any).allowed, false);
+  assert.ok((res as any).denied);
+  assert.equal((res as any).denied?.code, "COMPETITIVE_BRIEF_BAD_TARGET");
 });
