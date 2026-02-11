@@ -72,7 +72,22 @@ jobs:
 
       - name: Verify STRICT policy coverage
         if: github.event_name == 'pull_request'
-        run: node ./scripts/ci/verify-policy-coverage.mjs --required .tmp/required-policy-hits.json --required .tmp/required-policy-hits.registry.json --coverage .tmp/policy-coverage.log
+        run: node ./scripts/ci/verify-policy-coverage.mjs --required fixtures/policy-coverage-required.hits.json --required .tmp/required-policy-hits.json --required .tmp/required-policy-hits.registry.json --coverage .tmp/policy-coverage.log --write-merged-required .tmp/required-policy-hits.resolved.json
+
+      - name: Upload STRICT policy coverage receipts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: policy-coverage-receipts-pr${{ github.event.pull_request.number }}-${{ github.sha }}
+          retention-days: 7
+          if-no-files-found: ignore
+          path: |
+            .tmp/policy-coverage.log
+            .tmp/required-policy-hits.json
+            .tmp/required-policy-hits.registry.json
+            .tmp/required-policy-hits.resolved.json
+            .tmp/required-policy-hits.registry.meta.json
+            .tmp/verify-policy-coverage.summary.json
       - name: DeepThink gates
         run: npm run -s ci:deepthink-gates
 

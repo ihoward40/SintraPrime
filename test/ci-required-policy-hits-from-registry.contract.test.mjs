@@ -24,6 +24,14 @@ test("required hits from registry: emits required_hits + sources", () => {
   assert.ok(Array.isArray(j.required_hits));
   assert.ok(j.required_hits.length > 0);
   assert.ok(j.sources && typeof j.sources === "object");
+  assert.ok(Array.isArray(j.registry_policy_ids));
+  assert.ok(j.registry_policy_ids.length > 0);
+
+  const metaPath = outPath.replace(/\.json$/i, ".meta.json");
+  assert.ok(fs.existsSync(metaPath), "expected generator to emit .meta.json receipt");
+  const meta = JSON.parse(fs.readFileSync(metaPath, "utf8"));
+  assert.equal(typeof meta.out_sha256, "string");
+  assert.ok(meta.out_sha256.length >= 32);
 
   // Contract: every required hit should have at least one provenance source.
   const sample = j.required_hits.slice(0, 25);

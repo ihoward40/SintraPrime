@@ -1,0 +1,10 @@
+{
+  "kind": "RequiredPolicyHitsBaseline",
+  "required_hits": [
+    "browser.l0.navigate.v1\tDENY\tHOST_NOT_ALLOWED",
+    "competitive.brief.v1\tALLOW\tALLOW",
+    "competitive.brief.v1\tDENY\tCOMPETITIVE_BRIEF_TARGETS_REQUIRED",
+    "skills.apply.v1\tAPPROVAL_REQUIRED\tSKILLS_APPLY_REQUIRES_APPROVAL",
+    "skills.learn.v1\tDENY\tSKILLS_LEARN_MODE_NOT_ALLOWED"
+  ]
+}
