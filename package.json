@@ -42,7 +42,7 @@
     "monitor:weekly": "tsx src/cli/run-monitoring.ts weekly-review",
     "monitor:baselines": "tsx src/cli/run-monitoring.ts update-baselines",
     "monitor:test": "tsx tests/monitoring/severity-classifier.test.ts",
-    "diag:elevenlabs": "node scripts/load-env.mjs test-elevenlabs-complete.mjs",
+    "diag:elevenlabs": "node scripts/load-env.mjs scripts/diag-elevenlabs-complete.mjs",
     "automations:schema-snapshot": "node scripts/schema-snapshot-automations.mjs",
     "skills:revoke": "node scripts/skills-revoke-one.mjs",
     "skills:check": "node scripts/skills-check-revoked.mjs",
