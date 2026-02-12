@@ -28,6 +28,11 @@ jobs:
       - name: Fail if token missing
         run: |
           if [ -z "${BP_TOKEN}" ]; then
+            if [ "${GITHUB_REF_NAME}" != "${BRANCH}" ]; then
+              echo "::warning::Missing BRANCH_PROTECTION_TOKEN secret; skipping drift check on non-default branch (${GITHUB_REF_NAME})."
+              exit 0
+            fi
+
             echo "::error::Missing BRANCH_PROTECTION_TOKEN secret (needs Administration: Read)."
             exit 1
           fi
