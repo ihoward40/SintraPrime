@@ -9,67 +9,6 @@ permissions:
 
 jobs:
   guard-pair:
-    name: Guard solo.json <-> team.json symmetry
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout (full history for diffs)
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Detect changed files
-        id: changes
-        run: |
-          base="${{ github.event.pull_request.base.sha }}"
-          head="${{ github.event.pull_request.head.sha }}"
-
-          files=$(git diff --name-only "$base" "$head" || true)
-
-          solo_changed="false"
-          team_changed="false"
-
-          if echo "$files" | grep -Fxq ".github/branch-protection/solo.json"; then
-            solo_changed="true"
-          fi
-
-          if echo "$files" | grep -Fxq ".github/branch-protection/team.json"; then
-            team_changed="true"
-          fi
-
-          echo "solo_changed=$solo_changed" >> "$GITHUB_OUTPUT"
-          echo "team_changed=$team_changed" >> "$GITHUB_OUTPUT"
-
-          echo "Changed files:"
-          echo "$files" | sed 's/^/ - /'
-
-      - name: Enforce symmetry rule
-        run: |
-          solo="${{ steps.changes.outputs.solo_changed }}"
-          team="${{ steps.changes.outputs.team_changed }}"
-
-          # XOR: exactly one changed -> block
-          if [ "$solo" = "true" ] && [ "$team" != "true" ]; then
-            echo "::error::solo.json changed but team.json did NOT change."
-            echo "::error::Rule: branch-protection configs must be updated together (symmetry)."
-            exit 1
-          fi
-
-          if [ "$team" = "true" ] && [ "$solo" != "true" ]; then
-            echo "::error::team.json changed but solo.json did NOT change."
-            echo "::error::Rule: branch-protection configs must be updated together (symmetry)."
-            exit 1
-          fi
-
-          echo "OK: symmetry rule satisfied."
-
-      - name: Validate JSON (optional but smart)
-        run: |
-          jq -e . .github/branch-protection/solo.json >/dev/null
-          jq -e . .github/branch-protection/team.json >/dev/null
-          echo "OK: JSON valid."
-
-  guard-pair-new:
     name: Guard solo-team BP symmetry
     runs-on: ubuntu-latest
 
