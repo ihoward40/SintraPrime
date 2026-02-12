@@ -609,6 +609,53 @@ export function checkPolicyWithMeta(
       }
     }
 
+    // Browser operator (local automation) is deny-by-default for network targets.
+    // - Allows file:// for offline/local evidence capture.
+    // - http/https requires an explicit host allowlist AND explicit approval (/approve).
+    const isBrowserOperator =
+      step.adapter === "BrowserOperatorAdapter" || action === "browser.operator" || action.startsWith("browser.operator.");
+
+    if (isBrowserOperator) {
+      const readOnlyFlag = (step as any).read_only;
+      if (readOnlyFlag !== true) {
+        return withMeta(deny("BROWSER_OPERATOR_REQUIRES_READ_ONLY", "browser.operator requires read_only=true"));
+      }
+
+      if (url.protocol === "file:") {
+        // Allowed (offline/local).
+      } else if (url.protocol === "http:" || url.protocol === "https:") {
+        const allowedHosts = parseCsv(env.BROWSER_OPERATOR_ALLOWED_HOSTS);
+        if (!allowedHosts.length) {
+          return withMeta(
+            deny(
+              "BROWSER_OPERATOR_HOST_NOT_ALLOWED",
+              "BROWSER_OPERATOR_ALLOWED_HOSTS is not set (deny-by-default for browser operator network navigation)"
+            )
+          );
+        }
+        if (!allowedHosts.includes(url.hostname)) {
+          return withMeta(
+            deny("BROWSER_OPERATOR_HOST_NOT_ALLOWED", `host ${url.hostname} not allowlisted for browser operator`)
+          );
+        }
+
+        if (!approved) {
+          const destination = `${url.hostname}${url.pathname}`;
+          return withMeta(
+            requireApproval({
+              code: "BROWSER_OPERATOR_NETWORK_APPROVAL_REQUIRED",
+              reason: "Browser operator network navigation requires explicit approval",
+              action,
+              destination,
+              summary: `Navigate ${url.protocol}//${url.hostname}${url.pathname}`,
+            })
+          );
+        }
+      } else {
+        return withMeta(deny("BROWSER_OPERATOR_PROTOCOL_BLOCK", `protocol not allowed: ${url.protocol}`));
+      }
+    }
+
     // Browser L0 (read-only) is a separate evidence lane.
     // It is deny-by-default and requires an explicit host allowlist for http(s) URLs.
     const isBrowserL0Action = action === "browser.l0" || action.startsWith("browser.l0.");
@@ -758,7 +805,7 @@ export function checkPolicyWithMeta(
       }
     }
 
-    if (url.protocol !== "http:" && url.protocol !== "https:") {
+    if (url.protocol !== "http:" && url.protocol !== "https:" && !(isBrowserOperator && url.protocol === "file:")) {
       return withMeta(deny("POLICY_URL_PROTOCOL_BLOCK", `protocol not allowed: ${url.protocol}`));
     }
   }

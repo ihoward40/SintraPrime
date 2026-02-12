@@ -92,6 +92,43 @@
     }
   },
   {
+    "name": "browser-operator-file-happy",
+    "stage": "cli",
+    "command": "/browser operator ./fixtures/browser_operator/demo.html {\"actions\":[{\"type\":\"navigate\"},{\"type\":\"wait_for_selector\",\"selector\":\"#title\"},{\"type\":\"extract_text\",\"selector\":\"#status\",\"key\":\"status\"},{\"type\":\"screenshot\",\"name\":\"after\",\"full_page\":true}]}",
+    "env": {
+      "ALLOWED_DOMAINS": null,
+      "ALLOWED_METHODS": null,
+      "ENVIRONMENT": null,
+      "NODE_ENV": null,
+      "CONFIRM_PROD": null
+    },
+    "expect": { "status": "success" },
+    "post_assert": {
+      "artifact_dir": "runs/browser-operator",
+      "contains_keys": ["execution_id", "step_id", "url", "http_status", "outputs", "screenshots", "screenshots_count"],
+      "contains_subset": {
+        "step_id": "browser-operator",
+        "outputs": { "status": "ok" },
+        "screenshots_count": 1
+      }
+    }
+  },
+  {
+    "name": "browser-operator-network-requires-approval",
+    "stage": "cli",
+    "command": "/browser operator http://localhost:8787/status/200 {\"actions\":[{\"type\":\"navigate\"},{\"type\":\"screenshot\",\"name\":\"net\"}]}",
+    "env": {
+      "BROWSER_OPERATOR_ALLOWED_HOSTS": "localhost",
+      "ALLOWED_DOMAINS": null,
+      "ALLOWED_METHODS": null,
+      "ENVIRONMENT": null,
+      "NODE_ENV": null,
+      "CONFIRM_PROD": null
+    },
+    "expect_exit_code": 4,
+    "expect": { "kind": "ApprovalRequired", "code": "BROWSER_OPERATOR_NETWORK_APPROVAL_REQUIRED" }
+  },
+  {
     "name": "phases-happy-path",
     "stage": "cli",
     "command": "/intake ./docs",

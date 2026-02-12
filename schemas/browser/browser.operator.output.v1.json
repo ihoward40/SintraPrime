@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "browser.operator.output.v1",
+  "title": "SintraPrime Browser Operator Output (v1)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["status", "actions_executed", "artifact_json"],
+  "properties": {
+    "status": { "type": "string", "enum": ["success", "failed"] },
+    "actions_executed": { "type": "integer", "minimum": 0 },
+    "artifact_json": { "type": "string", "minLength": 1 },
+    "mode": { "type": "string", "enum": ["offline", "network"] },
+    "target": { "type": "string" },
+    "http": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "http_status": { "type": "integer", "minimum": 100, "maximum": 599 }
+      }
+    }
+  }
+}
