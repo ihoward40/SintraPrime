@@ -5,3 +5,16 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
+
+    labels:
+      - "dependencies"
+      - "ci"
+
+    groups:
+      github-actions-weekly:
+        patterns:
+          - "*"
+      github-actions-security:
+        applies-to: "security-updates"
+        patterns:
+          - "*"
