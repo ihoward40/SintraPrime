@@ -2,6 +2,7 @@ import type { SpeechSink } from "./types.js";
 import { consoleSink } from "./consoleSink.js";
 import { webhookSink } from "./webhookSink.js";
 import { osTtsSink } from "./osTtsSink.js";
+import { elevenLabsSink } from "./elevenLabsSink.js";
 
 function parseList(value: string | undefined): string[] {
   return String(value ?? "")
@@ -17,6 +18,7 @@ export function loadSpeechSinks(env: NodeJS.ProcessEnv = process.env): SpeechSin
     console: consoleSink,
     webhook: webhookSink,
     "os-tts": osTtsSink,
+    elevenlabs: elevenLabsSink,
   };
 
   const selected = (names.length ? names : ["console"])

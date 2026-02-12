@@ -5,7 +5,7 @@ on:
   pull_request:
 
 jobs:
-  smoke:
+  smoke-pr:
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -22,6 +22,24 @@ jobs:
       - name: Install
         run: npm ci
 
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-
+
+      - name: Install Playwright browsers (Chromium)
+        run: npx playwright install --with-deps chromium
+
+      - name: Required checks (AGENTS)
+        run: |
+          npm run -s typecheck
+          npm run -s validate:schemas
+
+      - name: Tests
+        run: npm test test/*.test.ts
       - name: DeepThink gates
         run: npm run -s ci:deepthink-gates
 

@@ -2,6 +2,8 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { parseDomainPrefix } from "../domains/parseDomainPrefix.js";
 import { startOperatorUiServer } from "../operator-ui/server.js";
+import { nowIso as fixedNowIso } from "../utils/clock.js";
+import { enforceCliCredits } from "../credits/enforceCliCredits.js";
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return !!v && typeof v === "object" && !Array.isArray(v);
@@ -217,6 +219,17 @@ function asOperatorQueue(json: unknown): any {
     const domainPrefix = parseDomainPrefix(raw);
     const command = domainPrefix?.inner_command ?? raw;
     const domain_id = domainPrefix?.domain_id ?? null;
+
+    {
+      const threadId = (process.env.THREAD_ID || "local_test_001").trim();
+      const now_iso = fixedNowIso();
+      const denied = enforceCliCredits({ now_iso, threadId, command: raw, domain_id });
+      if (denied) {
+        console.log(JSON.stringify(denied, null, 0));
+        process.exitCode = 1;
+        return;
+      }
+    }
 
     const parsed = parseOperatorUiCommand(command);
     if (!parsed) {

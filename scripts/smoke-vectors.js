@@ -12,6 +12,94 @@ const DEFAULT_LOCAL_MOCK_SECRET = "local_test_secret";
 const DEFAULT_LOCAL_MOCK_PORT_START = 8787;
 const DEFAULT_LOCAL_MOCK_PORT_TRIES = 20;
 
+const LOCAL_MOCK_PID_FILE = path.join(process.cwd(), "runs", "_smoke_vectors_mock_server.pid");
+
+function readPidFileSafe(filePath) {
+  try {
+    if (!fs.existsSync(filePath)) return null;
+    const raw = String(fs.readFileSync(filePath, "utf8") ?? "").trim();
+    const pid = Number(raw);
+    return Number.isFinite(pid) && pid > 0 ? pid : null;
+  } catch {
+    return null;
+  }
+}
+
+function isPidAlive(pid) {
+  if (!Number.isFinite(pid) || pid <= 0) return false;
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function tryKillPid(pid) {
+  if (!Number.isFinite(pid) || pid <= 0) return;
+  try {
+    process.kill(pid, "SIGTERM");
+  } catch {
+    // ignore
+  }
+
+  // Windows can be stubborn about SIGTERM; fall back to taskkill.
+  if (process.platform === "win32") {
+    try {
+      spawnSync("taskkill", ["/PID", String(pid), "/T", "/F"], {
+        stdio: "ignore",
+        windowsHide: true,
+      });
+    } catch {
+      // ignore
+    }
+  }
+}
+
+async function cleanupStaleLocalMockPidFile() {
+  const pid = readPidFileSafe(LOCAL_MOCK_PID_FILE);
+  if (pid && isPidAlive(pid)) {
+    tryKillPid(pid);
+    const deadline = Date.now() + 1500;
+    while (Date.now() < deadline && isPidAlive(pid)) {
+      await sleep(50);
+    }
+  }
+
+  try {
+    fs.rmSync(LOCAL_MOCK_PID_FILE, { force: true });
+  } catch {
+    // ignore
+  }
+}
+
+async function stopLocalMockServer(proc) {
+  if (!proc) return;
+  const pid = proc.pid;
+
+  try {
+    proc.kill();
+  } catch {
+    // ignore
+  }
+
+  if (pid && Number.isFinite(pid)) {
+    const deadline = Date.now() + 1500;
+    while (Date.now() < deadline && isPidAlive(pid)) {
+      await sleep(50);
+    }
+    if (isPidAlive(pid)) {
+      tryKillPid(pid);
+    }
+  }
+
+  try {
+    fs.rmSync(LOCAL_MOCK_PID_FILE, { force: true });
+  } catch {
+    // ignore
+  }
+}
+
 function getLocalMockBaseUrl() {
   const v = process.env.VALIDATION_WEBHOOK_URL;
   if (typeof v !== "string") return null;
@@ -74,6 +162,11 @@ async function startLocalMockServerIfNeeded() {
   // opting into remote URLs.
   if (process.env.SMOKE_VECTORS_USE_REMOTE === "1") return null;
 
+  // If a previous smoke-vectors run leaked a mock server process (common on Windows
+  // if a terminal is interrupted), clean it up so we can reliably bind to 8787 and
+  // avoid partial URL rewrite issues.
+  await cleanupStaleLocalMockPidFile();
+
   const secret = (process.env.WEBHOOK_SECRET || DEFAULT_LOCAL_MOCK_SECRET).trim();
   process.env.WEBHOOK_SECRET = secret;
 
@@ -99,6 +192,14 @@ async function startLocalMockServerIfNeeded() {
         process.env.VALIDATION_WEBHOOK_URL = `${baseUrl}/validation`;
         process.env.PLANNER_WEBHOOK_URL = `${baseUrl}/planner`;
         process.env.WEBHOOK_URL = `${baseUrl}/validation`;
+
+        try {
+          fs.mkdirSync(path.dirname(LOCAL_MOCK_PID_FILE), { recursive: true });
+          if (child.pid) fs.writeFileSync(LOCAL_MOCK_PID_FILE, String(child.pid));
+        } catch {
+          // ignore
+        }
+
         return child;
       }
       await sleep(50);
@@ -2258,9 +2359,5 @@ process.stdout.write(
 if (failed !== 0) process.exitCode = 1;
 
 if (mockServerProc) {
-  try {
-    mockServerProc.kill();
-  } catch {
-    // ignore
-  }
+  await stopLocalMockServer(mockServerProc);
 }

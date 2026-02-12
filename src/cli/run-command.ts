@@ -38,6 +38,7 @@ import { parseDomainPrefix } from "../domains/parseDomainPrefix.js";
 import { getOperatorId, operatorHasRole } from "../domains/domainRoles.js";
 import { runGovernor, isRunGovernorEnabled, deriveFingerprint, checkGovernor } from "../governor/runGovernor.js";
 import { nowIso as fixedNowIso } from "../utils/clock.js";
+import { enforceCliCredits } from "../credits/enforceCliCredits.js";
 import { updateProbationCounter } from "../requalification/updateProbationCounter.js";
 import { shouldDecayConfidence } from "../confidence/evaluateConfidenceDecay.js";
 import { readConfidence, updateConfidence } from "../confidence/updateConfidence.js";
@@ -663,6 +664,15 @@ async function run() {
   const domain_id = domainPrefix?.domain_id ?? null;
   const original_command = domainPrefix?.original_command ?? normalizedCommand;
   const command = domainPrefix?.inner_command ?? normalizedCommand;
+
+  {
+    const now_iso = fixedNowIso();
+    const denied = enforceCliCredits({ now_iso, threadId, command: original_command, domain_id });
+    if (denied) {
+      process.stdout.write(JSON.stringify(denied, null, 0));
+      process.exit(1);
+    }
+  }
 
   // Tier-S11: deterministic, local test hook for speech confidence gradient.
   // Usage: /speak confidence <0..1|0..100> <message...>

@@ -110,5 +110,41 @@ export interface Connector {
   name: string;
   type: string;
   authenticate(): Promise<void>;
-  call(method: string, args: any): Promise<any>;
+  call(method: string, endpointOrArgs: any, args?: any): Promise<any>;
+}
+
+/**
+ * Execution context for agent tasks
+ */
+export interface ExecutionContext {
+  userId?: string;
+  agentId?: string;
+  sessionId?: string;
+  environment?: 'production' | 'staging' | 'development';
+  [key: string]: any;
+}
+
+/**
+ * Task to be executed by an agent
+ */
+export interface Task {
+  id: string;
+  type: string;
+  description: string;
+  params?: any;
+  priority?: 'low' | 'medium' | 'high';
+}
+
+/**
+ * Result of a task execution
+ */
+export interface TaskResult {
+  success: boolean;
+  output?: any;
+  error?: string;
+  metadata?: {
+    duration?: number;
+    timestamp?: string;
+    [key: string]: any;
+  };
 }
