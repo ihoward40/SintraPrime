@@ -26,6 +26,11 @@
       "const": "1.1",
       "description": "Pinned schema version for bp_drift_summary.json exhibits."
     },
+    "schema_path": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Repo-relative path to the JSON Schema that validates this exhibit (non-identifying)."
+    },
     "generated_at": {
       "type": "string",
       "format": "date-time",
