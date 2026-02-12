@@ -3,6 +3,7 @@
   "$id": "https://example.invalid/schemas/bp_drift_summary.1.1.schema.json",
   "title": "Branch Protection Drift Summary",
   "description": "Machine-readable summary emitted by verify-branch-protection workflow. Captures expected vs actual required status-check contexts, drift, and token/permission booleans. schema_version is pinned for evidence packs.",
+  "$comment": "Schema upgrade discipline: bump schema_version only when required fields change or when the meaning/semantics of existing fields change. Adding optional fields (like extra non-sensitive diagnostics) should not require a schema_version bump.",
   "type": "object",
   "additionalProperties": false,
   "required": [

@@ -87,6 +87,7 @@ jobs:
             const extra = diff(actual, expected);
 
             const summary = {
+              // Schema upgrade discipline: bump only when required fields or semantics change.
               schema_version: "1.1",
               generated_at: new Date().toISOString(),
               token_checked_at: new Date().toISOString(),
