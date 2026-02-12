@@ -25,17 +25,139 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Gate on BRANCH_PROTECTION_TOKEN
+      - name: Generate branch protection drift summary JSON
+        id: bp_summary
+        shell: bash
+        env:
+          REPO: ${{ github.repository }}
+          BRANCH: ${{ github.event.repository.default_branch }}
+          BP_TOKEN: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
+        run: |
+          node <<'NODE'
+          const fs = require("fs");
+
+          const repo = process.env.REPO;
+          const branch = process.env.BRANCH || "master";
+          const token = process.env.BP_TOKEN || "";
+
+          const token_present = token.length > 0;
+
+          // Read expected contexts from solo.json
+          const soloPath = ".github/branch-protection/solo.json";
+          const solo = JSON.parse(fs.readFileSync(soloPath, "utf8"));
+          const expected = (solo.required_status_checks?.contexts || []).slice().sort();
+
+          async function fetchActualContexts() {
+            if (!token_present) {
+              return { ok: false, contexts: [], token_admin_read_ok: false };
+            }
+            const url = `https://api.github.com/repos/${repo}/branches/${branch}/protection/required_status_checks`;
+
+            const res = await fetch(url, {
+              headers: {
+                "Accept": "application/vnd.github+json",
+                "Authorization": `token ${token}`,
+                "User-Agent": "bp-drift-summary"
+              }
+            });
+
+            if (!res.ok) {
+              return { ok: false, contexts: [], token_admin_read_ok: false };
+            }
+
+            const data = await res.json();
+            const contexts = (data.contexts || []).slice().sort();
+            return { ok: true, contexts, token_admin_read_ok: true };
+          }
+
+          function diff(a, b) {
+            const bs = new Set(b);
+            return a.filter(x => !bs.has(x));
+          }
+
+          (async () => {
+            const actualRes = await fetchActualContexts();
+            const actual = actualRes.contexts;
+
+            const missing = diff(expected, actual);
+            const extra = diff(actual, expected);
+
+            const summary = {
+              schema_version: "bp_drift_summary.v1",
+              generated_at: new Date().toISOString(),
+              repo,
+              branch,
+              mode: "solo",
+              expected_contexts: expected,
+              actual_contexts: actual,
+              missing_contexts: missing,
+              extra_contexts: extra,
+              ok: actualRes.ok && missing.length === 0 && extra.length === 0,
+              token_present,
+              token_admin_read_ok: actualRes.token_admin_read_ok
+            };
+
+            fs.writeFileSync("bp_drift_summary.json", JSON.stringify(summary, null, 2));
+
+            const out = process.env.GITHUB_OUTPUT;
+            fs.appendFileSync(out, `ok=${summary.ok}\n`);
+            fs.appendFileSync(out, `token_present=${summary.token_present}\n`);
+            fs.appendFileSync(out, `token_admin_read_ok=${summary.token_admin_read_ok}\n`);
+          })().catch(err => {
+            const fallback = {
+              schema_version: "bp_drift_summary.v1",
+              generated_at: new Date().toISOString(),
+              repo,
+              branch,
+              mode: "solo",
+              expected_contexts: [],
+              actual_contexts: [],
+              missing_contexts: [],
+              extra_contexts: [],
+              ok: false,
+              token_present,
+              token_admin_read_ok: false
+            };
+            fs.writeFileSync("bp_drift_summary.json", JSON.stringify(fallback, null, 2));
+            const out = process.env.GITHUB_OUTPUT;
+            fs.appendFileSync(out, `ok=false\n`);
+            fs.appendFileSync(out, `token_present=${token_present}\n`);
+            fs.appendFileSync(out, `token_admin_read_ok=false\n`);
+            process.exitCode = 0;
+          });
+          NODE
+
+      - name: Upload drift summary artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bp-drift-summary
+          path: bp_drift_summary.json
+          retention-days: 14
+
+      - name: Gate on branch protection drift (master must be strict)
         id: gate
         run: |
-          if [ -z "${BP_TOKEN}" ]; then
-            if [ "${GITHUB_REF_NAME}" != "${BRANCH}" ]; then
+          if [ "${GITHUB_REF_NAME}" != "${BRANCH}" ]; then
+            if [ -z "${BP_TOKEN}" ]; then
               echo "::warning::Missing BRANCH_PROTECTION_TOKEN secret; skipping drift check on non-default branch (${GITHUB_REF_NAME})."
               echo "skip=true" >> "$GITHUB_OUTPUT"
               exit 0
             fi
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
 
-            echo "::error::Missing BRANCH_PROTECTION_TOKEN secret (needs Administration: Read)."
+          if [ "${{ steps.bp_summary.outputs.token_present }}" != "true" ]; then
+            echo "::error::Missing BRANCH_PROTECTION_TOKEN secret"
+            exit 1
+          fi
+          if [ "${{ steps.bp_summary.outputs.token_admin_read_ok }}" != "true" ]; then
+            echo "::error::BRANCH_PROTECTION_TOKEN lacks Administration: Read (or not scoped correctly)"
+            exit 1
+          fi
+          if [ "${{ steps.bp_summary.outputs.ok }}" != "true" ]; then
+            echo "::error::Branch protection drift detected (see bp-drift-summary artifact)"
             exit 1
           fi
 
