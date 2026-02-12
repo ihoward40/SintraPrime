@@ -2,7 +2,9 @@ import type { CaseRecord, RunRecord, CaseCategory, ExposureBand } from './types.
 
 export class CaseManager {
   generateCaseId(): string {
-    const date = (new Date().toISOString().split('T')[0] ?? '').replace(/-/g, '');
+    const iso = new Date().toISOString();
+    const datePart = iso.split('T')[0] ?? iso;
+    const date = datePart.replace(/-/g, '');
     const random = Math.random().toString(36).substring(2, 8).toUpperCase();
     return `CASE-${date}-${random}`;
   }
