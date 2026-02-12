@@ -139,11 +139,19 @@ jobs:
         if: always()
         shell: bash
         run: |
+          if [ -f ".github/branch-protection/bp_drift_summary.schema.json" ]; then
+            SCHEMA_PATH=".github/branch-protection/bp_drift_summary.schema.json"
+          elif [ -f "bp_drift_summary.schema.json" ]; then
+            SCHEMA_PATH="bp_drift_summary.schema.json"
+          else
+            SCHEMA_PATH="(schema not found in repo)"
+          fi
+
           {
             echo "## Branch protection drift evidence"
             echo
             echo "- Uploaded artifact: \`bp-drift-summary\` → contains \`bp_drift_summary.json\`"
-            echo "- Schema: \`.github/branch-protection/bp_drift_summary.schema.json\`"
+            echo "- Schema: \`$SCHEMA_PATH\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Gate on branch protection drift (master must be strict)
