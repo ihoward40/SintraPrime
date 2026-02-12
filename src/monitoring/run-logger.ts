@@ -11,7 +11,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
-import type { RunRecord } from "./types.js";
+import type { RunRecordLegacy as RunRecord } from "./types.js";
 
 /**
  * Log a run to the audit trail and optionally to Notion

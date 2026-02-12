@@ -18,7 +18,7 @@ import { createCase } from "../monitoring/case-manager.js";
 import { formatAlert, sendSlackAlert } from "../monitoring/slack-alert-formatter.js";
 import { generateWeeklyReport } from "../monitoring/credit-aggregator.js";
 import { updateAllBaselines, getBaseline } from "../monitoring/baseline-calculator.js";
-import type { RunRecord, PolicyConfig, JobType, RunStatus } from "../monitoring/types.js";
+import type { RunRecordLegacy as RunRecord, PolicyConfig, JobType, RunStatus } from "../monitoring/types.js";
 import { JobType as JobTypeEnum, RunStatus as RunStatusEnum, SeverityLevel, MisconfigLikelihood } from "../monitoring/types.js";
 
 // Load policy configuration
@@ -45,6 +45,55 @@ function parseArgs(): { command: string; args: Record<string, string> } {
   }
   
   return { command, args: parsedArgs };
+}
+
+function normalizeRunRecord(raw: any): RunRecord {
+  if (raw && typeof raw === "object" && typeof raw.Run_ID === "string") {
+    return raw as RunRecord;
+  }
+
+  const nowIso = new Date().toISOString();
+  const baseline =
+    (typeof raw?.Baseline_Expected_Credits === "number" && raw.Baseline_Expected_Credits) ||
+    (typeof raw?.baseline_expected_credits === "number" && raw.baseline_expected_credits) ||
+    0;
+
+  return {
+    Run_ID: String(raw?.run_id ?? raw?.Run_ID ?? "UNKNOWN"),
+    Timestamp: String(raw?.timestamp ?? raw?.Timestamp ?? nowIso),
+    Scenario_Name: String(
+      raw?.scenario_name ??
+        raw?.Scenario_Name ??
+        raw?.scenario_id ??
+        raw?.Scenario_ID ??
+        "UNKNOWN"
+    ),
+    Scenario_ID: raw?.scenario_id ?? raw?.Scenario_ID,
+    Job_Type: (raw?.job_type ?? raw?.Job_Type ?? JobTypeEnum.OTHER) as JobType,
+    Status: (raw?.status ?? raw?.Status ?? RunStatusEnum.Success) as RunStatus,
+    Credits_Total: Number(raw?.credits_total ?? raw?.Credits_Total ?? 0),
+    Credits_In: raw?.credits_in ?? raw?.Credits_In,
+    Credits_Out: raw?.credits_out ?? raw?.Credits_Out,
+    Model: raw?.model ?? raw?.Model,
+    Input_Tokens: raw?.input_tokens ?? raw?.Input_Tokens,
+    Output_Tokens: raw?.output_tokens ?? raw?.Output_Tokens,
+    Artifacts_Link: raw?.artifacts_link ?? raw?.Artifacts_Link,
+    Severity: (raw?.severity ?? raw?.Severity ?? SeverityLevel.SEV4) as any,
+    Risk_Flags: raw?.risk_flags ?? raw?.Risk_Flags,
+    Risk_Summary: raw?.risk_summary ?? raw?.Risk_Summary,
+    Misconfig_Likelihood: (raw?.misconfig_likelihood ?? raw?.Misconfig_Likelihood ?? MisconfigLikelihood.Low) as any,
+    Baseline_Expected_Credits: baseline,
+    Variance_Multiplier: Number(raw?.variance_multiplier ?? raw?.Variance_Multiplier ?? 0),
+
+    retry_count: raw?.retry_count,
+    has_max_items_config: raw?.has_max_items_config,
+    has_idempotency_key: raw?.has_idempotency_key,
+    prompt_version: raw?.prompt_version,
+    deployment_timestamp: raw?.deployment_timestamp,
+    is_batch_job: raw?.is_batch_job,
+    is_backfill: raw?.is_backfill,
+    input_item_count: raw?.input_item_count,
+  };
 }
 
 // Command: log
@@ -110,14 +159,15 @@ async function cmdLog(args: Record<string, string>): Promise<void> {
     console.log(`  Case ID: ${caseRecord.Case_ID}`);
 
     // Send Slack alert
-    if (process.env.SLACK_WEBHOOK_URL_DEFAULT) {
+    const defaultWebhook = process.env.SLACK_WEBHOOK_URL_DEFAULT;
+    if (defaultWebhook) {
       const alert = formatAlert(
         runRecord,
         classification,
         caseRecord.notion_url || "https://notion.so",
         `https://notion.so/run-${runId}`
       );
-      await sendSlackAlert(alert, process.env.SLACK_WEBHOOK_URL_DEFAULT);
+      await sendSlackAlert(alert, defaultWebhook);
       console.log(`  Slack alert sent`);
     }
   }
@@ -148,7 +198,7 @@ async function cmdClassify(args: Record<string, string>): Promise<void> {
 
   // Load fixture
   const content = fs.readFileSync(fixturePath, "utf-8");
-  const runRecord = JSON.parse(content) as RunRecord;
+  const runRecord = normalizeRunRecord(JSON.parse(content));
 
   // Get baseline
   const baseline = runRecord.Baseline_Expected_Credits || 0;
