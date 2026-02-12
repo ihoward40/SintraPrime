@@ -7,7 +7,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { generateAnalysisReport, summarizeDeepThinkOutput, isAIAvailable } from '../ai/client';
+import { generateAnalysisReport, summarizeDeepThinkOutput, isAIAvailable } from '../ai/client.js';
 
 async function main() {
   const args = process.argv.slice(2);
