@@ -47,7 +47,7 @@ jobs:
           echo '[${{ fromJSON(fromJSON(inputs.client_payload)).repo }}#${{ fromJSON(fromJSON(inputs.client_payload)).prContext.number }}](${{ fromJSON(fromJSON(inputs.client_payload)).prContext.url }}) - `${{ fromJSON(fromJSON(inputs.client_payload)).branch }}` by ${{ fromJSON(fromJSON(inputs.client_payload)).prContext.author }}' >> $GITHUB_STEP_SUMMARY
 
       - name: gitStream repo agent
-        uses: linear-b/gitstream-github-action@2.0.221
+        uses: linear-b/gitstream-github-action@d5311d4fa5af97c02416d6a2a4a7bdf06dfca314 # 2.0.221
         id: rules-engine
         with:
           full_repository: ${{ github.event.inputs.full_repository }}

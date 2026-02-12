@@ -19,6 +19,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Augment PR review
-        uses: augmentcode/review-pr@v0
+        uses: augmentcode/review-pr@e24b40c86b325aecbbf8085e34270745589aaadc # v0
         env:
           AUGMENT_SESSION_AUTH: ${{ secrets.AUGMENT_SESSION_AUTH }}
