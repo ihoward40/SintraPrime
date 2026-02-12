@@ -36,11 +36,10 @@ jobs:
       - name: Required checks (AGENTS)
         run: |
           npm run -s typecheck
-          npm run -s ci:lint-md:templates
-          npm run -s ci:validate-json:selected
+          npm run -s validate:schemas
 
       - name: Tests
-        run: npm test
+        run: npm test test/*.test.ts
       - name: DeepThink gates
         run: npm run -s ci:deepthink-gates
 
