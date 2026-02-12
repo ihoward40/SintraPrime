@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/schemas/bp_drift_summary.v1.schema.json",
+  "title": "Branch Protection Drift Summary",
+  "description": "Machine-readable summary emitted by verify-branch-protection workflow. Captures expected vs actual required status-check contexts, drift, and token/permission booleans.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "generated_at",
+    "repo",
+    "branch",
+    "mode",
+    "expected_contexts",
+    "actual_contexts",
+    "missing_contexts",
+    "extra_contexts",
+    "ok",
+    "token_present",
+    "token_admin_read_ok"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "bp_drift_summary.v1"
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO-8601 timestamp (UTC recommended)."
+    },
+    "repo": {
+      "type": "string",
+      "minLength": 3,
+      "pattern": "^[^/]+/[^/]+$",
+      "description": "owner/repo"
+    },
+    "branch": {
+      "type": "string",
+      "minLength": 1
+    },
+    "mode": {
+      "type": "string",
+      "enum": ["solo", "team"],
+      "description": "Which policy profile was used to define expected contexts."
+    },
+    "expected_contexts": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true,
+      "description": "Required status-check contexts as defined by policy-as-code."
+    },
+    "actual_contexts": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true,
+      "description": "Required status-check contexts fetched from live branch protection. Empty when token is missing or cannot read."
+    },
+    "missing_contexts": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true,
+      "description": "expected_contexts entries not present in actual_contexts."
+    },
+    "extra_contexts": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true,
+      "description": "actual_contexts entries not present in expected_contexts."
+    },
+    "ok": {
+      "type": "boolean",
+      "description": "True iff token_admin_read_ok is true and missing_contexts/extra_contexts are both empty."
+    },
+    "token_present": {
+      "type": "boolean",
+      "description": "True iff BRANCH_PROTECTION_TOKEN was present in the workflow environment."
+    },
+    "token_admin_read_ok": {
+      "type": "boolean",
+      "description": "True iff token allowed reading branch protection required_status_checks (Administration: Read)."
+    }
+  }
+}
