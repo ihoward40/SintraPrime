@@ -3,23 +3,24 @@
     {
       "name": "validation-agent",
       "version": "1.2.0",
-      "capabilities": ["command.validate"]
+      "capabilities": ["command.validate", "skills:learn"]
     },
     {
       "name": "planner-agent",
       "version": "1.1.3",
-      "capabilities": ["plan.generate"]
+      "capabilities": ["plan.generate", "skills:learn"]
     },
     {
       "name": "document-intake-agent",
       "version": "1.0.0",
-      "capabilities": ["intake.scan"]
+      "capabilities": ["intake.scan", "skills:learn"]
     },
     {
       "name": "tax-agent",
       "version": "1.0.0",
       "capabilities": [
-        "tax.analyze"
+        "tax.analyze",
+        "skills:learn"
       ]
     },
     {
@@ -27,7 +28,8 @@
       "version": "1.0.0",
       "capabilities": [
         "notion.read.database",
-        "notion.read.page"
+        "notion.read.page",
+        "skills:learn"
       ]
     },
     {
@@ -35,7 +37,8 @@
       "version": "1.0.0",
       "capabilities": [
         "notion.write.page_property",
-        "notion.write.page_title"
+        "notion.write.page_title",
+        "skills:learn"
       ]
     },
     {
@@ -45,7 +48,8 @@
         "browser:l0",
         "browser.l0.navigate",
         "browser.l0.screenshot",
-        "browser.l0.dom_extract"
+        "browser.l0.dom_extract",
+        "skills:learn"
       ]
     }
   ]

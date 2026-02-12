@@ -10,6 +10,7 @@ import { writeDocsCaptureArtifact } from "../artifacts/writeDocsCaptureArtifact.
 import { getIdempotencyRecord, writeIdempotencyRecord } from "../idempotency/idempotencyLedger.js";
 import { browserL0DomExtract, browserL0Navigate, browserL0Screenshot } from "../browserOperator/l0.js";
 import { evidenceRollupSha256 } from "../receipts/evidenceRollup.js";
+import { skillsLearnV1 } from "../skills/learnSkill.js";
 
 type RunStatus =
   | "running"
@@ -339,6 +340,14 @@ async function executeBrowserL0Step(step: ExecutionStep, timeoutMs: number, exec
   throw new Error(`Unknown browser.l0 action: ${action}`);
 }
 
+async function executeSkillsLearnStep(step: ExecutionStep, execution_id: string) {
+  const payload = (step as any).payload;
+  if (!payload || typeof payload !== "object") {
+    throw new Error("skills.learn.v1 requires payload object");
+  }
+  return await skillsLearnV1({ execution_id, step_id: step.step_id, payload });
+}
+
 export async function executePlan(rawPlan: unknown, opts: ExecutePlanOptions = {}): Promise<ExecutionRunLog> {
   const plan = ExecutionPlanSchema.parse(rawPlan);
   const nowIso = () => new Date().toISOString();
@@ -524,6 +533,8 @@ export async function executePlan(rawPlan: unknown, opts: ExecutePlanOptions = {
                   ? await executeDocsCaptureStep(step, timeoutMs, plan.execution_id)
                 : step.action === "browser.l0.navigate" || step.action === "browser.l0.screenshot" || step.action === "browser.l0.dom_extract"
                   ? await executeBrowserL0Step(step, timeoutMs, plan.execution_id)
+                : step.action === "skills.learn.v1"
+                  ? await executeSkillsLearnStep(step, plan.execution_id)
                 : await executeStep(step, timeoutMs);
           stepLog.http_status = out.status;
           stepLog.response = normalizeEvidenceOnReceiptResponse(out.response);

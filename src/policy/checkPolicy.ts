@@ -660,6 +660,78 @@ export function checkPolicyWithMeta(
       }
     }
 
+    // Skills Learn (v1) is a patch-only scaffolding lane.
+    // It must be read-only and is safe-by-default: patch generation only.
+    const isSkillsLearnAction = action === "skills.learn.v1" || action.startsWith("skills.learn.");
+    if (isSkillsLearnAction) {
+      const method = String(step.method || "GET").toUpperCase();
+      const readOnlyFlag = (step as any).read_only;
+
+      if (readOnlyFlag !== true) {
+        return withMeta(deny("SKILLS_LEARN_REQUIRES_READ_ONLY", "skills.learn.v1 requires read_only=true"));
+      }
+
+      if (method !== "GET" && method !== "HEAD") {
+        return withMeta(deny("SKILLS_LEARN_METHOD_NOT_ALLOWED", "skills.learn.v1 only allows GET/HEAD"));
+      }
+
+      const requiredCaps = Array.isArray((plan as any).required_capabilities)
+        ? (plan as any).required_capabilities.filter((c: any) => typeof c === "string")
+        : [];
+      if (!requiredCaps.includes("skills:learn")) {
+        return withMeta(
+          deny(
+            "SKILLS_LEARN_CAPABILITY_REQUIRED",
+            "skills.learn.v1 requires capability skills:learn in plan.required_capabilities"
+          )
+        );
+      }
+
+      const payload = (step as any).payload;
+      const mode = payload && typeof payload === "object" ? String((payload as any).output_mode ?? "patch_only") : "patch_only";
+
+      if (mode === "apply_patch") {
+        if (!approved) {
+          return withMeta(
+            requireApproval({
+              code: "SKILLS_LEARN_APPLY_PATCH_APPROVAL_REQUIRED",
+              reason: "skills.learn.v1 apply_patch mode requires explicit approval",
+              action,
+              destination: "LocalRepo",
+              summary: "Apply skill patch to repository",
+            })
+          );
+        }
+      } else if (mode !== "patch_only") {
+        return withMeta(deny("SKILLS_LEARN_MODE_NOT_ALLOWED", `skills.learn.v1 output_mode not allowed: ${mode}`));
+      }
+
+      const skillName = payload && typeof payload === "object" ? String((payload as any).skill_name ?? "") : "";
+      const description = payload && typeof payload === "object" ? String((payload as any).description ?? "") : "";
+      if (!skillName.trim()) {
+        return withMeta(deny("SKILLS_LEARN_SKILL_NAME_REQUIRED", "skills.learn.v1 requires payload.skill_name"));
+      }
+      if (!description.trim()) {
+        return withMeta(deny("SKILLS_LEARN_DESCRIPTION_REQUIRED", "skills.learn.v1 requires payload.description"));
+      }
+      if (skillName.length > 120) {
+        return withMeta(deny("SKILLS_LEARN_SKILL_NAME_TOO_LONG", "skills.learn.v1 payload.skill_name too long"));
+      }
+      if (description.length > 4000) {
+        return withMeta(deny("SKILLS_LEARN_DESCRIPTION_TOO_LONG", "skills.learn.v1 payload.description too long"));
+      }
+
+      const toolsRequested = payload && typeof payload === "object" ? (payload as any).tools_requested : null;
+      if (toolsRequested !== null && toolsRequested !== undefined) {
+        if (!Array.isArray(toolsRequested)) {
+          return withMeta(deny("SKILLS_LEARN_TOOLS_INVALID", "skills.learn.v1 payload.tools_requested must be string[]"));
+        }
+        if (toolsRequested.length > 50) {
+          return withMeta(deny("SKILLS_LEARN_TOOLS_TOO_MANY", "skills.learn.v1 payload.tools_requested too many"));
+        }
+      }
+    }
+
     // Tier 6.x: Notion has explicit read vs write lanes.
     // - Read is deny-only (Tier 6.0 contract)
     // - Write is approval-scoped (Tier 6.1), never auto-exec
