@@ -1,10 +1,10 @@
 name: Verify Branch Protection (solo mode)
 
-"on":
+on:
   push:
     paths:
-      - ".github/branch-protection/**"
-      - ".github/workflows/verify-branch-protection.yml"
+      - .github/branch-protection/**
+      - .github/workflows/verify-branch-protection.yml
   schedule:
     - cron: "17 5 * * *"
   workflow_dispatch: {}
@@ -54,15 +54,15 @@ jobs:
             -H "Authorization: Bearer ${BP_TOKEN}" \
             -H "Accept: application/vnd.github+json" \
             "https://api.github.com/repos/${OWNER}/${REPO}/branches/${BRANCH}/protection" \
-            | jq '{
-                strict: .required_status_checks.strict,
-                contexts: (.required_status_checks.contexts | sort),
-                enforce_admins: (.enforce_admins.enabled // .enforce_admins),
-                review_count: .required_pull_request_reviews.required_approving_review_count,
-                code_owner: .required_pull_request_reviews.require_code_owner_reviews,
-                last_push_approval: .required_pull_request_reviews.require_last_push_approval,
-                conversation_resolution: (.required_conversation_resolution.enabled // .required_conversation_resolution)
-              }' | jq -S . > actual.normalized.json
+          | jq '{
+              strict: .required_status_checks.strict,
+              contexts: (.required_status_checks.contexts | sort),
+              enforce_admins: (.enforce_admins.enabled // .enforce_admins),
+              review_count: .required_pull_request_reviews.required_approving_review_count,
+              code_owner: .required_pull_request_reviews.require_code_owner_reviews,
+              last_push_approval: .required_pull_request_reviews.require_last_push_approval,
+              conversation_resolution: (.required_conversation_resolution.enabled // .required_conversation_resolution)
+            }' | jq -S . > actual.normalized.json
 
           echo "ACTUAL:"
           cat actual.normalized.json
@@ -81,13 +81,13 @@ jobs:
             -H "Authorization: Bearer ${BP_TOKEN}" \
             -H "Accept: application/vnd.github+json" \
             "https://api.github.com/repos/${OWNER}/${REPO}/commits/${BRANCH}" \
-            | jq -r .sha)
+          | jq -r .sha)
 
           checks=$(curl -sS \
             -H "Authorization: Bearer ${BP_TOKEN}" \
             -H "Accept: application/vnd.github+json" \
             "https://api.github.com/repos/${OWNER}/${REPO}/commits/${sha}/check-runs" \
-            | jq -r '.check_runs[].name' | sort -u || true)
+          | jq -r '.check_runs[].name' | sort -u || true)
 
           if [ -z "$checks" ]; then
             echo "No check-runs found on latest commit; skipping context existence check."
@@ -97,12 +97,8 @@ jobs:
           echo "Check runs on latest commit:"
           echo "$checks"
 
-          missing=0
           for ctx in $(jq -r '.contexts[]' expected.normalized.json); do
             if ! echo "$checks" | grep -Fxq "$ctx"; then
               echo "::warning::Required context missing from latest commit: $ctx"
-              missing=1
             fi
           done
-
-          exit 0
