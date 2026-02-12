@@ -4,15 +4,14 @@
  * Provides AI-powered analysis and report generation for governance operations
  */
 
-import { OpenAI } from 'openai';
+// Stub OpenAI type for when package is not installed
+type OpenAIClient = any;
 
-export const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-  baseURL: process.env.OPENAI_API_BASE,
-});
+// OpenAI client instance (requires 'openai' package to be installed)
+export const openai: OpenAIClient = null;
 
 export function isAIAvailable(): boolean {
-  return !!process.env.OPENAI_API_KEY;
+  return !!process.env.OPENAI_API_KEY && openai !== null;
 }
 
 /**
@@ -22,6 +21,10 @@ export async function generateAnalysisReport(
   analysisData: any,
   options: { format?: 'markdown' | 'text' } = {}
 ): Promise<string> {
+  if (!isAIAvailable()) {
+    throw new Error('OpenAI client is not available. Set OPENAI_API_KEY environment variable and install the openai package.');
+  }
+
   const { format = 'markdown' } = options;
 
   const prompt = `Generate a comprehensive governance analysis report based on the following data:
@@ -51,6 +54,10 @@ Be professional, concise, and actionable.`;
  * Generate natural language summary of DeepThink output
  */
 export async function summarizeDeepThinkOutput(output: any): Promise<string> {
+  if (!isAIAvailable()) {
+    throw new Error('OpenAI client is not available. Set OPENAI_API_KEY environment variable and install the openai package.');
+  }
+
   const prompt = `Summarize the following analysis output in clear, non-technical language:
 
 ${JSON.stringify(output, null, 2)}

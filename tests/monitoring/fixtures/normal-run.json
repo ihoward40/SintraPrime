@@ -1,0 +1,22 @@
+{
+  "Run_ID": "RUN-TEST-NORMAL-001",
+  "Timestamp": "2026-01-23T08:30:00Z",
+  "Scenario_Name": "Document Analysis Standard",
+  "Scenario_ID": "DOC_ANALYSIS_v1",
+  "Job_Type": "ANALYSIS",
+  "Status": "Success",
+  "Credits_Total": 155,
+  "Credits_In": 105,
+  "Credits_Out": 50,
+  "Model": "gpt-4",
+  "Input_Tokens": 12500,
+  "Output_Tokens": 3500,
+  "Artifacts_Link": "https://drive.google.com/artifacts/test-005",
+  "Severity": "SEV4",
+  "Misconfig_Likelihood": "Low",
+  "Baseline_Expected_Credits": 150,
+  "Variance_Multiplier": 0,
+  "retry_count": 0,
+  "has_max_items_config": true,
+  "has_idempotency_key": true
+}

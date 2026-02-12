@@ -150,7 +150,7 @@ ${updates.join('\n')}
    * MODULE 4: Product Factory
    */
   async generateProductSpec(productName: string): Promise<any> {
-    const products = {
+    const products: Record<string, any> = {
       'Premium Status Correction System': {
         audience: 'Individuals with credit reporting errors',
         promise: 'Complete system for correcting credit status with Metro 2 compliance',
@@ -360,7 +360,7 @@ ${updates.join('\n')}
     const now = new Date();
     const quarter = Math.floor(now.getMonth() / 3);
     const nextQuarter = new Date(now.getFullYear(), (quarter + 1) * 3, 0);
-    return nextQuarter.toISOString().split('T')[0];
+    return nextQuarter.toISOString().split('T')[0] ?? '';
   }
 
   private getContentTopic(day: number): string {
@@ -373,7 +373,7 @@ ${updates.join('\n')}
       'Product spotlight',
       'Q&A response'
     ];
-    return topics[day % topics.length];
+    return topics[day % topics.length] ?? 'General topic';
   }
 
   private generateTimingMap(lyrics: string, bpm: number): any[] {

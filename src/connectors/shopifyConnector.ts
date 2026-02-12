@@ -130,7 +130,7 @@ export class ShopifyConnector implements Connector {
     const remaining = response.headers.get('X-Shopify-Shop-Api-Call-Limit');
     if (remaining) {
       const [used, total] = remaining.split('/').map(Number);
-      this.rateLimitRemaining = total - used;
+      this.rateLimitRemaining = (total ?? 0) - (used ?? 0);
       this.rateLimitResetTime = Date.now() + 1000; // Reset after 1 second
     }
   }
