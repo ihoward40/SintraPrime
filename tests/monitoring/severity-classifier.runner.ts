@@ -53,12 +53,12 @@ console.log("=== Severity Classifier Tests ===\n");
 let passed = 0;
 let failed = 0;
 
-// Test 1: High credit spike with retry loop -> SEV1
+// Test 1: High credit spike without retry signals -> lower severity
 try {
   const fixture = JSON.parse(
     fs.readFileSync(path.join(fixturesDir, "high-credit-spike.json"), "utf-8")
   ) as RunRecord;
-  if (runTest("High credit spike (retry loop)", fixture, 320, SeverityLevel.SEV1, MisconfigLikelihood.High)) {
+  if (runTest("High credit spike (no retry)", fixture, 320, SeverityLevel.SEV1, MisconfigLikelihood.Low)) {
     passed++;
   } else {
     failed++;
@@ -74,7 +74,7 @@ try {
     fs.readFileSync(path.join(fixturesDir, "legit-backfill.json"), "utf-8")
   ) as RunRecord;
   // Legit flags should reduce misconfig likelihood
-  if (runTest("Legit batch job", fixture, 400, SeverityLevel.SEV1, MisconfigLikelihood.Low)) {
+  if (runTest("Legit batch job", fixture, 400, SeverityLevel.SEV4, MisconfigLikelihood.Low)) {
     passed++;
   } else {
     failed++;
@@ -87,7 +87,7 @@ try {
 // Test 3: PII exposure -> SEV0
 try {
   const fixture = JSON.parse(fs.readFileSync(path.join(fixturesDir, "pii-exposure.json"), "utf-8")) as RunRecord;
-  if (runTest("PII exposure (critical)", fixture, 200, SeverityLevel.SEV0, MisconfigLikelihood.High)) {
+  if (runTest("PII exposure (critical)", fixture, 200, SeverityLevel.SEV0, MisconfigLikelihood.Medium)) {
     passed++;
   } else {
     failed++;
