@@ -3,7 +3,7 @@
 // Usage:
 //   set ELEVEN_API_KEY=...            (PowerShell: $env:ELEVEN_API_KEY='...')
 //   set ELEVEN_VOICE_DEFAULT=...      (optional; will prompt/list voices if missing)
-//   node test-elevenlabs-complete.mjs
+//   node scripts/diag-elevenlabs-complete.mjs
 //
 // This script:
 // 1) Verifies API connectivity
