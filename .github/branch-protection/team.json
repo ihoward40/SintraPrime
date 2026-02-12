@@ -1,7 +1,7 @@
 {
   "required_status_checks": {
     "strict": true,
-    "contexts": ["smoke-pr", "wiring-scope", "Guard solo.json <-> team.json symmetry"]
+    "contexts": ["smoke-pr", "wiring-scope", "Guard solo.json <-> team.json symmetry", "Guard solo-team BP symmetry"]
   },
   "enforce_admins": true,
   "required_pull_request_reviews": {
