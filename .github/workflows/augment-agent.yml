@@ -1,0 +1,65 @@
+name: Augment Agent
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+    inputs:
+      pull_number:
+        description: "PR number to review"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: augment-agent-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve PR number
+        id: pr
+        shell: bash
+        run: |
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          if [ -z "$PR_NUMBER" ]; then
+            PR_NUMBER="${{ github.event.inputs.pull_number }}"
+          fi
+          echo "number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
+
+      - name: Gate on AUGMENT_SESSION_AUTH
+        id: gate
+        shell: bash
+        env:
+          AUGMENT_SESSION_AUTH: ${{ secrets.AUGMENT_SESSION_AUTH }}
+        run: |
+          if [ -z "$AUGMENT_SESSION_AUTH" ]; then
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "AUGMENT_SESSION_AUTH not set; skipping Augment review (job passes)." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          echo "enabled=true" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout (for context)
+        if: steps.gate.outputs.enabled == 'true'
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Augment Agent
+        if: steps.gate.outputs.enabled == 'true'
+        uses: augmentcode/review-pr@v0
+        with:
+          augment_session_auth: ${{ secrets.AUGMENT_SESSION_AUTH }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          pull_number: ${{ steps.pr.outputs.number }}
+          repo_name: ${{ github.repository }}
+          custom_guidelines: |
+            - Prioritize TypeScript correctness (noUncheckedIndexedAccess-safe patterns).
+            - Flag any workflow/branch-protection changes that could deadlock required checks.
+            - Prefer smallest-possible diffs and deterministic behavior.

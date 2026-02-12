@@ -1,0 +1,26 @@
+# -*- mode: yaml -*-
+manifest:
+  version: 1.0
+
+automations:
+  pr_policy_low_noise:
+    on: [pr_created, commit]
+    if:
+      - {{ not pr.draft }}
+    run:
+      - action: describe-changes@v1
+        args:
+          concat_mode: append
+
+      - action: add-label@v1
+        args:
+          label: "{{ branch | estimatedReviewTime }} min review"
+
+      - action: add-comment@v1
+        args:
+          comment: |
+            ## gitStream Summary — Low Noise
+
+            **AI PR Description:** updated in PR body.
+            **ETR:** {{ branch | estimatedReviewTime }} min review
+            **Unresolved threads:** {{ pr.unresolved_threads | default(value=0) }}
