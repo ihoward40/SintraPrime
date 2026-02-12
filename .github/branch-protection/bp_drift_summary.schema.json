@@ -37,6 +37,11 @@
       "minLength": 1,
       "description": "SHA-pinned URL to the JSON Schema for this exhibit (built from GITHUB_SERVER_URL/GITHUB_SHA; non-identifying)."
     },
+    "schema_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$",
+      "description": "SHA-256 hex digest of the schema file contents at schema_path (non-identifying, tamper-evident metadata)."
+    },
     "generated_at": {
       "type": "string",
       "format": "date-time",

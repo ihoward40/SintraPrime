@@ -34,6 +34,7 @@ jobs:
           BP_TOKEN: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
         run: |
           node <<'NODE'
+          const crypto = require("crypto");
           const fs = require("fs");
 
           const repo = process.env.REPO;
@@ -42,6 +43,33 @@ jobs:
           const githubApiUrl = process.env.GITHUB_API_URL || "https://api.github.com";
           const githubServerUrl = process.env.GITHUB_SERVER_URL || "https://github.com";
           const githubSha = process.env.GITHUB_SHA || "";
+
+          const schemaPath = ".github/branch-protection/bp_drift_summary.schema.json";
+          const rawBase = (() => {
+            try {
+              const host = new URL(githubServerUrl).hostname;
+              if (host === "github.com") return "https://raw.githubusercontent.com";
+            } catch (_) {}
+            return githubServerUrl;
+          })();
+
+          const schemaUrl = (() => {
+            if (!githubSha) return undefined;
+            // Prefer raw-content host (not web UI); fall back to GHES-compatible /raw/ path.
+            if (rawBase === "https://raw.githubusercontent.com") {
+              return `${rawBase}/${repo}/${githubSha}/${schemaPath}`;
+            }
+            return `${rawBase}/${repo}/raw/${githubSha}/${schemaPath}`;
+          })();
+
+          const schemaSha256 = (() => {
+            try {
+              const bytes = fs.readFileSync(schemaPath);
+              return crypto.createHash("sha256").update(bytes).digest("hex");
+            } catch (_) {
+              return undefined;
+            }
+          })();
 
           const token_present = token.length > 0;
 
@@ -88,16 +116,12 @@ jobs:
             const missing = diff(expected, actual);
             const extra = diff(actual, expected);
 
-            const schemaPath = ".github/branch-protection/bp_drift_summary.schema.json";
-            const schemaUrl = githubSha
-              ? `${githubServerUrl}/${repo}/raw/${githubSha}/${schemaPath}`
-              : undefined;
-
             const summary = {
               // Schema upgrade discipline: bump only when required fields or semantics change.
               schema_version: "1.1",
               schema_path: schemaPath,
               schema_url: schemaUrl,
+              schema_sha256: schemaSha256,
               generated_at: new Date().toISOString(),
               token_checked_at: new Date().toISOString(),
               repo,
@@ -125,10 +149,9 @@ jobs:
           })().catch(err => {
             const fallback = {
               schema_version: "1.1",
-              schema_path: ".github/branch-protection/bp_drift_summary.schema.json",
-              schema_url: githubSha
-                ? `${githubServerUrl}/${repo}/raw/${githubSha}/.github/branch-protection/bp_drift_summary.schema.json`
-                : undefined,
+              schema_path: schemaPath,
+              schema_url: schemaUrl,
+              schema_sha256: schemaSha256,
               generated_at: new Date().toISOString(),
               token_checked_at: new Date().toISOString(),
               repo,
