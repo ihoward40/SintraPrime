@@ -81,10 +81,13 @@ TryCmd {
       Write-Host ("WARNING: unexpected schema_version (expected 1.1)") -ForegroundColor Yellow
     }
     if ($s.PSObject.Properties.Name -contains 'schema_path') {
-      Write-Host ("schema_path: " + $s.schema_path) -ForegroundColor Cyan
+      Write-Host ("schema_path (repo-relative): " + $s.schema_path) -ForegroundColor Cyan
     }
     if ($s.PSObject.Properties.Name -contains 'schema_url') {
-      Write-Host ("schema_url: " + $s.schema_url) -ForegroundColor Cyan
+      Write-Host ("schema_url (sha-pinned): " + $s.schema_url) -ForegroundColor Cyan
+    }
+    if ($s.PSObject.Properties.Name -contains 'schema_sha256') {
+      Write-Host ("schema_sha256: " + $s.schema_sha256) -ForegroundColor Cyan
     }
   } else {
     Write-Host "schema_version: (missing)" -ForegroundColor Yellow
