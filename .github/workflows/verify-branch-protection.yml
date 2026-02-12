@@ -227,7 +227,7 @@ jobs:
               review_count: .required_pull_request_reviews.required_approving_review_count,
               code_owner: .required_pull_request_reviews.require_code_owner_reviews,
               last_push_approval: .required_pull_request_reviews.require_last_push_approval,
-              conversation_resolution: (.required_conversation_resolution.enabled // .required_conversation_resolution)
+              conversation_resolution: (if (.required_conversation_resolution | type) == "object" and (.required_conversation_resolution | has("enabled")) then .required_conversation_resolution.enabled else (.required_conversation_resolution // false) end)
             }' | jq -S . > actual.normalized.json
           echo "ACTUAL:"
           cat actual.normalized.json
