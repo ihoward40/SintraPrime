@@ -12,6 +12,7 @@ control/secrets.env
 .DS_Store
 runs/
 tmp/
+voice/
 
 # Local editor settings
 .vscode/

@@ -1,0 +1,26 @@
+# Code Owners for Critical Infrastructure
+# These files require review from designated owners
+
+# Core governance and security
+/docs/governance/ @ihoward40
+/.github/workflows/ @ihoward40
+/.github/branch-protection/ @ihoward40
+/config/ @ihoward40
+
+# Security configurations
+/.gitignore @ihoward40
+/.env.example @ihoward40
+/tsconfig.json @ihoward40
+
+# Core runtime and execution
+/src/executor/ @ihoward40
+/src/governor/ @ihoward40
+/src/approval/ @ihoward40
+/src/policy/ @ihoward40
+
+# Monitoring and credit system
+/src/monitoring/ @ihoward40
+/config/sintraprime-policy.json @ihoward40
+
+# Airlock server
+/airlock_server/ @ihoward40
