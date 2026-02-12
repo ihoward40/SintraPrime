@@ -4,6 +4,9 @@ dist/
 .env.*
 !.env.example
 
+# TypeScript incremental build cache
+tsconfig.tsbuildinfo
+
 # Control plane secrets
 control/secrets.env
 .DS_Store
@@ -39,5 +42,26 @@ releases/policy-appendix/watch-mode/v1.0.1/
 releases/policy-appendix/watch-mode/v1.0.0/SintraPrime_Policy_Appendix_Watch_Mode_with_Diagram.pdf
 releases/policy-appendix/watch-mode/v1.0.0/SintraPrime_Policy_Appendix_Watch_Mode_with_Diagram.pdf.sha256
 
+# Airlock server runtime files
+airlock_server/tmp/
+airlock_server/.env
+airlock_server/node_modules/
+airlock_server/package-lock.json
+
 # OS / tooling noise
 Thumbs.db
+
+# OpenCodeSafe - Private keys and seal artifacts
+*.ed25519
+!*.ed25519.pub
+governance/keys/*.ed25519
+tools/OpenCodeSafe/test-seals/
+_GOVERNANCE/
+
+# ClawdBot integration - Runtime and sensitive files
+clawdbot-integration/.env
+clawdbot-integration/node_modules/
+clawdbot-integration/package-lock.json
+clawdbot-integration/clawdbot/
+clawdbot-integration/*.log
+clawdbot-integration/workspace/

@@ -10,7 +10,7 @@
  */
 
 import {
-  type RunRecord,
+  type RunRecordLegacy as RunRecord,
   type Classification,
   type MisconfigAssessment,
   type PolicyAction,

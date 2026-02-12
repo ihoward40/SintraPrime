@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background-color: #F2F2F2; }
+        .slide-container {
+            width: 1280px;
+            min-height: 720px; /* keep this */
+            background-color: #F2F2F2;
+            color: #000000;
+            position: relative;
+            overflow: hidden;
+            padding: 60px;
+            display: flex;
+            flex-direction: column;
+        }
+        .header {
+            border-bottom: 4px solid #000000;
+            padding-bottom: 20px;
+            margin-bottom: 40px;
+        }
+        h1 {
+            font-size: 48px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: -1px;
+        }
+        h2 {
+            font-size: 24px;
+            font-weight: 400;
+            color: #333333;
+            margin-top: 10px;
+        }
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(2, 1fr);
+            gap: 20px; /* reduced from 30 -> saves vertical space */
+            flex-grow: 1;
+        }
+        .category-card {
+            background-color: #FFFFFF;
+            padding: 20px; /* reduced from 30 -> saves vertical space */
+            border-top: 5px solid #FF3B30;
+            display: flex;
+            flex-direction: column;
+        }
+        .cat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 10px; /* reduced from 15 */
+            border-bottom: 1px solid #eee;
+            padding-bottom: 6px; /* reduced from 10 */
+        }
+        .cat-letter {
+            font-size: 48px;
+            font-weight: 900;
+            color: #FF3B30;
+            line-height: 1;
+        }
+        .cat-count {
+            font-size: 14px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #999;
+        }
+        .cat-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 8px; /* slightly reduced */
+            line-height: 1.2;
+        }
+        .cat-desc {
+            font-size: 16px;
+            color: #555;
+            line-height: 1.4;
+        }
+        /* Positioning specific cards */
+        .card-d {
+            grid-column: 1 / 2; /* Start at col 1 */
+        }
+        .card-e {
+            grid-column: 2 / 3; /* Start at col 2 */
+        }
+        .summary-block {
+            grid-column: 3 / 4;
+            background-color: #333;
+            color: #fff;
+            padding: 20px; /* reduced from 30 */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+        .summary-stat {
+            font-size: 64px;
+            font-weight: 900;
+            color: #FF3B30;
+            margin-bottom: 8px; /* reduced */
+        }
+        .summary-label {
+            font-size: 18px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+    </style>
+</head>
+<body>
+    <div class="slide-container">
+        <div class="header">
+            <h1>12 High-ROI Upgrades</h1>
+            <h2>Across 5 Strategic Categories</h2>
+        </div>
+        
+        <div class="grid-container">
+            <!-- Row 1 -->
+            <div class="category-card">
+                <div class="cat-header">
+                    <div class="cat-letter">A</div>
+                    <div class="cat-count">3 Upgrades</div>
+                </div>
+                <div class="cat-title">Better Proofs</div>
+                <div class="cat-desc">Strengthen evidence that your system works correctly. Prevent silent failures.</div>
+            </div>
+
+            <div class="category-card">
+                <div class="cat-header">
+                    <div class="cat-letter">B</div>
+                    <div class="cat-count">2 Upgrades</div>
+                </div>
+                <div class="cat-title">Observability</div>
+                <div class="cat-desc">Improve monitoring and proactive issue detection. Enable fast debugging.</div>
+            </div>
+
+            <div class="category-card">
+                <div class="cat-header">
+                    <div class="cat-letter">C</div>
+                    <div class="cat-count">3 Upgrades</div>
+                </div>
+                <div class="cat-title">Operational Hardening</div>
+                <div class="cat-desc">Prevent operational chaos and improve reliability. Handle edge cases.</div>
+            </div>
+
+            <!-- Row 2 -->
+            <div class="category-card card-d">
+                <div class="cat-header">
+                    <div class="cat-letter">D</div>
+                    <div class="cat-count">2 Upgrades</div>
+                </div>
+                <div class="cat-title">Governance</div>
+                <div class="cat-desc">Align with SintraPrime philosophy. Court-safe audit trails and approvals.</div>
+            </div>
+
+            <div class="category-card card-e">
+                <div class="cat-header">
+                    <div class="cat-letter">E</div>
+                    <div class="cat-count">2 Upgrades</div>
+                </div>
+                <div class="cat-title">Make.com Routing</div>
+                <div class="cat-desc">Robust integration patterns. Ensure no failures are silently ignored.</div>
+            </div>
+
+            <div class="summary-block">
+                <div class="summary-stat">12</div>
+                <div class="summary-label">Total Upgrades</div>
+                <div style="margin-top: 12px; font-size: 14px; opacity: 0.7;">Prioritized by Impact & Effort</div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

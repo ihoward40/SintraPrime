@@ -1,0 +1,19 @@
+{
+  "schemaVersion": "search-v1",
+  "query": "test query",
+  "results": [
+    {
+      "id": "doc-001",
+      "score": 0.95,
+      "content": "Sample search result content"
+    },
+    {
+      "id": "doc-002",
+      "score": 0.87,
+      "content": "Another search result"
+    }
+  ],
+  "totalHits": 2,
+  "duration_ms": 45,
+  "timestamp": "2026-02-03T12:00:00.000Z"
+}

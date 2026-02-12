@@ -1,0 +1,228 @@
+{
+  "project_info": {
+    "title": "SintraPrime Supermemory: High-ROI Upgrade Roadmap",
+    "created": 1770075340.8473697,
+    "last_updated": 1770075839.2486415,
+    "total_slides": 18
+  },
+  "slides": [
+    {
+      "id": "title_slide",
+      "state": "edited",
+      "pageNum": 1
+    },
+    {
+      "id": "philosophy",
+      "state": "edited",
+      "pageNum": 2
+    },
+    {
+      "id": "current_state",
+      "state": "edited",
+      "pageNum": 3
+    },
+    {
+      "id": "upgrade_categories",
+      "state": "edited",
+      "pageNum": 4
+    },
+    {
+      "id": "category_a",
+      "state": "edited",
+      "pageNum": 5
+    },
+    {
+      "id": "category_b",
+      "state": "edited",
+      "pageNum": 6
+    },
+    {
+      "id": "category_c",
+      "state": "edited",
+      "pageNum": 7
+    },
+    {
+      "id": "category_d",
+      "state": "edited",
+      "pageNum": 8
+    },
+    {
+      "id": "category_e",
+      "state": "edited",
+      "pageNum": 9
+    },
+    {
+      "id": "phase_1",
+      "state": "edited",
+      "pageNum": 10
+    },
+    {
+      "id": "phase_2",
+      "state": "edited",
+      "pageNum": 11
+    },
+    {
+      "id": "phase_3",
+      "state": "edited",
+      "pageNum": 12
+    },
+    {
+      "id": "phase_4",
+      "state": "edited",
+      "pageNum": 13
+    },
+    {
+      "id": "success_metrics",
+      "state": "edited",
+      "pageNum": 14
+    },
+    {
+      "id": "anti_patterns",
+      "state": "edited",
+      "pageNum": 15
+    },
+    {
+      "id": "implementation_roadmap",
+      "state": "edited",
+      "pageNum": 16
+    },
+    {
+      "id": "next_steps",
+      "state": "edited",
+      "pageNum": 17
+    },
+    {
+      "id": "summary",
+      "state": "edited",
+      "pageNum": 18
+    }
+  ],
+  "outline": [
+    {
+      "id": "title_slide",
+      "title": "SintraPrime Supermemory: High-ROI Upgrade Roadmap",
+      "summary": "Title slide introducing the High-ROI Upgrade Roadmap for SintraPrime Supermemory.",
+      "image_plan": "",
+      "slide_template_key": ""
+    },
+    {
+      "id": "philosophy",
+      "title": "The Discipline That Prevents System Failure",
+      "summary": "Outlines the core philosophy of Capability → Proof → Rollback → Repeat to prevent system failure.",
+      "image_plan": "",
+      "slide_template_key": ""
+    },
+    {
+      "id": "current_state",
+      "title": "Current State - v2 Foundation is Production-Ready",
+      "summary": "Details the six core capabilities of the v2 Supermemory scripts that make them production-ready.",
+      "image_plan": "/home/ubuntu/upload/pasted_file_40cdnq_image.png - The image shows a GitHub repository related to 'supermemoryai/claude-supermemory', which aligns with the slide's topic of 'SintraPrime Supermemory' and its operational capabilities.",
+      "slide_template_key": ""
+    },
+    {
+      "id": "upgrade_categories",
+      "title": "12 High-ROI Upgrades Across 5 Strategic Categories",
+      "summary": "Overview of the 12 upgrades categorized into Better Proofs, Observability, Operational Hardening, Governance, and Make.com Routing.",
+      "image_plan": "",
+      "slide_template_key": ""
+    },
+    {
+      "id": "category_a",
+      "title": "Category A - Better Proofs Prevent Silent Breakage",
+      "summary": "Details the three upgrades in Category A: Strict Schema Version Pinning, Golden Fixture Tests, and Receipt Integrity Check.",
+      "image_plan": "",
+      "slide_template_key": ""
+    },
+    {
+      "id": "category_b",
+      "title": "Category B - Observability Enables Proactive Detection",
+      "summary": "Details the two upgrades in Category B: Health Snapshot JSON and Health Diff Script.",
+      "image_plan": "",
+      "slide_template_key": ""
+    },
+    {
+      "id": "category_c",
+      "title": "Category C - Operational Hardening Prevents Chaos",
+      "summary": "Details the three upgrades in Category C: Lock File / Mutex, Receipt Rotation + Retention, and Timeout Discipline.",
+      "image_plan": "",
+      "slide_template_key": ""
+    },
+    {
+      "id": "category_d",
+      "title": "Category D - Governance Upgrades Enable Enterprise Control",
+      "summary": "Details the two upgrades in Category D: Policy Pack Hash and Two-Person Rule Proof.",
+      "image_plan": "",
+      "slide_template_key": ""
+    },
+    {
+      "id": "category_e",
+      "title": "Category E - Make.com Routing Ensures No Silent Failures",
+      "summary": "Details the two upgrades in Category E: Enhanced Router Enforcement and Receipt File Existence Guard.",
+      "image_plan": "",
+      "slide_template_key": ""
+    },
+    {
+      "id": "phase_1",
+      "title": "Phase 1 - Quick Wins Deliver Immediate Impact",
+      "summary": "Outlines the plan for Phase 1 (Weeks 1-2) focusing on high-ROI, low-effort upgrades.",
+      "image_plan": "",
+      "slide_template_key": ""
+    },
+    {
+      "id": "phase_2",
+      "title": "Phase 2 - Observability & Hardening Build Resilience",
+      "summary": "Outlines the plan for Phase 2 (Weeks 3-4) focusing on proactive detection and reliability.",
+      "image_plan": "",
+      "slide_template_key": ""
+    },
+    {
+      "id": "phase_3",
+      "title": "Phase 3 - Governance & Proofs Enable Court-Safe Audits",
+      "summary": "Outlines the plan for Phase 3 (Weeks 5-8) focusing on strengthening audit trails and controls.",
+      "image_plan": "",
+      "slide_template_key": ""
+    },
+    {
+      "id": "phase_4",
+      "title": "Phase 4 - Advanced Governance Achieves Enterprise Grade",
+      "summary": "Outlines the plan for Phase 4 (Weeks 9-12) focusing on high-risk operation controls.",
+      "image_plan": "",
+      "slide_template_key": ""
+    },
+    {
+      "id": "success_metrics",
+      "title": "Success Metrics Define Progress and Prevent Drift",
+      "summary": "Defines the operational, observability, and governance metrics to measure success.",
+      "image_plan": "",
+      "slide_template_key": ""
+    },
+    {
+      "id": "anti_patterns",
+      "title": "Four Anti-Patterns That Kill Autonomous Systems",
+      "summary": "Identifies four common failure modes to avoid: Scope Creep, Vibes-Based Decisions, No Rollback Plan, and Silent Failures.",
+      "image_plan": "",
+      "slide_template_key": ""
+    },
+    {
+      "id": "implementation_roadmap",
+      "title": "Implementation Roadmap - 12 Weeks to Excellence",
+      "summary": "Summarizes the 12-week implementation roadmap with clear milestones for each phase.",
+      "image_plan": "",
+      "slide_template_key": ""
+    },
+    {
+      "id": "next_steps",
+      "title": "Next Steps - Start With Phase 1 This Week",
+      "summary": "Lists concrete actions to begin implementation immediately.",
+      "image_plan": "",
+      "slide_template_key": ""
+    },
+    {
+      "id": "summary",
+      "title": "Summary - Discipline Enables Operational Excellence",
+      "summary": "Summarizes the key takeaways and reinforces the core philosophy of discipline over vibes.",
+      "image_plan": "",
+      "slide_template_key": ""
+    }
+  ]
+}

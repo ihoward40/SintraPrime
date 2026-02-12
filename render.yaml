@@ -1,0 +1,24 @@
+services:
+  # SintraPrime Service
+  - type: web
+    name: sintraprime
+    env: node
+    region: oregon
+    plan: free
+    buildCommand: pnpm install && pnpm run build
+    startCommand: pnpm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_API_BASE
+        value: https://api.openai.com/v1
+      - key: SPEECH_TIERS
+        value: S3,S5
+      - key: AIRLOCK_HMAC_SECRET
+        generateValue: true
+      - key: AIRLOCK_PORT
+        value: 3001

@@ -2,110 +2,71 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "sintraprime://schemas/runs_ledger.schema.json",
   "title": "Runs Ledger",
-  "description": "Credit monitoring ledger for automation runs",
   "type": "object",
+  "additionalProperties": false,
   "required": [
-    "Run_ID",
-    "Timestamp",
-    "Scenario_Name",
-    "Job_Type",
-    "Status",
-    "Credits_Total",
-    "Severity"
+    "run_id",
+    "timestamp",
+    "scenario_name",
+    "scenario_id",
+    "job_type",
+    "status",
+    "credits_total",
+    "severity",
+    "owner"
   ],
   "properties": {
-    "Run_ID": {
+    "run_id": {
       "type": "string",
-      "maxLength": 128,
-      "description": "Unique identifier for this run"
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$",
+      "description": "Unique run identifier"
     },
-    "Timestamp": {
+    "timestamp": {
       "type": "string",
       "format": "date-time",
-      "description": "ISO 8601 timestamp of run execution"
+      "description": "Run execution timestamp (UTC)"
     },
-    "Scenario_Name": {
+    "scenario_name": { "type": "string", "maxLength": 240 },
+    "scenario_id": { "type": "string", "maxLength": 128 },
+    "job_type": {
       "type": "string",
-      "maxLength": 240,
-      "description": "Human-readable scenario name"
+      "enum": ["ANALYSIS", "BINDER_EXPORT", "EMAIL_SEND", "RECONCILE_BACKFILL", "FILING", "OTHER"]
     },
-    "Scenario_ID": {
+    "status": {
       "type": "string",
-      "maxLength": 120,
-      "description": "Machine-readable scenario identifier"
+      "enum": ["Success", "Failed", "Quarantined", "Escalated"]
     },
-    "Job_Type": {
-      "enum": ["BINDER_EXPORT", "RECONCILE_BACKFILL", "ANALYSIS", "OTHER"],
-      "description": "Type of automation job"
-    },
-    "Status": {
-      "enum": ["Success", "Failed", "Quarantined", "Escalated"],
-      "description": "Run completion status"
-    },
-    "Credits_Total": {
-      "type": "number",
-      "minimum": 0,
-      "description": "Total credits consumed by this run"
-    },
-    "Credits_In": {
-      "type": "number",
-      "minimum": 0,
-      "description": "Input credits (context/prompt)"
-    },
-    "Credits_Out": {
-      "type": "number",
-      "minimum": 0,
-      "description": "Output credits (completion)"
-    },
-    "Model": {
-      "type": "string",
-      "maxLength": 60,
-      "description": "LLM model identifier"
-    },
-    "Input_Tokens": {
-      "type": "integer",
-      "minimum": 0,
-      "description": "Number of input tokens"
-    },
-    "Output_Tokens": {
-      "type": "integer",
-      "minimum": 0,
-      "description": "Number of output tokens"
-    },
-    "Artifacts_Link": {
+    "credits_total": { "type": "number", "minimum": 0 },
+    "credits_in": { "type": "number", "minimum": 0 },
+    "credits_out": { "type": "number", "minimum": 0 },
+    "model": { "type": "string", "maxLength": 120 },
+    "input_tokens": { "type": "integer", "minimum": 0 },
+    "output_tokens": { "type": "integer", "minimum": 0 },
+    "artifacts_link": {
       "type": "string",
       "format": "uri",
-      "description": "URL to run artifacts (Drive, S3, etc.)"
+      "description": "Link to run artifacts (Drive/Box/runs directory)"
     },
-    "Severity": {
-      "enum": ["SEV0", "SEV1", "SEV2", "SEV3", "SEV4"],
-      "description": "Incident severity classification"
-    },
-    "Risk_Flags": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      },
-      "description": "Risk indicators identified during classification"
-    },
-    "Risk_Summary": {
+    "notion_case_id": {
       "type": "string",
-      "maxLength": 4000,
-      "description": "Human-readable risk assessment summary"
+      "description": "Relation to CASES database (Case_ID)"
     },
-    "Misconfig_Likelihood": {
-      "enum": ["High", "Medium", "Low"],
-      "description": "Likelihood that this is a misconfiguration vs. legitimate load"
+    "severity": {
+      "type": "string",
+      "enum": ["SEV0", "SEV1", "SEV2", "SEV3", "SEV4"]
     },
-    "Baseline_Expected_Credits": {
-      "type": "number",
-      "minimum": 0,
-      "description": "Expected baseline credit consumption for this scenario"
+    "risk_flags": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Multi-select risk indicators"
     },
-    "Variance_Multiplier": {
-      "type": "number",
-      "minimum": 0,
-      "description": "Actual credits divided by baseline (variance factor)"
-    }
+    "risk_summary": { "type": "string", "maxLength": 4000 },
+    "misconfig_likelihood": {
+      "type": "string",
+      "enum": ["High", "Medium", "Low"]
+    },
+    "baseline_expected_credits": { "type": "number", "minimum": 0 },
+    "variance_multiplier": { "type": "number", "minimum": 0 },
+    "owner": { "type": "string", "maxLength": 120 }
   }
 }

@@ -1,0 +1,17 @@
+{
+  "version": "sm-health-v1",
+  "generatedAt": "2026-02-03T12:00:00.000Z",
+  "generatedAtUnix": 1770465600,
+  "hostname": "sintra-prod-01",
+  "user": "sintra",
+  "metrics": {
+    "attempts": 1000,
+    "successes": 995,
+    "errors": 5,
+    "p95_ms": 1500,
+    "p99_ms": 2100,
+    "avg_ms": 450
+  },
+  "status": "healthy",
+  "healthScore": 99.5
+}

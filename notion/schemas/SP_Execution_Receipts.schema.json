@@ -1,0 +1,238 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "sintraprime://schemas/sp_execution_receipts.schema.json",
+  "title": "SP Execution Receipts",
+  "description": "Execution receipts with enhanced evidence tracking, snapshot hashes, and audit trail",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "receipt_id",
+    "timestamp",
+    "mode",
+    "action_type",
+    "target_system",
+    "result"
+  ],
+  "properties": {
+    "receipt_id": {
+      "type": "string",
+      "pattern": "^RCP-[0-9]{6,}$",
+      "description": "Unique identifier for this receipt (e.g., RCP-000001)"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When this action was attempted/executed (UTC)"
+    },
+    "mode": {
+      "type": "string",
+      "enum": ["READ", "EXECUTE"],
+      "description": "Whether this was a read-only or execute action"
+    },
+    "action_type": {
+      "type": "string",
+      "enum": [
+        "VOICE_BOOKING",
+        "VOICE_TRANSFER",
+        "SMS_SEND",
+        "EMAIL_SEND",
+        "GITHUB_PR",
+        "GITHUB_COMMIT",
+        "PUBLISH",
+        "BUY",
+        "CALENDAR_CREATE",
+        "CALENDAR_UPDATE",
+        "CALENDAR_DELETE",
+        "OTHER"
+      ],
+      "description": "Type of action being performed"
+    },
+    "target_system": {
+      "type": "string",
+      "enum": ["Voice", "Calendar", "Slack", "Gmail", "GitHub", "Notion", "Drive", "Twilio", "Other"],
+      "description": "External system being accessed"
+    },
+    "result": {
+      "type": "string",
+      "enum": ["PENDING", "SUCCESS", "FAILED", "BLOCKED"],
+      "description": "Final result of the action attempt"
+    },
+    "policy_id": {
+      "type": "string",
+      "pattern": "^POL-[0-9]{3,}$",
+      "description": "Linked policy ID (relation to Policy Registry)"
+    },
+    "request_id": {
+      "type": "string",
+      "maxLength": 240,
+      "description": "Idempotency key for this action"
+    },
+    "confirmed_by_user": {
+      "type": "boolean",
+      "description": "Whether user explicitly confirmed this action"
+    },
+    "consent_ok": {
+      "type": "boolean",
+      "description": "Whether consent registry check passed"
+    },
+    "rate_limit_ok": {
+      "type": "boolean",
+      "description": "Whether rate limit check passed"
+    },
+    "pae_check_result": {
+      "type": "string",
+      "enum": ["PASS", "FAIL", "NOT_REQUIRED"],
+      "description": "Pre-approved envelope check result"
+    },
+    "pae_reason": {
+      "type": "string",
+      "maxLength": 1000,
+      "description": "Details of PAE check (why it passed or failed)"
+    },
+    "break_glass_used": {
+      "type": "boolean",
+      "description": "Whether emergency break-glass override was used"
+    },
+    "break_glass_ok": {
+      "type": "boolean",
+      "description": "Whether break-glass was approved"
+    },
+    "break_glass_reason": {
+      "type": "string",
+      "maxLength": 2000,
+      "description": "Justification for break-glass usage"
+    },
+    "external_ref": {
+      "type": "string",
+      "maxLength": 500,
+      "description": "External reference (message-id, PR URL, call SID, event URL, etc.)"
+    },
+    "primary_artifact_link": {
+      "type": "string",
+      "format": "uri",
+      "maxLength": 2048,
+      "description": "Link to primary artifact/evidence"
+    },
+    "evidence_link": {
+      "type": "string",
+      "format": "uri",
+      "maxLength": 2048,
+      "description": "Link to additional evidence"
+    },
+    "evidence_json": {
+      "type": "string",
+      "description": "Canonical JSON string containing all evidence fields. This is the source of truth for evidence."
+    },
+    "missing_fields": {
+      "type": "string",
+      "maxLength": 1000,
+      "description": "Comma-separated list of required evidence fields that are missing"
+    },
+    "receipt_hash": {
+      "type": "string",
+      "pattern": "^[a-fA-F0-9]{64}$",
+      "description": "SHA-256 hash of this receipt's canonical representation"
+    },
+    "chain_hash": {
+      "type": "string",
+      "pattern": "^[a-fA-F0-9]{64}$",
+      "description": "Hash chain linking to previous receipt"
+    },
+    "switchboard_snapshot_sha256": {
+      "type": "string",
+      "pattern": "^[a-fA-F0-9]{64}$",
+      "description": "SHA-256 of Switchboard configuration snapshot at time of execution"
+    },
+    "pae_snapshot_sha256": {
+      "type": "string",
+      "pattern": "^[a-fA-F0-9]{64}$",
+      "description": "SHA-256 of PAE configuration snapshot at time of execution (if PAE was required)"
+    },
+    "action_registry_snapshot_sha256": {
+      "type": "string",
+      "pattern": "^[a-fA-F0-9]{64}$",
+      "description": "SHA-256 of Action Registry snapshot at time of execution"
+    },
+    "config_fingerprint_sha256": {
+      "type": "string",
+      "pattern": "^[a-fA-F0-9]{64}$",
+      "description": "SHA-256 fingerprint of overall config state at time of execution"
+    },
+    "blocked_reason_code": {
+      "type": "string",
+      "enum": [
+        "QUARANTINE_MODE",
+        "MISSING_POLICY",
+        "CONSENT_REQUIRED",
+        "PAE_FAIL",
+        "RATE_LIMIT",
+        "CONSENT_REGISTRY",
+        "EXEC_DISABLED",
+        "CONFIG_GATE_LOCKED",
+        "BREAK_GLASS_DENIED",
+        "OTHER"
+      ],
+      "description": "Machine-readable code for why action was blocked"
+    },
+    "blocked_reason_detail": {
+      "type": "string",
+      "maxLength": 2000,
+      "description": "Human-readable details of why action was blocked"
+    },
+    "gate_status": {
+      "type": "string",
+      "description": "Computed gate status (formula result showing pass/block reason)"
+    },
+    "receipt_completeness": {
+      "type": "string",
+      "enum": ["COMPLETE", "INCOMPLETE", "MISSING"],
+      "description": "Whether all required receipt fields are filled"
+    },
+    "is_complete": {
+      "type": "boolean",
+      "description": "Boolean flag: true if receipt_completeness is COMPLETE"
+    },
+    "voice_exec_enabled": {
+      "type": "boolean",
+      "description": "Snapshot of VOICE_EXEC_ENABLED from Switchboard at time of execution"
+    },
+    "quarantine_mode": {
+      "type": "boolean",
+      "description": "Snapshot of QUARANTINE_MODE from Switchboard at time of execution"
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 4000,
+      "description": "Additional notes, anomalies, or context"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "result": {
+            "const": "BLOCKED"
+          }
+        }
+      },
+      "then": {
+        "required": ["blocked_reason_code"]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "mode": {
+            "const": "EXECUTE"
+          },
+          "result": {
+            "const": "SUCCESS"
+          }
+        }
+      },
+      "then": {
+        "required": ["external_ref", "evidence_json"]
+      }
+    }
+  ]
+}

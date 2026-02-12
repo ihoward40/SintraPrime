@@ -1,63 +1,56 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "sintraprime://schemas/cases.schema.json",
-  "title": "Cases",
-  "description": "Incident case tracking for credit monitoring system",
+  "title": "Cases (Incident & Compliance)",
   "type": "object",
+  "additionalProperties": false,
   "required": [
-    "Case_ID",
-    "Title",
-    "Category",
-    "Severity",
-    "Status"
+    "case_id",
+    "title",
+    "category",
+    "severity",
+    "exposure_band",
+    "status"
   ],
   "properties": {
-    "Case_ID": {
+    "case_id": {
       "type": "string",
       "pattern": "^CASE-[0-9]{8}-[A-Z0-9]{6}$",
-      "description": "Unique case identifier in format CASE-YYYYMMDD-XXXXXX"
+      "description": "Unique case identifier (e.g., CASE-20260123-A1B2C3)"
     },
-    "Title": {
+    "title": { "type": "string", "maxLength": 240 },
+    "category": {
       "type": "string",
-      "maxLength": 240,
-      "description": "Human-readable case title"
+      "enum": ["Cost/Credits", "Data/PII", "Delivery/Email", "Filing/Regulatory", "Reliability", "Other"]
     },
-    "Category": {
-      "enum": [
-        "Cost/Credits",
-        "Data/PII",
-        "Delivery/Email",
-        "Filing/Regulatory",
-        "Reliability",
-        "Other"
-      ],
-      "description": "Case category classification"
-    },
-    "Severity": {
-      "enum": ["SEV0", "SEV1", "SEV2", "SEV3", "SEV4"],
-      "description": "Case severity level"
-    },
-    "Exposure_Band": {
-      "enum": ["Regulatory", "Financial", "Privacy", "Operational"],
-      "description": "Risk exposure classification"
-    },
-    "Status": {
-      "enum": ["Open", "Investigating", "Mitigating", "Resolved"],
-      "description": "Current case status"
-    },
-    "Slack_Thread_URL": {
+    "severity": {
       "type": "string",
-      "format": "uri",
-      "description": "Link to Slack discussion thread"
+      "enum": ["SEV0", "SEV1", "SEV2", "SEV3", "SEV4"]
     },
-    "Root_Cause": {
-      "enum": [
-        "Misconfig",
-        "Legit Load",
-        "External Dependency",
-        "Unknown"
-      ],
-      "description": "Determined root cause after investigation"
-    }
+    "exposure_band": {
+      "type": "string",
+      "enum": ["Regulatory", "Financial", "Privacy", "Operational"]
+    },
+    "status": {
+      "type": "string",
+      "enum": ["Open", "Investigating", "Mitigating", "Resolved"]
+    },
+    "primary_run_id": {
+      "type": "string",
+      "description": "Relation to RUNS_LEDGER (primary triggering run)"
+    },
+    "run_timeline_ids": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Relations to RUNS_LEDGER (all related runs)"
+    },
+    "slack_thread_url": { "type": "string", "format": "uri" },
+    "root_cause": {
+      "type": "string",
+      "enum": ["Misconfig", "Legit Load", "External Dependency", "Unknown"]
+    },
+    "fix_patch": { "type": "string", "maxLength": 4000 },
+    "prevent_recurrence_notes": { "type": "string", "maxLength": 4000 },
+    "prevent_recurrence_complete": { "type": "boolean" }
   }
 }

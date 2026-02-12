@@ -37,3 +37,43 @@
 
 - **DeepThink — Spec → Implementation Map (v1)**  
   [`specs/deepthink.spec-to-implementation-map.v1.md`](./specs/deepthink.spec-to-implementation-map.v1.md)
+
+## External Tool Patterns & References
+
+### Agent Governance Operating System
+
+- **📋 Executive Summary — Agent Governance System**  
+  [`AGENT_GOVERNANCE_EXECUTIVE_SUMMARY.md`](./AGENT_GOVERNANCE_EXECUTIVE_SUMMARY.md)  
+  **START HERE** — Complete repo-level summary of the agent governance operating system. Explains what was implemented, why it matters, how it works end-to-end, and implementation roadmap. Written in plain English for stakeholders, auditors, and implementers.
+
+- **ClawdBot Pattern Brief (v1)**  
+  [`external-notes/clawdbot-pattern-brief.v1.md`](./external-notes/clawdbot-pattern-brief.v1.md)  
+  Structured analysis of ClawdBot architecture patterns applicable to SintraPrime (messaging-first control, persistent memory, skills ecosystem, multi-agent isolation).
+
+- **ClawdBot Agent Policy Snippets (v1)**  
+  [`policy/clawdbot-agent-policy-snippets.v1.md`](./policy/clawdbot-agent-policy-snippets.v1.md)  
+  Governance policies for adopting ClawdBot-style agent patterns (environment isolation, least privilege, two-mode operations, execute consent, skill governance, voice channel governance).
+
+- **Agent Governance Complete System (v1)**  
+  [`agent-governance-complete-system.v1.md`](./agent-governance-complete-system.v1.md)  
+  Production-ready architecture for audit-grade agent governance including Notion databases, formulas, policies, automation patterns, and compliance reporting (22 policies, hash chain ledger, weekly verifier packs).
+
+- **Notion Formulas — Agent Governance Enforcement (v1)**  
+  [`notion-formulas-agent-governance.v1.md`](./notion-formulas-agent-governance.v1.md)  
+  Copy-paste ready Notion formulas for enforcing agent governance (Gate_Status, Receipt_Completeness, PAE checks, compliance scoring, execution blocking).
+
+- **Notion Policy Database Implementation (v1)**  
+  [`notion-policy-database-implementation.v1.md`](./notion-policy-database-implementation.v1.md)  
+  Step-by-step guide for implementing the complete policy database in Notion with auto-linked receipts, enforcement buttons, templates, and global safety nets.
+
+- **Switchboard & Verifier Pack System (v1)**  
+  [`switchboard-verifier-pack-system.v1.md`](./switchboard-verifier-pack-system.v1.md)  
+  Complete implementation guide for single-source-of-truth control toggles (Switchboard), automated weekly verifier packs with config snapshots, hash chaining, PDF generation, Pack Verifier JSON (packverifier.v1.2), independent verification workflows, example files, and Verifier Ritual printable sheet.
+
+- **Config Gate Logic & Race-Condition Prevention (v1)** ⭐ **NEW**  
+  [`config-gate-logic-race-prevention.v1.md`](./config-gate-logic-race-prevention.v1.md)  
+  Critical upgrades for race-condition safe configuration management: latest relevant change logic, config fingerprinting, canary validation, evidence JSON, snapshot hashes in receipts, and universal preflight enforcement. Makes the system self-governing, auditor-proof, and machine-verifiable.
+
+- **Config Management Schema Reference (v1)** ⭐ **NEW**  
+  [`config-management-schema-reference.v1.md`](./config-management-schema-reference.v1.md)  
+  Comprehensive reference for SP_Config_Change_Log, SP_Switchboard, SP_Execution_Receipts, and SP_Canary_Packs schemas. Includes relationships, workflows, integration guide, best practices, and migration paths.

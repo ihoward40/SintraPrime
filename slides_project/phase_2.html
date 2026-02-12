@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background-color: #F2F2F2; }
+        .slide-container {
+            width: 1280px;
+            min-height: 720px; /* keep per requirement */
+            background-color: #F2F2F2;
+            color: #000000;
+            position: relative;
+            overflow: hidden;
+            padding: 60px;
+            display: grid;
+            grid-template-rows: auto 1fr;
+-            gap: 40px;
++            gap: 20px; /* reduced vertical gap to save height */
+        }
+        .header {
+            border-bottom: 4px solid #000000;
+            padding-bottom: 20px;
+        }
+        h1 {
+            font-size: 48px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: -1px;
+        }
+        h2 {
+            font-size: 24px;
+            font-weight: 400;
+            color: #333333;
+            margin-top: 10px;
+        }
+        .content-wrapper {
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 40px;
+        }
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid #CCC;
+-            padding-right: 40px;
++            padding-right: 24px;
+        }
+        .timeline-box {
+            background-color: #000000;
+            color: #FFFFFF;
+-            padding: 30px;
+-            margin-bottom: 40px;
++            padding: 14px; /* shrink inner padding */
++            margin-bottom: 20px; /* reduce spacing under box */
+        }
+        .timeline-label {
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 10px;
+            color: #FF3B30;
+            font-weight: 700;
+        }
+        .timeline-value {
+            font-size: 48px;
+            font-weight: 900;
+            line-height: 1;
+        }
+        .goal-box {
+-            margin-bottom: 40px;
++            margin-bottom: 20px;
+        }
+        .section-label {
+            font-size: 16px;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-bottom: 15px;
+            color: #FF3B30;
+        }
+        .goal-text {
+            font-size: 24px;
+            line-height: 1.4;
+            font-weight: 700;
+        }
+        .effort-text {
+            font-size: 18px;
+            color: #555;
+-            margin-top: 20px;
++            margin-top: 12px;
+            line-height: 1.4;
+        }
+        .main-content {
+            display: flex;
+            flex-direction: column;
+        }
+        .upgrades-list {
+            display: flex;
+            flex-direction: column;
+-            gap: 25px;
+-            margin-bottom: 50px;
++            gap: 12px; /* tighter stack */
++            margin-bottom: 30px; /* reduce bottom space */
+        }
+        .upgrade-item {
+            display: flex;
+            align-items: flex-start;
+            background-color: #FFFFFF;
+-            padding: 20px;
++            padding: 12px;
+            border-left: 6px solid #FF3B30;
+        }
+        .upgrade-number {
+            font-size: 24px;
+            font-weight: 900;
+            color: #FF3B30;
+            margin-right: 20px;
+            min-width: 40px;
+        }
+        .upgrade-details h3 {
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+        .upgrade-details p {
+            font-size: 18px;
+            color: #555;
+        }
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            background-color: #E0E0E0;
+-            padding: 30px;
++            padding: 16px; /* reduce padding to save height */
+        }
+        .metric-item {
+            display: flex;
+            flex-direction: column;
+        }
+        .metric-label {
+            font-size: 14px;
+            text-transform: uppercase;
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: #555;
+        }
+        .metric-value {
+            font-size: 32px;
+            font-weight: 900;
+            color: #000;
+        }
+    </style>
+</head>
+<body>
+    <div class="slide-container">
+        <div class="header">
+            <h1>Phase 2: Observability & Hardening</h1>
+            <h2>Building Resilience Through Proactive Detection</h2>
+        </div>
+        
+        <div class="content-wrapper">
+            <div class="sidebar">
+                <div class="timeline-box">
+                    <div class="timeline-label">Timeline</div>
+                    <div class="timeline-value">Weeks<br>3-4</div>
+                </div>
+                
+                <div class="goal-box">
+                    <div class="section-label">Primary Goal</div>
+                    <div class="goal-text">Improve monitoring and operational resilience.</div>
+                    <div class="effort-text">Requires new scripts and validation logic.</div>
+                </div>
+            </div>
+
+            <div class="main-content">
+                <div class="section-label">Key Upgrades</div>
+                <div class="upgrades-list">
+                    <div class="upgrade-item">
+                        <div class="upgrade-number">#5</div>
+                        <div class="upgrade-details">
+                            <h3>Health Diff Script</h3>
+                            <p>Proactive regression detection (P95 spikes, error rates).</p>
+                        </div>
+                    </div>
+                    <div class="upgrade-item">
+                        <div class="upgrade-number">#8</div>
+                        <div class="upgrade-details">
+                            <h3>Timeout Discipline</h3>
+                            <p>Prevents hung processes via killable job wrappers.</p>
+                        </div>
+                    </div>
+                    <div class="upgrade-item">
+                        <div class="upgrade-number">#1</div>
+                        <div class="upgrade-details">
+                            <h3>Strict Schema Version Pinning</h3>
+                            <p>Prevents CLI drift and silent breakage.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section-label">Expected Metrics</div>
+                <div class="metrics-grid">
+                    <div class="metric-item">
+                        <div class="metric-label">Detection Time</div>
+                        <div class="metric-value">&lt;1 Hour</div>
+                    </div>
+                    <div class="metric-item">
+                        <div class="metric-label">Hung Processes</div>
+                        <div class="metric-value">&lt;1%</div>
+                    </div>
+                    <div class="metric-item">
+                        <div class="metric-label">Version Mismatch</div>
+                        <div class="metric-value">0%</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

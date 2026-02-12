@@ -14,10 +14,10 @@ import {
   CaseCategory,
   CaseStatus,
   ExposureBand,
-  type CaseRecord,
+  type CaseRecordLegacy as CaseRecord,
   type RiskFlag,
   type RootCause,
-  type RunRecord,
+  type RunRecordLegacy as RunRecord,
   type SeverityLevel,
 } from "./types.js";
 

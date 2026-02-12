@@ -9,7 +9,7 @@
  */
 
 import type {
-  RunRecord,
+  RunRecordLegacy as RunRecord,
   Classification,
   SlackMessage,
   SlackActionsBlock,

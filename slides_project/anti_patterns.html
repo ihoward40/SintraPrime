@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background-color: #F2F2F2; }
+        .slide-container {
+            width: 1280px;
+            min-height: 720px;
+            background-color: #F2F2F2;
+            color: #000000;
+            position: relative;
+            overflow: hidden;
+            padding: 60px 60px 60px; /* keep top padding for title consistency */
+            display: grid;
+            grid-template-rows: auto 1fr;
+            gap: 24px; /* reduced gap to bring grid up */
+        }
+        .header {
+            border-bottom: 4px solid #000000;
+            padding-bottom: 20px;
+        }
+        h1 {
+            font-size: 48px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: -1px;
+        }
+        h2 {
+            font-size: 24px;
+            font-weight: 400;
+            color: #333333;
+            margin-top: 10px;
+        }
+        .grid-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 1fr 1fr;
+            gap: 20px; /* reduced to tighten rows and columns */
+        }
+        .anti-pattern-card {
+            background-color: #FFFFFF;
+            padding: 14px; /* reduced inner padding */
+            border-left: 8px solid #000000;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+        .anti-pattern-card.danger {
+            border-left-color: #FF3B30;
+        }
+        .icon-box {
+            position: absolute;
+            top: 14px; /* aligned with new padding */
+            right: 14px;
+            font-size: 32px;
+            color: #FF3B30;
+        }
+        .card-title {
+            font-size: 28px;
+            font-weight: 900;
+            margin-bottom: 8px; /* tightened spacing */
+            text-transform: uppercase;
+            padding-right: 40px;
+        }
+        .card-desc {
+            font-size: 18px;
+            line-height: 1.5;
+            color: #333;
+            margin-bottom: 12px; /* tightened spacing */
+            flex-grow: 1;
+        }
+        .card-footer {
+            font-size: 14px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #666;
+            border-top: 1px solid #E0E0E0;
+            padding-top: 10px; /* slightly smaller */
+        }
+        .highlight {
+            color: #FF3B30;
+        }
+    </style>
+</head>
+<body>
+    <div class="slide-container">
+        <div class="header">
+            <h1>Four Anti-Patterns</h1>
+            <h2>That Kill Autonomous Systems</h2>
+        </div>
+        
+        <div class="grid-container">
+            <!-- 1. Scope Creep -->
+            <div class="anti-pattern-card">
+                <div class="icon-box"><i class="fas fa-expand-arrows-alt"></i></div>
+                <div class="card-title">Scope Creep</div>
+                <div class="card-desc">
+                    Adding features without proving the core loop works first. Leads to a bloated, unmaintainable codebase that fails silently.
+                </div>
+                <div class="card-footer">
+                    Remedy: <span class="highlight">Prove value before expanding.</span>
+                </div>
+            </div>
+
+            <!-- 2. Vibes-Based Decisions -->
+            <div class="anti-pattern-card danger">
+                <div class="icon-box"><i class="fas fa-magic"></i></div>
+                <div class="card-title">Vibes-Based Decisions</div>
+                <div class="card-desc">
+                    "It feels faster" or "I think it's working." Without metrics (P95, Error Rate), you are flying blind and will crash.
+                </div>
+                <div class="card-footer">
+                    Remedy: <span class="highlight">Trust only receipts & metrics.</span>
+                </div>
+            </div>
+
+            <!-- 3. No Rollback Plan -->
+            <div class="anti-pattern-card">
+                <div class="icon-box"><i class="fas fa-undo-alt"></i></div>
+                <div class="card-title">No Rollback Plan</div>
+                <div class="card-desc">
+                    Deploying changes without a tested way to revert. When production breaks, you are trapped fixing forward under pressure.
+                </div>
+                <div class="card-footer">
+                    Remedy: <span class="highlight">Always have an undo button.</span>
+                </div>
+            </div>
+
+            <!-- 4. Silent Failures -->
+            <div class="anti-pattern-card danger">
+                <div class="icon-box"><i class="fas fa-volume-mute"></i></div>
+                <div class="card-title">Silent Failures</div>
+                <div class="card-desc">
+                    Swallowing errors or ignoring exit codes. The system looks healthy but is actually doing nothing or leaking data.
+                </div>
+                <div class="card-footer">
+                    Remedy: <span class="highlight">Fail loud. Fail fast.</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

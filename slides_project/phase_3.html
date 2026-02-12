@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background-color: #F2F2F2; }
+        .slide-container {
+            width: 1280px;
+            min-height: 720px;
+            background-color: #F2F2F2;
+            color: #000000;
+            position: relative;
+            overflow: hidden;
+            padding: 60px 60px 20px 60px; /* keep top padding, reduce bottom to bring total <720px */
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            grid-template-rows: 1fr auto;
+            gap: 40px; /* slightly reduced gap to tighten layout */
+        }
+        .phase-info {
+            grid-column: 1 / 2;
+            border-right: 2px solid #000000;
+            padding-right: 40px;
+            display: flex;
+            flex-direction: column;
+        }
+        .phase-label {
+            font-size: 24px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+        .phase-number {
+            font-size: 120px;
+            font-weight: 900;
+            color: #FF3B30;
+            line-height: 0.8;
+            margin-bottom: 20px;
+            margin-left: -5px;
+        }
+        .phase-weeks {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 40px;
+        }
+        .phase-goal-label {
+            font-size: 16px;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            border-top: 4px solid #000;
+            padding-top: 20px;
+        }
+        .phase-goal {
+            font-size: 24px;
+            line-height: 1.4;
+        }
+        .upgrades-list {
+            grid-column: 2 / 3;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .list-header {
+            font-size: 36px;
+            font-weight: 900;
+            margin-bottom: 40px;
+            text-transform: uppercase;
+        }
+        .upgrade-item {
+            background-color: #FFFFFF;
+            padding: 25px;
+            margin-bottom: 16px; /* slightly reduced spacing */
+            border-left: 10px solid #000000;
+            display: flex;
+            align-items: center;
+        }
+        .upgrade-item.highlight {
+            border-left-color: #FF3B30;
+        }
+        .item-number {
+            font-size: 24px;
+            font-weight: 900;
+            color: #999;
+            margin-right: 20px;
+            min-width: 40px;
+        }
+        .item-content {
+            flex-grow: 1;
+        }
+        .item-title {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+        .item-desc {
+            font-size: 18px;
+            color: #555;
+        }
+        .metrics-bar {
+            grid-column: 1 / 3;
+            background-color: #000000;
+            color: #FFFFFF;
+            padding: 30px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+        .metric-item {
+            display: flex;
+            flex-direction: column;
+            border-left: 1px solid #333;
+            padding-left: 20px;
+        }
+        .metric-item:first-child {
+            border-left: none;
+            padding-left: 0;
+        }
+        .metric-label {
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 5px;
+            color: #999;
+        }
+        .metric-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #FF3B30;
+        }
+    </style>
+</head>
+<body>
+    <div class="slide-container">
+        <div class="phase-info">
+            <div class="phase-label">Phase</div>
+            <div class="phase-number">03</div>
+            <div class="phase-weeks">Weeks 5-8</div>
+            
+            <div class="phase-goal-label">Primary Goal</div>
+            <div class="phase-goal">Strengthen audit trails and governance controls to enable court-safe verification.</div>
+        </div>
+
+        <div class="upgrades-list">
+            <div class="list-header">Governance & Proofs Upgrades</div>
+            
+            <div class="upgrade-item">
+                <div class="item-number">#2</div>
+                <div class="item-content">
+                    <div class="item-title">Golden Fixture Tests</div>
+                    <div class="item-desc">Catches parsing regressions before production deployment.</div>
+                </div>
+            </div>
+
+            <div class="upgrade-item highlight">
+                <div class="item-number">#3</div>
+                <div class="item-content">
+                    <div class="item-title">Receipt Integrity Check</div>
+                    <div class="item-desc">Adds SHA-256 hashes and Merkle chains for tamper-evidence.</div>
+                </div>
+            </div>
+
+            <div class="upgrade-item">
+                <div class="item-number">#9</div>
+                <div class="item-content">
+                    <div class="item-title">Policy Pack Hash</div>
+                    <div class="item-desc">Prevents unauthorized policy changes from reaching production.</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="metrics-bar">
+            <div class="metric-item">
+                <div class="metric-label">Parsing Regression Detection</div>
+                <div class="metric-value">Pre-Production</div>
+            </div>
+            <div class="metric-item">
+                <div class="metric-label">Receipt Tamper Detection</div>
+                <div class="metric-value">Immediate</div>
+            </div>
+            <div class="metric-item">
+                <div class="metric-label">Unauthorized Changes</div>
+                <div class="metric-value">0% Rate</div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

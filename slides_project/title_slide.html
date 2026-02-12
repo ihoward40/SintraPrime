@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background-color: #F2F2F2; }
+        .slide-container {
+            width: 1280px;
+            min-height: 720px;
+            background-color: #F2F2F2;
+            color: #000000;
+            position: relative;
+            overflow: hidden;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 1fr auto;
+        }
+        .content-left {
+            grid-column: 1 / 2;
+            grid-row: 1 / 3;
+            padding: 80px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            border-right: 1px solid #333333;
+        }
+        .content-right {
+            grid-column: 2 / 3;
+            grid-row: 1 / 3;
+            background-color: #000000;
+            color: #F2F2F2;
+            padding: 80px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: flex-start;
+        }
+        h1 {
+            font-size: 96px;
+            font-weight: 900;
+            line-height: 0.9;
+            letter-spacing: -2px;
+            margin-bottom: 40px;
+            text-transform: uppercase;
+        }
+        h2 {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: #FF3B30;
+        }
+        p {
+            font-size: 24px;
+            font-weight: 400;
+            line-height: 1.4;
+            max-width: 400px;
+        }
+        .accent-bar {
+            width: 100px;
+            height: 10px;
+            background-color: #FF3B30;
+            margin-bottom: 40px;
+        }
+        .decorative-grid {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            background-image: linear-gradient(#333333 1px, transparent 1px), linear-gradient(90deg, #333333 1px, transparent 1px);
+            background-size: 40px 40px;
+            opacity: 0.05;
+        }
+    </style>
+</head>
+<body>
+    <div class="slide-container">
+        <div class="decorative-grid"></div>
+        <div class="content-left">
+            <div class="accent-bar"></div>
+            <h1>Sintra<br>Prime<br>Super<br>Memory</h1>
+        </div>
+        <div class="content-right">
+            <h2>High-ROI Upgrade Roadmap</h2>
+            <p>Evidence-Based Operational Excellence</p>
+            <div style="margin-top: 60px; font-size: 16px; opacity: 0.7;">
+                February 2026<br>
+                v1.0
+            </div>
+        </div>
+    </div>
+</body>
+</html>

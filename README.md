@@ -1,5 +1,34 @@
 # Agent Mode Engine
 
+## AI Provider Integrations
+
+### ClawdBot Integration
+
+SintraPrime now includes a complete ClawdBot software integration package with governance-compliant installation, configuration, and monitoring.
+
+**Quick Start:** [`clawdbot-integration/QUICK_START.md`](clawdbot-integration/QUICK_START.md)  
+**Installation Guide:** [`INSTALL_CLAWDBOT.md`](INSTALL_CLAWDBOT.md)  
+**Status Overview:** [`CLAWDBOT_STATUS.md`](CLAWDBOT_STATUS.md)
+
+ClawdBot provides:
+- Self-hosted AI assistant gateway
+- Multi-platform chat integration (Telegram/WhatsApp/Discord/Slack/Signal/iMessage)
+- Persistent memory and skills ecosystem
+- Full governance compliance (isolation, least privilege, execute consent)
+
+### Kimi K 2.5 (Moonshot AI)
+
+Kimi K 2.5 from Moonshot AI is now integrated as an AI provider for reasoning and analysis tasks.
+
+**Documentation:** [`agents/kimi/README.md`](agents/kimi/README.md)  
+**Configuration:** [`config/kimi-config.json`](config/kimi-config.json)
+
+Kimi K 2.5 provides:
+- Advanced language model with up to 128K context window
+- Chat completion and streaming APIs
+- Alternative reasoning engine for DeepThink operations
+- Full governance compliance with secure API key management
+
 ## Agent Mode (API-only)
 
 Validator → Planner → Executor pipeline and receipt logging: [docs/agent-mode-executor-v1.md](docs/agent-mode-executor-v1.md)
@@ -46,6 +75,46 @@ External reviewers can follow a read-only verification path in the **Public Veri
 - **Current Governance Checkpoint:**  
   Phase X Lock v1.4 — Read-Only Analysis Integration  
   [phaseX-lock-v1.4](https://github.com/ihoward40/SintraPrime/releases/tag/phaseX-lock-v1.4)
+
+## Monitoring & Forensics (Make.com Automation)
+
+SintraPrime includes a plug-and-play credit forensics system for Make.com, designed for non-coders to monitor runs, classify severity, and receive alerts.
+
+- **Operator Guide**: [`automations/OPERATOR_GUIDE.md`](automations/OPERATOR_GUIDE.md) — Step-by-step instructions for extracting top 5 scenarios from Make.com usage UI
+- **Environment Config**: [`automations/fieldmap.manifest.v1.json`](automations/fieldmap.manifest.v1.json) — Field mapping for Make.com scenarios
+- **Make.com Scenarios**:
+  - [`automations/make/1-runs-logger.md`](automations/make/1-runs-logger.md) — Monitors runs directory and logs new artifacts
+  - [`automations/make/2-severity-classifier.md`](automations/make/2-severity-classifier.md) — Analyzes and classifies run severity
+  - [`automations/make/3-slack-alerts.md`](automations/make/3-slack-alerts.md) — Sends high-severity alerts to Slack
+  - [`automations/make/4-weekly-credit-review.md`](automations/make/4-weekly-credit-review.md) — Generates weekly usage summaries
+
+For full documentation, see [`monitoring/README.md`](monitoring/README.md).
+
+## Airlock Server (ManusLite Gateway)
+
+SintraPrime Airlock is a production-ready HMAC-verified gateway that replaces paid Manus credits with owned infrastructure. It securely receives portal automation payloads, validates signatures and file integrity, and forwards sanitized receipts to Make.com workflows.
+
+**Key Features:**
+- HMAC-SHA256 signature verification (sender → Airlock → Make)
+- SHA-256 file hash validation
+- Temporary file storage for Make.com downloads
+- Security guardrails (no_submit_pay flag, size limits)
+- Health check endpoint for monitoring
+
+**Quick Start:**
+```bash
+cd airlock_server
+npm install
+cp .env.example .env
+# Configure environment variables
+npm start
+```
+
+**Documentation:**
+- **Server README**: [`airlock_server/README.md`](airlock_server/README.md) — Architecture and API reference
+- **Deployment Guide**: [`docs/AIRLOCK_DEPLOYMENT.md`](docs/AIRLOCK_DEPLOYMENT.md) — Step-by-step Render.com deployment
+- **Make.com Setup**: [`docs/MAKE_SCENARIO_SETUP.md`](docs/MAKE_SCENARIO_SETUP.md) — Configure Make.com scenario with HMAC verification
+- **Test Script**: [`scripts/send_to_airlock.mjs`](scripts/send_to_airlock.mjs) — Send test PDFs through Airlock
 
 ## Windows path note
 
