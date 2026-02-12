@@ -79,6 +79,19 @@
     "token_admin_read_ok": {
       "type": "boolean",
       "description": "True iff token allowed reading branch protection required_status_checks (Administration: Read)."
+    },
+    "token_checked_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO-8601 timestamp for when the token capability checks were performed (non-identifying)."
+    },
+    "token_scope_repo": {
+      "type": "boolean",
+      "description": "True iff the workflow successfully used the token against repo-scoped endpoints (non-identifying)."
+    },
+    "token_permission_admin_read": {
+      "type": "boolean",
+      "description": "True iff the token appears to have Administration: Read for this repo (alias of token_admin_read_ok; non-identifying)."
     }
   }
 }

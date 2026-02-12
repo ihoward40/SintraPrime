@@ -85,6 +85,7 @@ jobs:
             const summary = {
               schema_version: "bp_drift_summary.v1",
               generated_at: new Date().toISOString(),
+              token_checked_at: new Date().toISOString(),
               repo,
               branch,
               mode: "solo",
@@ -94,7 +95,9 @@ jobs:
               extra_contexts: extra,
               ok: actualRes.ok && missing.length === 0 && extra.length === 0,
               token_present,
-              token_admin_read_ok: actualRes.token_admin_read_ok
+              token_admin_read_ok: actualRes.token_admin_read_ok,
+              token_scope_repo: actualRes.ok,
+              token_permission_admin_read: actualRes.token_admin_read_ok
             };
 
             fs.writeFileSync("bp_drift_summary.json", JSON.stringify(summary, null, 2));
@@ -107,6 +110,7 @@ jobs:
             const fallback = {
               schema_version: "bp_drift_summary.v1",
               generated_at: new Date().toISOString(),
+              token_checked_at: new Date().toISOString(),
               repo,
               branch,
               mode: "solo",
@@ -116,7 +120,9 @@ jobs:
               extra_contexts: [],
               ok: false,
               token_present,
-              token_admin_read_ok: false
+              token_admin_read_ok: false,
+              token_scope_repo: false,
+              token_permission_admin_read: false
             };
             fs.writeFileSync("bp_drift_summary.json", JSON.stringify(fallback, null, 2));
             const out = process.env.GITHUB_OUTPUT;
