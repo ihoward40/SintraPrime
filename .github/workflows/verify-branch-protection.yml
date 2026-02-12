@@ -1,6 +1,6 @@
 name: Verify Branch Protection (solo mode)
 
-on:
+"on":
   push:
     paths:
       - ".github/branch-protection/**"
