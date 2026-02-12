@@ -19,7 +19,9 @@ jobs:
         env:
           BASE_REF: ${{ github.base_ref || github.event.repository.default_branch }}
         run: |
-          git fetch origin "$BASE_REF" --depth=1
+          # Ensure the base branch has enough history for merge-base/three-dot diff.
+          # A shallow fetch here can cause: "fatal: origin/<base>...HEAD: no merge base".
+          git fetch --no-tags --prune origin "+refs/heads/$BASE_REF:refs/remotes/origin/$BASE_REF"
           CHANGED=$(git diff --name-only "origin/$BASE_REF...HEAD")
           echo "$CHANGED" > changed_files.txt
           echo "changed_files<<EOF" >> $GITHUB_OUTPUT
