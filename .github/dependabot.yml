@@ -1,5 +1,61 @@
 version: 2
 updates:
+  # Main repository dependencies
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "daily"
+      time: "06:00"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+    groups:
+      production-dependencies:
+        applies-to: version-updates
+        patterns:
+          - "*"
+        exclude-patterns:
+          - "@types/*"
+          - "typescript"
+          - "eslint*"
+          - "prettier"
+        update-types:
+          - "minor"
+          - "patch"
+      development-dependencies:
+        applies-to: version-updates
+        patterns:
+          - "@types/*"
+          - "typescript"
+          - "eslint*"
+          - "prettier"
+        update-types:
+          - "minor"
+          - "patch"
+
+  # Airlock server dependencies
+  - package-ecosystem: "npm"
+    directory: "/airlock_server"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "airlock"
+
+  # UI client dependencies  
+  - package-ecosystem: "npm"
+    directory: "/ui/client"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "ui"
+
+  # GitHub Actions
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
