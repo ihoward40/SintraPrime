@@ -86,6 +86,9 @@ TryCmd {
 
   Write-Host ("ok: " + $s.ok) -ForegroundColor Cyan
   Write-Host ("token_present: " + $s.token_present + " | token_admin_read_ok: " + $s.token_admin_read_ok) -ForegroundColor Cyan
+  if ($s.PSObject.Properties.Name -contains 'token_admin_read_http_status') {
+    Write-Host ("token_admin_read_http_status: " + $s.token_admin_read_http_status) -ForegroundColor Cyan
+  }
   if ($null -ne $s.token_checked_at) {
     Write-Host ("token_checked_at: " + $s.token_checked_at) -ForegroundColor Cyan
   }
