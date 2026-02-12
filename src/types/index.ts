@@ -110,7 +110,7 @@ export interface Connector {
   name: string;
   type: string;
   authenticate(): Promise<void>;
-  call(method: string, args: any): Promise<any>;
+  call(method: string, endpointOrArgs: any, args?: any): Promise<any>;
 }
 
 /**

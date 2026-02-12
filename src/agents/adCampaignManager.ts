@@ -602,7 +602,7 @@ export class AdCampaignManager {
    * Generates daily performance report
    */
   async generateDailyReport(): Promise<DailyReport> {
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date().toISOString().split('T')[0] ?? '';
     const campaignSummaries: CampaignSummary[] = [];
     let totalSpend = 0;
     let totalRevenue = 0;
