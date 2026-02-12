@@ -50,54 +50,50 @@ TryCmd {
   gh run list --repo $Repo --workflow "verify-branch-protection.yml" --branch $Branch -L 3
 } "Could not list drift runs"
 
-Section "Drift failure summary (safe)"
+Section "Drift summary artifact (no logs)"
 TryCmd {
   $latest = gh run list --repo $Repo --workflow "verify-branch-protection.yml" --branch $Branch -L 1 --json databaseId,status,conclusion,url --jq '.[0]'
-  if (-not $latest) {
-    Write-Host "No runs found." -ForegroundColor Yellow
+  if (-not $latest) { Write-Host "No runs found." -ForegroundColor Yellow; return }
+
+  $run = $latest | ConvertFrom-Json
+  $conclusion = if ($null -eq $run.conclusion) { "" } else { $run.conclusion }
+
+  Write-Host ("Latest drift run: #" + $run.databaseId + " -> " + $run.status + " " + $conclusion) -ForegroundColor Gray
+  Write-Host ("URL: " + $run.url) -ForegroundColor Gray
+
+  $tmp = Join-Path $env:TEMP ("bp_drift_" + $run.databaseId)
+  Remove-Item $tmp -Recurse -Force -ErrorAction SilentlyContinue | Out-Null
+  New-Item -ItemType Directory -Path $tmp | Out-Null
+
+  gh run download $run.databaseId --repo $Repo --name "bp-drift-summary" --dir $tmp | Out-Null
+
+  $found = Get-ChildItem -Path $tmp -Recurse -Filter "bp_drift_summary.json" -ErrorAction SilentlyContinue | Select-Object -First 1
+  if (-not $found) {
+    Write-Host "Artifact bp_drift_summary.json not found (older runs may not have it yet)." -ForegroundColor Yellow
     return
   }
 
-  $obj = $latest | ConvertFrom-Json
-  $conclusion = if ($null -eq $obj.conclusion) { "" } else { $obj.conclusion }
+  $s = Get-Content $found.FullName -Raw | ConvertFrom-Json
 
-  Write-Host ("Latest drift run: #" + $obj.databaseId + " -> " + $obj.status + " " + $conclusion) -ForegroundColor Gray
-  Write-Host ("URL: " + $obj.url) -ForegroundColor Gray
+  Write-Host ("ok: " + $s.ok) -ForegroundColor Cyan
+  Write-Host ("token_present: " + $s.token_present + " | token_admin_read_ok: " + $s.token_admin_read_ok) -ForegroundColor Cyan
 
-  if ($obj.status -ne "completed") {
-    Write-Host "Run not completed yet; skipping log peek." -ForegroundColor Yellow
-    return
+  Write-Host "`nExpected contexts:" -ForegroundColor Gray
+  $s.expected_contexts | ForEach-Object { Write-Host "  - $_" }
+
+  Write-Host "`nActual contexts:" -ForegroundColor Gray
+  $s.actual_contexts | ForEach-Object { Write-Host "  - $_" }
+
+  if ($s.missing_contexts.Count -gt 0) {
+    Write-Host "`nMissing contexts:" -ForegroundColor Yellow
+    $s.missing_contexts | ForEach-Object { Write-Host "  - $_" -ForegroundColor DarkYellow }
   }
 
-  if ($obj.conclusion -ne "success") {
-    # Pull only error-ish lines; avoid dumping full logs.
-    $log = gh run view $obj.databaseId --repo $Repo --log-failed 2>$null
-    if (-not $log) {
-      $log = gh run view $obj.databaseId --repo $Repo --log 2>$null
-    }
-    if (-not $log) {
-      Write-Host "Could not read logs (permissions?)" -ForegroundColor Yellow
-      return
-    }
-
-    $hits = $log -split "`n" | Where-Object {
-      $_ -match "::error::" -or
-      $_ -match "Missing BRANCH_PROTECTION_TOKEN" -or
-      $_ -match "\b401\b" -or
-      $_ -match "\b403\b" -or
-      $_ -match "\b404\b"
-    } | Select-Object -First 25
-
-    if ($hits.Count -gt 0) {
-      Write-Host "Key failure lines:" -ForegroundColor Yellow
-      $hits | ForEach-Object { Write-Host $_ -ForegroundColor DarkYellow }
-    } else {
-      Write-Host "No obvious error markers found in logs (showing URL above)." -ForegroundColor Yellow
-    }
-  } else {
-    Write-Host "Drift check is green." -ForegroundColor Green
+  if ($s.extra_contexts.Count -gt 0) {
+    Write-Host "`nExtra contexts:" -ForegroundColor Yellow
+    $s.extra_contexts | ForEach-Object { Write-Host "  - $_" -ForegroundColor DarkYellow }
   }
-} "Could not summarize drift failure (need Actions read perms)."
+} "Could not download drift artifact (need Actions read perms)."
 
 Section "BRANCH_PROTECTION_TOKEN secret present?"
 TryCmd {
