@@ -77,6 +77,14 @@ TryCmd {
 
   Write-Host ("ok: " + $s.ok) -ForegroundColor Cyan
   Write-Host ("token_present: " + $s.token_present + " | token_admin_read_ok: " + $s.token_admin_read_ok) -ForegroundColor Cyan
+  if ($null -ne $s.token_checked_at) {
+    Write-Host ("token_checked_at: " + $s.token_checked_at) -ForegroundColor Cyan
+  }
+  if ($null -ne $s.token_scope_repo -or $null -ne $s.token_permission_admin_read) {
+    $scopeRepo = if ($null -ne $s.token_scope_repo) { $s.token_scope_repo } else { "(n/a)" }
+    $adminRead = if ($null -ne $s.token_permission_admin_read) { $s.token_permission_admin_read } else { "(n/a)" }
+    Write-Host ("token_scope_repo: " + $scopeRepo + " | token_permission_admin_read: " + $adminRead) -ForegroundColor Cyan
+  }
 
   Write-Host "`nExpected contexts:" -ForegroundColor Gray
   $s.expected_contexts | ForEach-Object { Write-Host "  - $_" }
