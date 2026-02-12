@@ -83,7 +83,7 @@ jobs:
             const extra = diff(actual, expected);
 
             const summary = {
-              schema_version: "bp_drift_summary.v1",
+              schema_version: "1.1",
               generated_at: new Date().toISOString(),
               token_checked_at: new Date().toISOString(),
               repo,
@@ -108,7 +108,7 @@ jobs:
             fs.appendFileSync(out, `token_admin_read_ok=${summary.token_admin_read_ok}\n`);
           })().catch(err => {
             const fallback = {
-              schema_version: "bp_drift_summary.v1",
+              schema_version: "1.1",
               generated_at: new Date().toISOString(),
               token_checked_at: new Date().toISOString(),
               repo,

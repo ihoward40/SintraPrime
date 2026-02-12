@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://example.invalid/schemas/bp_drift_summary.v1.schema.json",
+  "$id": "https://example.invalid/schemas/bp_drift_summary.1.1.schema.json",
   "title": "Branch Protection Drift Summary",
-  "description": "Machine-readable summary emitted by verify-branch-protection workflow. Captures expected vs actual required status-check contexts, drift, and token/permission booleans.",
+  "description": "Machine-readable summary emitted by verify-branch-protection workflow. Captures expected vs actual required status-check contexts, drift, and token/permission booleans. schema_version is pinned for evidence packs.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -22,7 +22,8 @@
   "properties": {
     "schema_version": {
       "type": "string",
-      "const": "bp_drift_summary.v1"
+      "const": "1.1",
+      "description": "Pinned schema version for bp_drift_summary.json exhibits."
     },
     "generated_at": {
       "type": "string",
