@@ -75,6 +75,15 @@ TryCmd {
 
   $s = Get-Content $found.FullName -Raw | ConvertFrom-Json
 
+  if ($null -ne $s.schema_version) {
+    Write-Host ("schema_version: " + $s.schema_version) -ForegroundColor Cyan
+    if ($s.schema_version -ne "1.1") {
+      Write-Host ("WARNING: unexpected schema_version (expected 1.1)") -ForegroundColor Yellow
+    }
+  } else {
+    Write-Host "schema_version: (missing)" -ForegroundColor Yellow
+  }
+
   Write-Host ("ok: " + $s.ok) -ForegroundColor Cyan
   Write-Host ("token_present: " + $s.token_present + " | token_admin_read_ok: " + $s.token_admin_read_ok) -ForegroundColor Cyan
   if ($null -ne $s.token_checked_at) {
