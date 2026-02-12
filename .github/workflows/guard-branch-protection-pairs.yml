@@ -3,8 +3,6 @@ name: Guard Branch Protection Config Pair
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
-    paths:
-      - ".github/branch-protection/**"
 
 permissions:
   contents: read
