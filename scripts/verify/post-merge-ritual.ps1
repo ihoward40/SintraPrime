@@ -83,6 +83,9 @@ TryCmd {
     if ($s.PSObject.Properties.Name -contains 'schema_path') {
       Write-Host ("schema_path: " + $s.schema_path) -ForegroundColor Cyan
     }
+    if ($s.PSObject.Properties.Name -contains 'schema_url') {
+      Write-Host ("schema_url: " + $s.schema_url) -ForegroundColor Cyan
+    }
   } else {
     Write-Host "schema_version: (missing)" -ForegroundColor Yellow
   }

@@ -40,6 +40,8 @@ jobs:
           const branch = process.env.BRANCH || "master";
           const token = process.env.BP_TOKEN || "";
           const githubApiUrl = process.env.GITHUB_API_URL || "https://api.github.com";
+          const githubServerUrl = process.env.GITHUB_SERVER_URL || "https://github.com";
+          const githubSha = process.env.GITHUB_SHA || "";
 
           const token_present = token.length > 0;
 
@@ -86,10 +88,16 @@ jobs:
             const missing = diff(expected, actual);
             const extra = diff(actual, expected);
 
+            const schemaPath = ".github/branch-protection/bp_drift_summary.schema.json";
+            const schemaUrl = githubSha
+              ? `${githubServerUrl}/${repo}/raw/${githubSha}/${schemaPath}`
+              : undefined;
+
             const summary = {
               // Schema upgrade discipline: bump only when required fields or semantics change.
               schema_version: "1.1",
-              schema_path: ".github/branch-protection/bp_drift_summary.schema.json",
+              schema_path: schemaPath,
+              schema_url: schemaUrl,
               generated_at: new Date().toISOString(),
               token_checked_at: new Date().toISOString(),
               repo,
@@ -118,6 +126,9 @@ jobs:
             const fallback = {
               schema_version: "1.1",
               schema_path: ".github/branch-protection/bp_drift_summary.schema.json",
+              schema_url: githubSha
+                ? `${githubServerUrl}/${repo}/raw/${githubSha}/.github/branch-protection/bp_drift_summary.schema.json`
+                : undefined,
               generated_at: new Date().toISOString(),
               token_checked_at: new Date().toISOString(),
               repo,
