@@ -1,0 +1,108 @@
+name: Verify Branch Protection (solo mode)
+
+on:
+  push:
+    paths:
+      - ".github/branch-protection/**"
+      - ".github/workflows/verify-branch-protection.yml"
+  schedule:
+    - cron: "17 5 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    env:
+      EXPECTED_FILE: .github/branch-protection/solo.json
+      OWNER: ${{ github.repository_owner }}
+      REPO: ${{ github.event.repository.name }}
+      BRANCH: ${{ github.event.repository.default_branch }}
+      BP_TOKEN: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fail if token missing
+        run: |
+          if [ -z "${BP_TOKEN}" ]; then
+            echo "::error::Missing BRANCH_PROTECTION_TOKEN secret (needs Administration: Read)."
+            exit 1
+          fi
+
+      - name: Normalize expected config (from solo.json)
+        run: |
+          jq -n --slurpfile f "${EXPECTED_FILE}" '
+            ($f[0]) | {
+              strict: .required_status_checks.strict,
+              contexts: (.required_status_checks.contexts | sort),
+              enforce_admins: .enforce_admins,
+              review_count: .required_pull_request_reviews.required_approving_review_count,
+              code_owner: .required_pull_request_reviews.require_code_owner_reviews,
+              last_push_approval: .required_pull_request_reviews.require_last_push_approval,
+              conversation_resolution: .required_conversation_resolution
+            }' | jq -S . > expected.normalized.json
+
+          echo "EXPECTED:"
+          cat expected.normalized.json
+
+      - name: Fetch + normalize actual branch protection (live)
+        run: |
+          curl -sS \
+            -H "Authorization: Bearer ${BP_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${OWNER}/${REPO}/branches/${BRANCH}/protection" \
+            | jq '{
+                strict: .required_status_checks.strict,
+                contexts: (.required_status_checks.contexts | sort),
+                enforce_admins: (.enforce_admins.enabled // .enforce_admins),
+                review_count: .required_pull_request_reviews.required_approving_review_count,
+                code_owner: .required_pull_request_reviews.require_code_owner_reviews,
+                last_push_approval: .required_pull_request_reviews.require_last_push_approval,
+                conversation_resolution: (.required_conversation_resolution.enabled // .required_conversation_resolution)
+              }' | jq -S . > actual.normalized.json
+
+          echo "ACTUAL:"
+          cat actual.normalized.json
+
+      - name: Compare (fail if drift)
+        run: |
+          if ! diff -u expected.normalized.json actual.normalized.json; then
+            echo "::error::Branch protection drift detected (not in solo mode)."
+            echo "Fix: run scripts/ops/branch-protection.ps1 -Mode solo"
+            exit 1
+          fi
+
+      - name: Optional: verify required contexts exist on latest commit
+        run: |
+          sha=$(curl -sS \
+            -H "Authorization: Bearer ${BP_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${OWNER}/${REPO}/commits/${BRANCH}" \
+            | jq -r .sha)
+
+          checks=$(curl -sS \
+            -H "Authorization: Bearer ${BP_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${OWNER}/${REPO}/commits/${sha}/check-runs" \
+            | jq -r '.check_runs[].name' | sort -u || true)
+
+          if [ -z "$checks" ]; then
+            echo "No check-runs found on latest commit; skipping context existence check."
+            exit 0
+          fi
+
+          echo "Check runs on latest commit:"
+          echo "$checks"
+
+          missing=0
+          for ctx in $(jq -r '.contexts[]' expected.normalized.json); do
+            if ! echo "$checks" | grep -Fxq "$ctx"; then
+              echo "::warning::Required context missing from latest commit: $ctx"
+              missing=1
+            fi
+          done
+
+          exit 0
