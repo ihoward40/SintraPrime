@@ -135,6 +135,17 @@ jobs:
           path: bp_drift_summary.json
           retention-days: 14
 
+      - name: Write drift artifact notes to job summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## Branch protection drift evidence"
+            echo
+            echo "- Uploaded artifact: \`bp-drift-summary\` → contains \`bp_drift_summary.json\`"
+            echo "- Schema: \`.github/branch-protection/bp_drift_summary.schema.json\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Gate on branch protection drift (master must be strict)
         id: gate
         run: |
