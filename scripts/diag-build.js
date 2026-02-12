@@ -1,4 +1,4 @@
-import { sendMessage } from './sendMessage.js';
+import { sendMessage } from '../sendMessage.js';
 
 const result = await sendMessage({
   message: '/build validation-agent {"dry_run":false}',
