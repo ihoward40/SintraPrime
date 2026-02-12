@@ -81,6 +81,12 @@
       "type": "boolean",
       "description": "True iff token allowed reading branch protection required_status_checks (Administration: Read)."
     },
+    "token_admin_read_http_status": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 599,
+      "description": "HTTP status code returned by the required_status_checks probe. 200=ok, 401=bad auth/header, 403=permission denied, 404=not found (often permission or endpoint), 0=network/curl/fetch failure. Non-identifying."
+    },
     "token_checked_at": {
       "type": "string",
       "format": "date-time",
