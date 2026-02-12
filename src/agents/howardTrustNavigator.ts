@@ -360,7 +360,7 @@ ${updates.join('\n')}
     const now = new Date();
     const quarter = Math.floor(now.getMonth() / 3);
     const nextQuarter = new Date(now.getFullYear(), (quarter + 1) * 3, 0);
-    return nextQuarter.toISOString().slice(0, 10);
+    return nextQuarter.toISOString().split('T')[0] ?? '';
   }
 
   private getContentTopic(day: number): string {

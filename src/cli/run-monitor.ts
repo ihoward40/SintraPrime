@@ -22,7 +22,7 @@ if (command === 'classify') {
   // Example: classify a run
   const runDataPath = process.argv[3];
   if (!runDataPath) {
-    console.error('Usage: run-monitor.ts classify <input_file>');
+    console.error('Error: Run data path is required');
     process.exit(1);
   }
   const runData = JSON.parse(fs.readFileSync(runDataPath, 'utf-8'));
@@ -33,7 +33,7 @@ if (command === 'classify') {
   // Example: generate Slack alert
   const runDataPath = process.argv[3];
   if (!runDataPath) {
-    console.error('Usage: run-monitor.ts alert <input_file>');
+    console.error('Error: Run data path is required');
     process.exit(1);
   }
   const runData: RunRecord = JSON.parse(fs.readFileSync(runDataPath, 'utf-8'));

@@ -1,6 +1,8 @@
 import { sendMessage } from "../agents/sendMessage.js";
 import { enforceMaxRunsPerDay } from "../autonomy/budget.js";
 import { writeAutonomySummary } from "../artifacts/writeAutonomySummary.js";
+import { nowIso as fixedNowIso } from "../utils/clock.js";
+import { enforceCliCredits } from "../credits/enforceCliCredits.js";
 
 const mode = String(process.env.AUTONOMY_MODE || "OFF");
 
@@ -26,8 +28,18 @@ async function main() {
     process.exit(2);
   }
 
+  const threadId = (process.env.THREAD_ID || "autonomy_001").trim();
+
+  {
+    const now_iso = fixedNowIso();
+    const denied = enforceCliCredits({ now_iso, threadId, command, domain_id: null });
+    if (denied) {
+      process.stdout.write(JSON.stringify(denied, null, 0));
+      process.exit(1);
+    }
+  }
+
   const started_at = nowIso();
-  const threadId = process.env.THREAD_ID || "autonomy_001";
 
   const resp = await sendMessage({
     message: command,
