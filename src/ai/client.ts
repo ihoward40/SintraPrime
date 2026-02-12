@@ -4,15 +4,14 @@
  * Provides AI-powered analysis and report generation for governance operations
  */
 
-import { OpenAI } from 'openai';
+// Stub OpenAI type for when package is not installed
+type OpenAIClient = any;
 
-export const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-  baseURL: process.env.OPENAI_API_BASE,
-});
+// OpenAI client instance (requires 'openai' package to be installed)
+export const openai: OpenAIClient = null;
 
 export function isAIAvailable(): boolean {
-  return !!process.env.OPENAI_API_KEY;
+  return !!process.env.OPENAI_API_KEY && openai !== null;
 }
 
 /**
