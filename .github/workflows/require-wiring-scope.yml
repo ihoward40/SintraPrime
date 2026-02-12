@@ -1,11 +1,11 @@
-name: Require Governance Wiring Scope
+name: governance
 
 on:
   pull_request:
     types: [opened, synchronize, reopened]
 
 jobs:
-  wiring-scope-check:
+  wiring-scope:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
