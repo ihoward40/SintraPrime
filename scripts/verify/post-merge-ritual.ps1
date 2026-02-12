@@ -50,6 +50,55 @@ TryCmd {
   gh run list --repo $Repo --workflow "verify-branch-protection.yml" --branch $Branch -L 3
 } "Could not list drift runs"
 
+Section "Drift failure summary (safe)"
+TryCmd {
+  $latest = gh run list --repo $Repo --workflow "verify-branch-protection.yml" --branch $Branch -L 1 --json databaseId,status,conclusion,url --jq '.[0]'
+  if (-not $latest) {
+    Write-Host "No runs found." -ForegroundColor Yellow
+    return
+  }
+
+  $obj = $latest | ConvertFrom-Json
+  $conclusion = if ($null -eq $obj.conclusion) { "" } else { $obj.conclusion }
+
+  Write-Host ("Latest drift run: #" + $obj.databaseId + " -> " + $obj.status + " " + $conclusion) -ForegroundColor Gray
+  Write-Host ("URL: " + $obj.url) -ForegroundColor Gray
+
+  if ($obj.status -ne "completed") {
+    Write-Host "Run not completed yet; skipping log peek." -ForegroundColor Yellow
+    return
+  }
+
+  if ($obj.conclusion -ne "success") {
+    # Pull only error-ish lines; avoid dumping full logs.
+    $log = gh run view $obj.databaseId --repo $Repo --log-failed 2>$null
+    if (-not $log) {
+      $log = gh run view $obj.databaseId --repo $Repo --log 2>$null
+    }
+    if (-not $log) {
+      Write-Host "Could not read logs (permissions?)" -ForegroundColor Yellow
+      return
+    }
+
+    $hits = $log -split "`n" | Where-Object {
+      $_ -match "::error::" -or
+      $_ -match "Missing BRANCH_PROTECTION_TOKEN" -or
+      $_ -match "\b401\b" -or
+      $_ -match "\b403\b" -or
+      $_ -match "\b404\b"
+    } | Select-Object -First 25
+
+    if ($hits.Count -gt 0) {
+      Write-Host "Key failure lines:" -ForegroundColor Yellow
+      $hits | ForEach-Object { Write-Host $_ -ForegroundColor DarkYellow }
+    } else {
+      Write-Host "No obvious error markers found in logs (showing URL above)." -ForegroundColor Yellow
+    }
+  } else {
+    Write-Host "Drift check is green." -ForegroundColor Green
+  }
+} "Could not summarize drift failure (need Actions read perms)."
+
 Section "BRANCH_PROTECTION_TOKEN secret present?"
 TryCmd {
   # GitHub will return nothing if you have no secrets or you lack permission.
