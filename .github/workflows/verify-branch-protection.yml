@@ -89,6 +89,7 @@ jobs:
             const summary = {
               // Schema upgrade discipline: bump only when required fields or semantics change.
               schema_version: "1.1",
+              schema_path: ".github/branch-protection/bp_drift_summary.schema.json",
               generated_at: new Date().toISOString(),
               token_checked_at: new Date().toISOString(),
               repo,
@@ -116,6 +117,7 @@ jobs:
           })().catch(err => {
             const fallback = {
               schema_version: "1.1",
+              schema_path: ".github/branch-protection/bp_drift_summary.schema.json",
               generated_at: new Date().toISOString(),
               token_checked_at: new Date().toISOString(),
               repo,
