@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "browser.l0.dom_extract input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["execution_id", "step_id", "url", "timeoutMs"],
+  "properties": {
+    "execution_id": { "type": "string", "minLength": 1 },
+    "step_id": { "type": "string", "minLength": 1 },
+    "url": { "type": "string", "minLength": 1 },
+    "timeoutMs": { "type": "integer", "minimum": 1 },
+    "maxChars": { "type": "integer", "minimum": 1 }
+  }
+}

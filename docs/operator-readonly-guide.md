@@ -18,6 +18,22 @@ Remove-Item Env:SMOKE_VECTORS_USE_REMOTE,Env:WEBHOOK_URL,Env:VALIDATION_WEBHOOK_
 
 ## Read-only operations
 
+### Browser L0 (read-only web capture)
+
+Browser L0 steps (`browser.l0.*`) are **read-only** and **deny-by-default** for `http(s)`.
+
+- Default posture is `https:` only.
+- `data:` URLs are allowed by default (useful for deterministic/offline self-tests). Set `BROWSER_L0_ALLOW_DATA=0` to disable.
+- `http:` is blocked by default. Set `BROWSER_L0_ALLOW_HTTP=1` only if you explicitly need it.
+- `http(s)` requires an explicit hostname allowlist via `BROWSER_L0_ALLOWED_HOSTS`.
+- SSRF guards block localhost/`.local`, IP-literals, private/local IPv4 ranges, and metadata targets like `169.254.169.254`.
+
+Example (PowerShell):
+
+```powershell
+$env:BROWSER_L0_ALLOWED_HOSTS="example.com,docs.example.com"
+```
+
 ### Run a Notion live read (if enabled by policy)
 
 - Set secrets in `control/secrets.env` (never commit).
