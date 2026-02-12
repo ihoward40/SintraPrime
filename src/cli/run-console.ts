@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
+import { nowIso as fixedNowIso } from "../utils/clock.js";
+import { enforceCliCredits } from "../credits/enforceCliCredits.js";
 import {
   SCHEMA_VERSION,
   assertValid,
@@ -362,6 +364,17 @@ function delegateToEngine(command: string) {
 
 async function main() {
   const command = getArgCommand();
+
+  {
+    const threadId = (process.env.THREAD_ID || "local_test_001").trim();
+    const now_iso = fixedNowIso();
+    const denied = enforceCliCredits({ now_iso, threadId, command, domain_id: null });
+    if (denied) {
+      console.log(JSON.stringify(denied, null, 0));
+      process.exitCode = 1;
+      return;
+    }
+  }
 
   const q = parseQueueCommand(command);
   if (q) {

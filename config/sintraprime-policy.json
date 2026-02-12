@@ -1,0 +1,83 @@
+{
+  "version": "1.0.0",
+  "severity_policy": {
+    "sev0": {
+      "multiplier": 10,
+      "pii_or_regulatory": true,
+      "action": [
+        "quarantine",
+        "block_dispatch",
+        "create_case",
+        "page_lock",
+        "slack_escalate"
+      ]
+    },
+    "sev1": {
+      "multiplier": 5,
+      "action": [
+        "create_case",
+        "slack_alert",
+        "require_ack_before_rerun"
+      ]
+    },
+    "sev2": {
+      "multiplier": 2,
+      "action": [
+        "log_case_optional",
+        "weekly_review"
+      ]
+    },
+    "sev3": {
+      "multiplier": 1.5,
+      "action": [
+        "ledger_only",
+        "weekly_review_optional"
+      ]
+    },
+    "sev4": {
+      "multiplier": 0,
+      "action": [
+        "ledger_only"
+      ]
+    }
+  },
+  "risk_flags": {
+    "retry_loop": {
+      "misconfig_weight": 3
+    },
+    "unbounded_iterator": {
+      "misconfig_weight": 4
+    },
+    "missing_idempotency": {
+      "misconfig_weight": 4
+    },
+    "sudden_prompt_growth": {
+      "misconfig_weight": 2
+    },
+    "batch_job": {
+      "legit_weight": 3
+    },
+    "backfill_mode": {
+      "legit_weight": 4
+    }
+  },
+  "review_windows": {
+    "credit_review_days": 7,
+    "baseline_window_days": 30,
+    "healthy_run_statuses": ["Success"]
+  },
+  "slack": {
+    "channels": {
+      "sev0": "#ops-critical",
+      "sev1": "#ops-alerts",
+      "sev2": "#ops-review",
+      "default": "#ops-monitoring"
+    }
+  },
+  "notion": {
+    "databases": {
+      "runs_ledger_id": "${NOTION_RUNS_LEDGER_DB_ID}",
+      "cases_id": "${NOTION_CASES_DB_ID}"
+    }
+  }
+}

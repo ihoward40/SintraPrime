@@ -5,6 +5,8 @@ import { simulatePolicy } from "../policy/simulatePolicy.js";
 import { extractScoreFeatures } from "../policy/extractScoreFeatures.js";
 import { scorePolicy } from "../policy/scorePolicy.js";
 import { loadAgentRegistry, findAgentsProvidingCapability } from "../agents/agentRegistry.js";
+import { nowIso as fixedNowIso } from "../utils/clock.js";
+import { enforceCliCredits } from "../credits/enforceCliCredits.js";
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return !!v && typeof v === "object" && !Array.isArray(v);
@@ -378,6 +380,16 @@ function parseOperatorCommand(command: string):
 (async () => {
   try {
     const raw = getArgCommand();
+    {
+      const threadId = (process.env.THREAD_ID || "local_test_001").trim();
+      const now_iso = fixedNowIso();
+      const denied = enforceCliCredits({ now_iso, threadId, command: raw, domain_id: null });
+      if (denied) {
+        console.log(JSON.stringify(denied, null, 0));
+        process.exitCode = 1;
+        return;
+      }
+    }
     const parsed = parseOperatorCommand(raw);
     if (!parsed) {
       throw new Error("Usage: /operator queue | /operator job <job_id> | /operator stats");

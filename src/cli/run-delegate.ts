@@ -20,6 +20,8 @@ import { promotionsDir, readPromotion } from "../autonomy/promotionStore.js";
 import fs from "node:fs";
 import path from "node:path";
 import { patternMatchesCommand } from "../delegated/patternMatch.js";
+import { nowIso as fixedNowIso } from "../utils/clock.js";
+import { enforceCliCredits } from "../credits/enforceCliCredits.js";
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return !!v && typeof v === "object" && !Array.isArray(v);
@@ -62,6 +64,16 @@ export async function main() {
   const raw = getArgCommand();
   const domainPrefix = parseDomainPrefix(raw);
   const command = domainPrefix?.inner_command ?? raw;
+  {
+    const threadId = (process.env.THREAD_ID || "local_test_001").trim();
+    const now_iso = fixedNowIso();
+    const denied = enforceCliCredits({ now_iso, threadId, command: raw, domain_id: domainPrefix?.domain_id ?? null });
+    if (denied) {
+      console.log(JSON.stringify(denied, null, 0));
+      process.exitCode = 1;
+      return;
+    }
+  }
   const trimmed = command.trim();
 
   try {

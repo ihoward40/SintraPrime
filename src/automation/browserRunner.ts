@@ -79,6 +79,11 @@ export class BrowserRunner {
         const action = task.actions[i];
         if (!action) continue;
         
+        if (!action) {
+          results.push({ action: i, success: false, error: 'Action is undefined' });
+          continue;
+        }
+        
         try {
           const result = await this.executeAction(action, i);
           results.push({ action: i, success: true, result });
@@ -158,7 +163,8 @@ export class BrowserRunner {
 
       case 'scroll':
         await this.page.evaluate(() => {
-          (globalThis as any).scrollBy(0, (globalThis as any).innerHeight);
+          // @ts-ignore - window is available in browser context
+          window.scrollBy(0, window.innerHeight);
         });
         return { scrolled: true };
 

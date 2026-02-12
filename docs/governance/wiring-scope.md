@@ -1,18 +1,17 @@
 # Governance Wiring Scope Declaration
 
 **Status:** Draft (Required for any wiring change)
-**Change Type:** ☐ New wiring ☐ Modification ☐ Removal
-**Branch:** feature/governance-specs-to-runtime
+**Change Type:** ☐ New wiring ☑ Modification ☐ Removal
+**Branch:** copilot/implement-credit-monitoring-system
 **Scope Hash (SHA-256):** ____________________
 **Prepared By:** ____________________
-**Date (UTC):** ____________________
+**Date (UTC):** 2026-02-03
 
 ---
 
 ## 1. Purpose of This Change
 
-Describe *why* this wiring is proposed and what problem it solves.
-Keep this factual and bounded. No outcomes or promises.
+Stabilize deterministic smoke vector execution on Windows, and add tooling/integration wiring used by local runtime paths (speech sink integration, env loading helper, deterministic automations schema snapshot generator).
 
 ---
 
@@ -20,9 +19,16 @@ Keep this factual and bounded. No outcomes or promises.
 
 List the exact spec(s), schema(s), or template(s) being connected to runtime behavior.
 
-- Spec / Schema Name:
-- File Path:
-- Version / Hash (if applicable):
+- Spec / Schema Name: Smoke vectors runner (deterministic local mock server)
+	- File Path: scripts/smoke-vectors.js
+
+- Spec / Schema Name: Automations schema snapshot (deterministic fingerprint)
+	- File Path: scripts/schema-snapshot-automations.mjs
+	- Output: scripts/schema-snapshots/automations.schema-snapshot.json
+
+- Spec / Schema Name: Speech sink integration (ElevenLabs)
+	- File Path: src/speech/sinks/elevenLabsSink.ts
+	- Wiring: src/speech/sinks/index.ts
 
 ---
 
@@ -30,9 +36,17 @@ List the exact spec(s), schema(s), or template(s) being connected to runtime beh
 
 List every execution path that will change.
 
-- Path / Module:
-- Before:
-- After:
+- Path / Module: scripts/smoke-vectors.js
+	- Before: local mock server could leak on Windows and hold port 8787, causing cross-run nondeterminism.
+	- After: PID tracking + stale-process cleanup + forced shutdown fallback to keep vectors deterministic across repeated runs.
+
+- Path / Module: scripts/schema-snapshot-automations.mjs
+	- Before: no deterministic automations snapshot generator.
+	- After: snapshot tool generates stable per-file hashes and a manifest hash.
+
+- Path / Module: src/speech/sinks/*
+	- Before: no ElevenLabs sink.
+	- After: ElevenLabs sink available via env configuration and registered in sink index.
 
 ---
 
@@ -40,8 +54,8 @@ List every execution path that will change.
 
 List related paths that are intentionally untouched.
 
-- Path / Module:
-- Reason for non-impact:
+- Path / Module: live webhook smoke path
+	- Reason for non-impact: remote webhook smoke runner remains available behind the explicit smoke:webhook script; default smoke remains local.
 
 ---
 
@@ -49,6 +63,8 @@ List related paths that are intentionally untouched.
 
 ☐ No authority expansion  
 ☐ Authority expansion (explain below)
+
+☑ No authority expansion
 
 If any authority is expanded, specify:
 - Previous authority boundary:
@@ -79,6 +95,10 @@ Describe controls that prevent overreach.
 - Tests added or updated:
 - Manual verification steps:
 - Evidence artifacts produced:
+
+- Tests added or updated: smoke:vectors determinism hardened; existing smoke vectors validate behavior.
+- Manual verification steps: run npm run typecheck; run npm run smoke:vectors twice back-to-back on Windows.
+- Evidence artifacts produced: scripts/schema-snapshots/automations.schema-snapshot.json; smoke vector output artifacts under runs/.
 
 ---
 

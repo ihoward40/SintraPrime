@@ -1,0 +1,83 @@
+{
+  "schemaVersion": "make-notion-contract-v1",
+  "contractName": "evidence-hygiene",
+  "purpose": "Create exactly-one Evidence Hygiene task for eligible Cases, and always emit a Run Receipt.",
+  "notion": {
+    "databases": {
+      "cases": {
+        "displayName": "🧾 Cases",
+        "requiredProperties": {
+          "Stage": { "type": "select", "required": true, "notes": "Trigger value: Wave-1 Sent" },
+          "WT Gate For Automation": { "type": "select|status", "required": true, "notes": "Gate value: ✅ ALLOWED" },
+          "WT Gate Verdict": { "type": "rich_text|select", "required": false },
+          "CaseID": { "type": "rich_text", "required": false, "notes": "Recommended stable ID for idempotency" }
+        }
+      },
+      "tasks": {
+        "displayName": "Tasks",
+        "requiredProperties": {
+          "Name": { "type": "title", "required": true },
+          "Case": { "type": "relation", "required": true, "notes": "Relation to 🧾 Cases" },
+          "Idempotency Key": { "type": "rich_text", "required": true },
+          "Status": { "type": "status|select", "required": true, "notes": "Must include Next and Done" },
+          "Priority": { "type": "select", "required": true, "notes": "Must include P0" },
+          "Mode": { "type": "select", "required": true, "notes": "Must include Draft-Only" }
+        }
+      },
+      "runReceipts": {
+        "displayName": "Run Receipts",
+        "requiredProperties": {
+          "Name": { "type": "title", "required": true },
+          "Case": { "type": "relation", "required": true },
+          "Idempotency Key": { "type": "rich_text", "required": true },
+          "Outcome": { "type": "select", "required": true, "notes": "created|duplicate|blocked|error" },
+          "Blocked Reason": { "type": "rich_text", "required": false },
+          "Run At": { "type": "date", "required": true }
+        }
+      }
+    }
+  },
+  "make": {
+    "scenario": {
+      "name": "Evidence Hygiene Task Creator",
+      "trigger": {
+        "module": "Notion.WatchDatabaseItems",
+        "filter": "Stage == 'Wave-1 Sent'"
+      },
+      "routes": [
+        {
+          "name": "ALLOWED",
+          "filter": "WT Gate For Automation == '✅ ALLOWED'",
+          "dedupe": {
+            "database": "tasks",
+            "condition": "Idempotency Key == <idempotencyKey> AND Status != 'Done'"
+          },
+          "outcomes": [
+            { "when": "dedupeHit", "receiptOutcome": "duplicate" },
+            {
+              "when": "dedupeMiss",
+              "createTask": {
+                "Name": "Evidence Hygiene (Wave-1)",
+                "Priority": "P0",
+                "Mode": "Draft-Only",
+                "Status": "Next"
+              },
+              "receiptOutcome": "created"
+            }
+          ]
+        },
+        {
+          "name": "BLOCKED",
+          "filter": "WT Gate For Automation != '✅ ALLOWED'",
+          "createReceipt": {
+            "receiptOutcome": "blocked",
+            "blockedReasonSource": "WT Gate Verdict"
+          }
+        }
+      ],
+      "idempotency": {
+        "key": "${CaseID || NotionPageIdNoDashes}:evidence_hygiene:v1"
+      }
+    }
+  }
+}

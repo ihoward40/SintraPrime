@@ -1,0 +1,23 @@
+{
+  "Run_ID": "RUN-TEST-RETRY-LOOP-001",
+  "Timestamp": "2026-01-23T13:15:00Z",
+  "Scenario_Name": "Document Processing",
+  "Scenario_ID": "DOC_PROCESS_v1",
+  "Job_Type": "ANALYSIS",
+  "Status": "Success",
+  "Credits_Total": 1600,
+  "Credits_In": 1200,
+  "Credits_Out": 400,
+  "Model": "gpt-4",
+  "Input_Tokens": 150000,
+  "Output_Tokens": 32000,
+  "Artifacts_Link": "https://drive.google.com/artifacts/test-004",
+  "Severity": "SEV4",
+  "Misconfig_Likelihood": "Low",
+  "Baseline_Expected_Credits": 200,
+  "Variance_Multiplier": 0,
+  "retry_count": 15,
+  "has_max_items_config": false,
+  "has_idempotency_key": false,
+  "deployment_timestamp": "2026-01-23T08:00:00Z"
+}

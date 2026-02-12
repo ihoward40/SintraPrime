@@ -1,0 +1,6 @@
+Case_ID,Title,Category,Severity,Exposure_Band,Status,Slack_Thread_URL,Root_Cause,Primary_Run_ID,Created_At
+CASE-20260121-A3F8B2,SEV0 • PII Exposure • PII_REVIEW_v1,Data/PII,SEV0,Regulatory,Resolved,https://slack.com/archives/C123/p1234567890,Misconfig,RUN-20260121-008,2026-01-21T15:50:00Z
+CASE-20260121-B9C4D1,SEV1 • Credit Spike • BINDER_EXPORT_v2,Cost/Credits,SEV1,Financial,Investigating,https://slack.com/archives/C123/p1234567891,Misconfig,RUN-20260121-006,2026-01-21T11:35:00Z
+CASE-20260121-E2A7F5,SEV2 • Minor Routing Issue • DELIVERY_v1,Delivery/Email,SEV2,Operational,Resolved,https://slack.com/archives/C123/p1234567892,External Dependency,RUN-20260120-015,2026-01-21T08:00:00Z
+CASE-20260122-C5B8A9,SEV3 • Backfill Variance • RECONCILE_v1,Cost/Credits,SEV3,Operational,Resolved,https://slack.com/archives/C123/p1234567893,Legit Load,RUN-20260122-010,2026-01-22T10:35:00Z
+CASE-20260120-D4E3B6,SEV1 • Filing Delay • FILING_v2,Filing/Regulatory,SEV1,Regulatory,Mitigating,https://slack.com/archives/C123/p1234567894,Unknown,RUN-20260120-012,2026-01-20T16:00:00Z

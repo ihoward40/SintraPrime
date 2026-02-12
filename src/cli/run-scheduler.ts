@@ -7,6 +7,8 @@ import { readSchedulerHistory } from "../scheduler/readHistory.js";
 import { writeSchedulerReceipt } from "../artifacts/writeSchedulerReceipt.js";
 import { decisionTrace } from "../scheduler/decisionTrace.js";
 import { runSchedulerExplain } from "./run-scheduler-explain.js";
+import { nowIso as fixedNowIso } from "../utils/clock.js";
+import { enforceCliCredits } from "../credits/enforceCliCredits.js";
 
 type SchedulerMode = "OFF" | "READ_ONLY_AUTONOMY" | "PROPOSE_ONLY_AUTONOMY" | "APPROVAL_GATED_AUTONOMY";
 
@@ -286,6 +288,17 @@ export async function runScheduler(jobId?: string) {
 
 async function main() {
   const cmd = getArgCommand();
+
+  {
+    const threadId = (process.env.THREAD_ID || "local_test_001").trim();
+    const now_iso = fixedNowIso();
+    const denied = enforceCliCredits({ now_iso, threadId, command: cmd, domain_id: null });
+    if (denied) {
+      console.log(JSON.stringify(denied, null, 0));
+      process.exitCode = 1;
+      return;
+    }
+  }
 
   const parsedExplain = parseSchedulerExplainCommand(cmd);
   if (parsedExplain) {

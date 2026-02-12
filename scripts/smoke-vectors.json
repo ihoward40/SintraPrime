@@ -1077,6 +1077,22 @@
     }
   },
   {
+    "name": "credits-daily-budget-exceeded",
+    "stage": "cli",
+    "command": "/policy explain NOTION_LIVE_REQUIRES_READ_ONLY",
+    "env": {
+      "CREDITS_MONITOR_ENABLED": "1",
+      "CREDITS_DAILY_BUDGET_UNITS": "0",
+      "CREDITS_UNITS_PER_RUN": "1",
+      "SMOKE_FIXED_NOW_ISO": "2024-01-10T09:15:30Z"
+    },
+    "expect_exit_code": 1,
+    "expect": {
+      "kind": "CreditDenied",
+      "code": "CREDITS_DAILY_BUDGET_UNITS_EXCEEDED"
+    }
+  },
+  {
     "name": "tier15-audit-export-creates-bundle",
     "stage": "cli",
     "command": "/audit export {\"since_iso\":\"2025-01-01T00:00:00.000Z\",\"redact\":true,\"include_artifacts\":false}",

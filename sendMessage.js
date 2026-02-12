@@ -1,16 +1,18 @@
-const DEFAULT_WEBHOOK_URL = 'https://connect.testmyprompt.com/webhook/69460c4a2e1c203dcdd080e4';
-
 export async function sendMessage({
   message,
   threadId = 'local_test_001',
   type = 'user_message',
   webhookUrl
 }) {
-  if (!process.env.WEBHOOK_SECRET) {
-    throw new Error('Missing WEBHOOK_SECRET env var');
+  const url = webhookUrl || process.env.WEBHOOK_URL;
+  if (!url) {
+    throw new Error('Missing WEBHOOK_URL (or pass webhookUrl)');
   }
 
-  const url = webhookUrl || process.env.WEBHOOK_URL || DEFAULT_WEBHOOK_URL;
+  const secret = process.env.WEBHOOK_SECRET;
+  if (!secret) {
+    throw new Error('Missing WEBHOOK_SECRET env var');
+  }
 
   const payload = { type, threadId, message };
 
@@ -26,7 +28,7 @@ export async function sendMessage({
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'X-Webhook-Secret': process.env.WEBHOOK_SECRET,
+      'X-Webhook-Secret': secret,
       'Cache-Control': 'no-store'
     },
     body: JSON.stringify(payload)

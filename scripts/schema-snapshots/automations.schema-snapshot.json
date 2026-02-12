@@ -1,0 +1,29 @@
+{
+  "kind": "automations.schema_snapshot.v1",
+  "created_at": "2026-02-03T13:06:31.680Z",
+  "root": "automations",
+  "total_files": 4,
+  "manifest_sha256": "53fe712cca51a2fdf9acc2e035d851444f4ffa7b33ee216e5e8a3551c4db42ac",
+  "files": [
+    {
+      "path": "automations/make-run-logger-blueprint.json",
+      "byte_length": 5235,
+      "sha256": "639ccdd7a2322c852f74af83c4325b5bacc282cb5deb0bd6fc198015bedf043e"
+    },
+    {
+      "path": "automations/make/contracts/evidence-hygiene.contract.json",
+      "byte_length": 3247,
+      "sha256": "fd9b00f13d892d7703fd5c5680f9751034f7f69daf55439dddc968819b84f19d"
+    },
+    {
+      "path": "automations/make/evidence-hygiene.md",
+      "byte_length": 4060,
+      "sha256": "4432c387c7eaa67eee91a9ca236c0dea89ad7a7531643d9a148f25e2ded2f750"
+    },
+    {
+      "path": "automations/README.md",
+      "byte_length": 8946,
+      "sha256": "8fa4bee2af3390168d5f2601932d8b6d0a1bb3c1cdc5a82b8c1828bb2e149f9b"
+    }
+  ]
+}

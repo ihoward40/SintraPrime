@@ -21,6 +21,8 @@ import {
 import { compareConfidence } from "../policy/compareConfidence.js";
 import type { ConfidenceScoreWithRegressionOutput } from "../policy/typesConfidenceRegression.js";
 import { explainPolicyCode } from "./run-policy-explain.js";
+import { nowIso as fixedNowIso } from "../utils/clock.js";
+import { enforceCliCredits } from "../credits/enforceCliCredits.js";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object" && !Array.isArray(value);
@@ -576,6 +578,18 @@ function inferApprovalRequiredFromPlan(plan: any): boolean {
 (async () => {
   try {
     const raw = getArgCommand();
+
+    {
+      const threadId = (process.env.THREAD_ID || "local_test_001").trim();
+      const now_iso = fixedNowIso();
+      const denied = enforceCliCredits({ now_iso, threadId, command: raw, domain_id: null });
+      if (denied) {
+        console.log(JSON.stringify(denied, null, 0));
+        process.exitCode = 1;
+        return;
+      }
+    }
+
     const parsedExplain = parsePolicyExplainCommand(raw);
     const parsedSim = parsePolicySimulateCommand(raw);
     const parsedScore = parsePolicyScoreCommand(raw);

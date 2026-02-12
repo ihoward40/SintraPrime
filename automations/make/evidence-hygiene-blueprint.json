@@ -1,0 +1,445 @@
+{
+  "name": "Evidence Hygiene Task Creator",
+  "description": "Watches Cases database for Wave-1 Sent stage, enforces gate check, ensures idempotency, and creates Evidence Hygiene tasks with audit receipts",
+  "version": "1.0.0",
+  "flow": [
+    {
+      "id": 1,
+      "module": "notion:WatchDatabaseItems",
+      "version": 1,
+      "parameters": {
+        "databaseId": "{{env.NOTION_CASES_DB_ID}}",
+        "filterType": "formula",
+        "filter": {
+          "property": "Stage",
+          "select": {
+            "equals": "Wave-1 Sent"
+          }
+        }
+      },
+      "mapper": {},
+      "metadata": {
+        "designer": {
+          "x": 0,
+          "y": 0
+        },
+        "restore": {},
+        "expect": [
+          {
+            "name": "databaseId",
+            "type": "text",
+            "label": "Database ID",
+            "required": true
+          }
+        ]
+      }
+    },
+    {
+      "id": 2,
+      "module": "builtin:SetVariables",
+      "version": 1,
+      "parameters": {},
+      "mapper": {
+        "variables": [
+          {
+            "name": "caseIdStable",
+            "value": "{{if(length(1.properties.CaseID.rich_text) > 0; first(1.properties.CaseID.rich_text).plain_text; replace(1.id; \"-\"; \"\"))}}"
+          },
+          {
+            "name": "idempotencyKey",
+            "value": "{{caseIdStable}}:evidence_hygiene:v1"
+          },
+          {
+            "name": "gateValue",
+            "value": "{{1.properties.WT Gate For Automation.select.name}}"
+          },
+          {
+            "name": "gateVerdict",
+            "value": "{{if(length(1.properties.WT Gate Verdict.rich_text) > 0; first(1.properties.WT Gate Verdict.rich_text).plain_text; \"\")}}"
+          }
+        ],
+        "scope": "roundtrip"
+      },
+      "metadata": {
+        "designer": {
+          "x": 300,
+          "y": 0
+        }
+      }
+    },
+    {
+      "id": 3,
+      "module": "builtin:Router",
+      "version": 1,
+      "mapper": null,
+      "metadata": {
+        "designer": {
+          "x": 600,
+          "y": 0
+        }
+      },
+      "routes": [
+        {
+          "flow": [
+            {
+              "id": 4,
+              "module": "notion:SearchObjects",
+              "version": 1,
+              "parameters": {
+                "databaseId": "{{env.NOTION_TASKS_DB_ID}}",
+                "filter": {
+                  "and": [
+                    {
+                      "property": "Idempotency Key",
+                      "rich_text": {
+                        "equals": "{{2.idempotencyKey}}"
+                      }
+                    },
+                    {
+                      "property": "Status",
+                      "status": {
+                        "does_not_equal": "Done"
+                      }
+                    }
+                  ]
+                }
+              },
+              "mapper": {},
+              "metadata": {
+                "designer": {
+                  "x": 900,
+                  "y": -150
+                },
+                "restore": {},
+                "expect": [
+                  {
+                    "name": "databaseId",
+                    "type": "text",
+                    "label": "Database ID",
+                    "required": true
+                  }
+                ]
+              }
+            },
+            {
+              "id": 5,
+              "module": "builtin:Router",
+              "version": 1,
+              "mapper": null,
+              "metadata": {
+                "designer": {
+                  "x": 1200,
+                  "y": -150
+                }
+              },
+              "routes": [
+                {
+                  "flow": [
+                    {
+                      "id": 6,
+                      "module": "notion:CreateADatabaseItem",
+                      "version": 1,
+                      "parameters": {
+                        "databaseId": "{{env.NOTION_RUN_RECEIPTS_DB_ID}}"
+                      },
+                      "mapper": {
+                        "properties": {
+                          "Name": {
+                            "title": [
+                              {
+                                "text": {
+                                  "content": "Evidence Hygiene"
+                                }
+                              }
+                            ]
+                          },
+                          "Case": {
+                            "relation": [
+                              {
+                                "id": "{{1.id}}"
+                              }
+                            ]
+                          },
+                          "Idempotency Key": {
+                            "rich_text": [
+                              {
+                                "text": {
+                                  "content": "{{2.idempotencyKey}}"
+                                }
+                              }
+                            ]
+                          },
+                          "Outcome": {
+                            "select": {
+                              "name": "duplicate"
+                            }
+                          },
+                          "Run At": {
+                            "date": {
+                              "start": "{{now}}"
+                            }
+                          }
+                        }
+                      },
+                      "metadata": {
+                        "designer": {
+                          "x": 1500,
+                          "y": -250
+                        }
+                      }
+                    }
+                  ],
+                  "filter": {
+                    "name": "Duplicate Found",
+                    "conditions": [
+                      [
+                        {
+                          "a": "{{length(4.results)}}",
+                          "o": "greater",
+                          "b": "0"
+                        }
+                      ]
+                    ]
+                  }
+                },
+                {
+                  "flow": [
+                    {
+                      "id": 7,
+                      "module": "notion:CreateADatabaseItem",
+                      "version": 1,
+                      "parameters": {
+                        "databaseId": "{{env.NOTION_TASKS_DB_ID}}"
+                      },
+                      "mapper": {
+                        "properties": {
+                          "Name": {
+                            "title": [
+                              {
+                                "text": {
+                                  "content": "Evidence Hygiene (Wave-1)"
+                                }
+                              }
+                            ]
+                          },
+                          "Case": {
+                            "relation": [
+                              {
+                                "id": "{{1.id}}"
+                              }
+                            ]
+                          },
+                          "Idempotency Key": {
+                            "rich_text": [
+                              {
+                                "text": {
+                                  "content": "{{2.idempotencyKey}}"
+                                }
+                              }
+                            ]
+                          },
+                          "Priority": {
+                            "select": {
+                              "name": "P0"
+                            }
+                          },
+                          "Mode": {
+                            "select": {
+                              "name": "Draft-Only"
+                            }
+                          },
+                          "Status": {
+                            "status": {
+                              "name": "Next"
+                            }
+                          }
+                        }
+                      },
+                      "metadata": {
+                        "designer": {
+                          "x": 1500,
+                          "y": -50
+                        }
+                      }
+                    },
+                    {
+                      "id": 8,
+                      "module": "notion:CreateADatabaseItem",
+                      "version": 1,
+                      "parameters": {
+                        "databaseId": "{{env.NOTION_RUN_RECEIPTS_DB_ID}}"
+                      },
+                      "mapper": {
+                        "properties": {
+                          "Name": {
+                            "title": [
+                              {
+                                "text": {
+                                  "content": "Evidence Hygiene"
+                                }
+                              }
+                            ]
+                          },
+                          "Case": {
+                            "relation": [
+                              {
+                                "id": "{{1.id}}"
+                              }
+                            ]
+                          },
+                          "Idempotency Key": {
+                            "rich_text": [
+                              {
+                                "text": {
+                                  "content": "{{2.idempotencyKey}}"
+                                }
+                              }
+                            ]
+                          },
+                          "Outcome": {
+                            "select": {
+                              "name": "created"
+                            }
+                          },
+                          "Run At": {
+                            "date": {
+                              "start": "{{now}}"
+                            }
+                          }
+                        }
+                      },
+                      "metadata": {
+                        "designer": {
+                          "x": 1800,
+                          "y": -50
+                        }
+                      }
+                    }
+                  ],
+                  "filter": {
+                    "name": "No Duplicate - Create Task",
+                    "conditions": [
+                      [
+                        {
+                          "a": "{{length(4.results)}}",
+                          "o": "equal",
+                          "b": "0"
+                        }
+                      ]
+                    ]
+                  }
+                }
+              ]
+            }
+          ],
+          "filter": {
+            "name": "ALLOWED",
+            "conditions": [
+              [
+                {
+                  "a": "{{2.gateValue}}",
+                  "o": "equal",
+                  "b": "✅ ALLOWED"
+                }
+              ]
+            ]
+          }
+        },
+        {
+          "flow": [
+            {
+              "id": 9,
+              "module": "notion:CreateADatabaseItem",
+              "version": 1,
+              "parameters": {
+                "databaseId": "{{env.NOTION_RUN_RECEIPTS_DB_ID}}"
+              },
+              "mapper": {
+                "properties": {
+                  "Name": {
+                    "title": [
+                      {
+                        "text": {
+                          "content": "Evidence Hygiene"
+                        }
+                      }
+                    ]
+                  },
+                  "Case": {
+                    "relation": [
+                      {
+                        "id": "{{1.id}}"
+                      }
+                    ]
+                  },
+                  "Idempotency Key": {
+                    "rich_text": [
+                      {
+                        "text": {
+                          "content": "{{2.idempotencyKey}}"
+                        }
+                      }
+                    ]
+                  },
+                  "Outcome": {
+                    "select": {
+                      "name": "blocked"
+                    }
+                  },
+                  "Blocked Reason": {
+                    "rich_text": [
+                      {
+                        "text": {
+                          "content": "{{2.gateVerdict}}"
+                        }
+                      }
+                    ]
+                  },
+                  "Run At": {
+                    "date": {
+                      "start": "{{now}}"
+                    }
+                  }
+                }
+              },
+              "metadata": {
+                "designer": {
+                  "x": 900,
+                  "y": 150
+                }
+              }
+            }
+          ],
+          "filter": {
+            "name": "BLOCKED",
+            "conditions": [
+              [
+                {
+                  "a": "{{2.gateValue}}",
+                  "o": "not_equal",
+                  "b": "✅ ALLOWED"
+                }
+              ]
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "version": 1,
+    "scenario": {
+      "roundtrips": 1,
+      "maxErrors": 3,
+      "autoCommit": true,
+      "sequential": false,
+      "confidential": false,
+      "dataloss": false,
+      "dlq": false
+    },
+    "designer": {
+      "orphans": []
+    },
+    "zone": "us1.make.com"
+  }
+}

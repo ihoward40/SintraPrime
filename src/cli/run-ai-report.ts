@@ -47,6 +47,12 @@ async function main() {
   const outputPath = outputIndex !== -1 ? args[outputIndex + 1] : null;
   const format = formatIndex !== -1 ? args[formatIndex + 1] as 'markdown' | 'text' : 'markdown';
 
+  // Validate input path
+  if (!inputPath) {
+    console.error('Error: Input file path is required');
+    process.exit(1);
+  }
+
   // Read input file
   if (!fs.existsSync(inputPath)) {
     console.error(`Error: Input file not found: ${inputPath}`);

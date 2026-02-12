@@ -1,21 +1,28 @@
-name: Require Governance Wiring Scope
+name: governance
 
 on:
+  push:
   pull_request:
     types: [opened, synchronize, reopened]
 
 jobs:
-  wiring-scope-check:
+  wiring-scope:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Detect runtime-adjacent changes
         id: changes
+        env:
+          BASE_REF: ${{ github.base_ref || github.event.repository.default_branch }}
         run: |
-          git fetch origin ${{ github.base_ref }} --depth=1
-          CHANGED=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
+          # Ensure the base branch has enough history for merge-base/three-dot diff.
+          # A shallow fetch here can cause: "fatal: origin/<base>...HEAD: no merge base".
+          git fetch --no-tags --prune origin "+refs/heads/$BASE_REF:refs/remotes/origin/$BASE_REF"
+          CHANGED=$(git diff --name-only "origin/$BASE_REF...HEAD")
           echo "$CHANGED" > changed_files.txt
           echo "changed_files<<EOF" >> $GITHUB_OUTPUT
           echo "$CHANGED" >> $GITHUB_OUTPUT

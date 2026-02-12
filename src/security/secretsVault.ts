@@ -125,8 +125,7 @@ export class SecretsVault {
     
     const decipher = crypto.createDecipheriv('aes-256-cbc', this.encryptionKey, iv);
     
-    let decrypted = decipher.update(encryptedData, 'hex', 'utf8');
-    decrypted += decipher.final('utf8');
+    const decrypted = decipher.update(encryptedData, 'hex', 'utf8') + decipher.final('utf8');
     
     return decrypted;
   }
