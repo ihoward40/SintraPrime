@@ -37,10 +37,10 @@ const CONFIG = {
 
 function requireApiKey() {
   if (!CONFIG.apiKey) {
-    console.error('❌ ELEVEN_API_KEY is not set.');
-    console.error('   PowerShell: $env:ELEVEN_API_KEY = "..."');
-    console.error('   bash/zsh:   export ELEVEN_API_KEY="..."');
-    process.exit(2);
+    console.log('[skip] ELEVEN_API_KEY is not set (skipping ElevenLabs diagnostics)');
+    console.log('       PowerShell: $env:ELEVEN_API_KEY = "..."');
+    console.log('       bash/zsh:   export ELEVEN_API_KEY="..."');
+    process.exit(0);
   }
 }
 
