@@ -8,6 +8,8 @@ jobs:
   smoke-pr:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout
@@ -39,7 +41,7 @@ jobs:
           npm run -s validate:schemas
 
       - name: Tests
-        run: npm test test/*.test.ts
+        run: npm test
       - name: DeepThink gates
         run: npm run -s ci:deepthink-gates
 
@@ -67,3 +69,33 @@ jobs:
           PLANNER_WEBHOOK_URL: http://localhost:8787/planner
           THREAD_ID: local_test_001
         run: npm run smoke:vectors:trim
+
+  integration-local-mock:
+    name: ci/integration-local-mock
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [smoke-pr]
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Integration tests (local mock, opt-in)
+        env:
+          RUN_INTEGRATION_TESTS: "1"
+          WEBHOOK_SECRET: localdev
+          WEBHOOK_URL: http://127.0.0.1:8787/validation
+          ALLOW_NONLOCAL_WEBHOOK_TESTS: "0"
+          NO_PROXY: 127.0.0.1,localhost
+        run: npm run test:integration

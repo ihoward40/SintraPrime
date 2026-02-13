@@ -14,23 +14,33 @@ const policyPath = path.join(process.cwd(), "config", "sintraprime-policy.json")
 const policy: PolicyConfig = JSON.parse(fs.readFileSync(policyPath, "utf-8"));
 
 // Test helper
-function runTest(name: string, runRecord: RunRecord, baseline: number, expectedSeverity: SeverityLevel, expectedMisconfig: MisconfigLikelihood) {
+function runTest(
+  name: string,
+  runRecord: RunRecord,
+  baseline: number,
+  expectedSeverity: SeverityLevel,
+  expectedMisconfig: MisconfigLikelihood
+) {
   console.log(`\nTest: ${name}`);
   const classification = classifyRun(runRecord, baseline, policy);
-  
+
   const severityMatch = classification.severity === expectedSeverity;
   const misconfigMatch = classification.misconfigLikelihood === expectedMisconfig;
-  
-  console.log(`  Expected Severity: ${expectedSeverity}, Got: ${classification.severity} ${severityMatch ? "✓" : "✗"}`);
-  console.log(`  Expected Misconfig: ${expectedMisconfig}, Got: ${classification.misconfigLikelihood} ${misconfigMatch ? "✓" : "✗"}`);
+
+  console.log(
+    `  Expected Severity: ${expectedSeverity}, Got: ${classification.severity} ${severityMatch ? "✓" : "✗"}`
+  );
+  console.log(
+    `  Expected Misconfig: ${expectedMisconfig}, Got: ${classification.misconfigLikelihood} ${misconfigMatch ? "✓" : "✗"}`
+  );
   console.log(`  Variance: ${classification.varianceMultiplier.toFixed(2)}×`);
   console.log(`  Risk Flags: ${classification.riskFlags.join(", ") || "None"}`);
-  
+
   if (!severityMatch || !misconfigMatch) {
     console.error(`  FAILED`);
     return false;
   }
-  
+
   console.log(`  PASSED`);
   return true;
 }
@@ -45,7 +55,9 @@ let failed = 0;
 
 // Test 1: High credit spike with retry loop -> SEV1
 try {
-  const fixture = JSON.parse(fs.readFileSync(path.join(fixturesDir, "high-credit-spike.json"), "utf-8")) as RunRecord;
+  const fixture = JSON.parse(
+    fs.readFileSync(path.join(fixturesDir, "high-credit-spike.json"), "utf-8")
+  ) as RunRecord;
   if (runTest("High credit spike (retry loop)", fixture, 320, SeverityLevel.SEV1, MisconfigLikelihood.High)) {
     passed++;
   } else {
@@ -58,7 +70,9 @@ try {
 
 // Test 2: Legit backfill -> SEV3 or SEV4 (depending on variance)
 try {
-  const fixture = JSON.parse(fs.readFileSync(path.join(fixturesDir, "legit-backfill.json"), "utf-8")) as RunRecord;
+  const fixture = JSON.parse(
+    fs.readFileSync(path.join(fixturesDir, "legit-backfill.json"), "utf-8")
+  ) as RunRecord;
   // Legit flags should reduce misconfig likelihood
   if (runTest("Legit batch job", fixture, 400, SeverityLevel.SEV1, MisconfigLikelihood.Low)) {
     passed++;
@@ -98,7 +112,9 @@ try {
 
 // Test 5: Retry loop misconfig -> SEV1
 try {
-  const fixture = JSON.parse(fs.readFileSync(path.join(fixturesDir, "retry-loop-misconfig.json"), "utf-8")) as RunRecord;
+  const fixture = JSON.parse(
+    fs.readFileSync(path.join(fixturesDir, "retry-loop-misconfig.json"), "utf-8")
+  ) as RunRecord;
   if (runTest("Retry loop misconfig", fixture, 200, SeverityLevel.SEV1, MisconfigLikelihood.High)) {
     passed++;
   } else {
