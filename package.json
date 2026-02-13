@@ -12,7 +12,7 @@
     "build:watch": "tsc -p tsconfig.json --incremental --watch",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "npm run test:unit",
-    "test:unit": "node --import tsx --test \"tests/**/*.test.ts\" \"test/**/*.test.ts\"",
+    "test:unit": "node ./scripts/run-unit-tests.mjs",
     "test:integration": "node ./scripts/run-integration-tests.mjs",
     "dev": "tsx src/cli/run-command.ts",
     "start": "node dist/cli/run-command.js",
