@@ -78,6 +78,51 @@ node .\scripts\smoke-webhook-dual.js
 
 If `:8787` is busy, run the mock server on another port and set `MOCK_BASE_URL` for the smoke script.
 
+## Wiring real endpoints (production)
+
+The CLI reads webhook settings from environment variables. Required:
+
+- `PLANNER_WEBHOOK_URL` (example: `https://your-host/planner`)
+- `VALIDATION_WEBHOOK_URL` (example: `https://your-host/validation`)
+- `WEBHOOK_SECRET` (shared secret for `X-Webhook-Secret`)
+
+Optional:
+
+- `THREAD_ID` (defaults to `exec_live_001`)
+
+### Minimal runbook: switch mock ↔ production
+
+Mock:
+
+```powershell
+$env:WEBHOOK_SECRET='local_dev_secret'
+$env:VALIDATION_WEBHOOK_URL='http://localhost:8787/validation'
+$env:PLANNER_WEBHOOK_URL='http://localhost:8787/planner'
+npm run mock:server
+```
+
+In a separate terminal:
+
+```powershell
+$env:WEBHOOK_SECRET='local_dev_secret'
+node .\scripts\smoke-webhook-dual.js
+```
+
+Production (safe validation/plan check):
+
+- Set `PLANNER_WEBHOOK_URL` and `VALIDATION_WEBHOOK_URL` to your real endpoints.
+- Set `WEBHOOK_SECRET` via your secret manager or shell (do not commit it to git).
+- Run a dry-run command so the executor cannot apply side effects:
+
+```powershell
+npm run dev -- "/build validation-agent {\"dry_run\":true}"
+```
+
+Notes:
+
+- Avoid commands that echo secrets (`echo $env:WEBHOOK_SECRET`, etc.).
+- The transport does not log secrets; failures should surface as status + a truncated response preview.
+
 ## God mode suggestions (optional enhancements)
 
 These are intentionally **optional**: the current dual-endpoint CLI + mock server contract is already verified.
