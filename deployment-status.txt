@@ -1,0 +1,6 @@
+﻿NAME                  IMAGE                 COMMAND                  SERVICE   CREATED          STATUS                    PORTS
+sintraprime-airlock   sintraprime-airlock   "docker-entrypoint.sΓÇª"   airlock   6 minutes ago    Up 5 minutes              0.0.0.0:3000->3000/tcp, [::]:3000->3000/tcp
+sintraprime-brain     sintraprime-brain     "python -m uvicorn bΓÇª"   brain     6 minutes ago    Up 5 minutes              0.0.0.0:8011->8011/tcp, [::]:8011->8011/tcp
+sintraprime-fastapi   sintraprime-fastapi   "python -m uvicorn aΓÇª"   fastapi   6 minutes ago    Up 5 minutes              0.0.0.0:8000->8000/tcp, [::]:8000->8000/tcp
+sintraprime-mysql     mysql:8.0             "docker-entrypoint.sΓÇª"   mysql     36 minutes ago   Up 36 minutes (healthy)   0.0.0.0:3306->3306/tcp, [::]:3306->3306/tcp
+sintraprime-webapp    sintraprime-webapp    "docker-entrypoint.sΓÇª"   webapp    5 minutes ago    Up 5 minutes              0.0.0.0:3002->3002/tcp, [::]:3002->3002/tcp
