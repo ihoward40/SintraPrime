@@ -29,6 +29,40 @@ Kimi K 2.5 provides:
 - Alternative reasoning engine for DeepThink operations
 - Full governance compliance with secure API key management
 
+## Docker Deployment (Phase 3)
+
+SintraPrime Phase 3 introduces a fully containerized deployment architecture with 5 core services orchestrated via Docker Compose.
+
+**Quick Start:**
+```bash
+# Clone and configure
+git clone https://github.com/ihoward40/SintraPrime.git
+cd SintraPrime
+cp .env.example .env.docker
+
+# Edit .env.docker with your configuration
+# Then start all services
+docker-compose up -d
+
+# Verify deployment
+docker-compose ps
+curl http://localhost:3000/health  # Airlock
+curl http://localhost:8011/health  # Brain
+curl http://localhost:8000/health  # FastAPI
+curl http://localhost:3002/health  # WebApp
+```
+
+**Phase 3 Achievements:**
+- ✅ 5/5 containers (MySQL, Airlock, Brain, FastAPI, WebApp)
+- ✅ 100% health check pass rate
+- ✅ Zero manual intervention deployment
+- ✅ Production-ready baseline captured
+
+**Documentation:**
+- **Deployment Guide:** [`DOCKER_DEPLOYMENT.md`](DOCKER_DEPLOYMENT.md)
+- **Best Practices:** [`docs/DOCKER_BEST_PRACTICES.md`](docs/DOCKER_BEST_PRACTICES.md)
+- **Baseline Snapshot:** [`docs/snapshots/phase3-baseline/`](docs/snapshots/phase3-baseline/)
+
 ## Agent Mode (API-only)
 
 Validator → Planner → Executor pipeline and receipt logging: [docs/agent-mode-executor-v1.md](docs/agent-mode-executor-v1.md)
