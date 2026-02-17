@@ -121,6 +121,11 @@ These are intentionally **optional**: the current dual-endpoint CLI + mock serve
 - Persist a compact, JSON-only receipt for every webhook call (request fingerprint + response hash + status).
 - Add an idempotency key header for `POST` calls where applicable.
 
+Implementation notes (local CLI transport):
+
+- Set `WRITE_WEBHOOK_CALL_RECEIPTS=1` to persist `WebhookCallReceipt` entries via `persistReceipt`.
+- Set `WEBHOOK_IDEMPOTENCY=1` to add an `X-Idempotency-Key` header derived from the request fingerprint.
+
 ### 7) CI guardrail
 
 - Add a CI job that starts the mock server and runs `node ./scripts/smoke-webhook-dual.js`.

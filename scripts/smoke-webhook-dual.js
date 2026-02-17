@@ -11,6 +11,11 @@ function jsonEq(a, b) {
   return JSON.stringify(a) === JSON.stringify(b);
 }
 
+function hintUnsetMockBaseUrl() {
+  // Keep this PowerShell-centric since most local runs are on Windows.
+  return "If MOCK_BASE_URL is set in your shell, unset it (PowerShell: Remove-Item Env:MOCK_BASE_URL) or set it to the running mock server (e.g. http://localhost:8787).";
+}
+
 async function httpJson(url, { method, headers, body }) {
   const res = await fetch(url, { method, headers, body });
   const text = await res.text();
@@ -35,6 +40,21 @@ async function waitForReady(statusUrl, timeoutMs = 2000) {
     await new Promise((r) => setTimeout(r, 100));
   }
   throw new Error(`Mock server not reachable at ${statusUrl}`);
+}
+
+async function expectJsonErrorStatus(url, { method, headers, body, expectedStatus }) {
+  const { status, json } = await httpJson(url, { method, headers, body });
+  if (status !== expectedStatus) {
+    throw new Error(
+      `Expected HTTP ${expectedStatus} from ${url}; got ${status}: ${JSON.stringify(json).slice(0, 500)}`
+    );
+  }
+  const err = json?.error;
+  if (typeof err !== "string" || err.trim() === "") {
+    throw new Error(
+      `Expected JSON error string from ${url} (${expectedStatus}); got: ${JSON.stringify(json).slice(0, 500)}`
+    );
+  }
 }
 
 function runCliCommand(command, env) {
@@ -79,7 +99,14 @@ async function main() {
   const validationUrl = hasBaseOverride ? `${baseUrl}/validation` : (process.env.VALIDATION_WEBHOOK_URL || `${baseUrl}/validation`);
   const plannerUrl = hasBaseOverride ? `${baseUrl}/planner` : (process.env.PLANNER_WEBHOOK_URL || `${baseUrl}/planner`);
 
-  await waitForReady(`${baseUrl}/status/200`, 2500);
+  try {
+    await waitForReady(`${baseUrl}/status/200`, 2500);
+  } catch (e) {
+    const extra = hasBaseOverride
+      ? `MOCK_BASE_URL is set to ${baseUrlRaw}. ${hintUnsetMockBaseUrl()}`
+      : `Set MOCK_BASE_URL to the mock server base URL if it is not running on :8787.`;
+    throw new Error(`${String(e?.message || e)}\n${extra}`);
+  }
 
   const threadId = process.env.THREAD_ID || `smoke_dual_${Date.now()}`;
   const message = '/build document-intake {"path":"./docs"}';
@@ -90,6 +117,42 @@ async function main() {
     "X-Webhook-Secret": secret,
     "Cache-Control": "no-store",
   };
+
+  // 0) Negative auth checks (contract hardening)
+  {
+    const headersMissingSecret = { ...headers };
+    delete headersMissingSecret["X-Webhook-Secret"];
+
+    const headersWrongSecret = { ...headers, "X-Webhook-Secret": `${secret}_wrong` };
+
+    const body = JSON.stringify({ type: "user_message", threadId, message });
+
+    await expectJsonErrorStatus(validationUrl, {
+      method: "POST",
+      headers: headersMissingSecret,
+      body,
+      expectedStatus: 401,
+    });
+    await expectJsonErrorStatus(validationUrl, {
+      method: "POST",
+      headers: headersWrongSecret,
+      body,
+      expectedStatus: 403,
+    });
+
+    await expectJsonErrorStatus(plannerUrl, {
+      method: "POST",
+      headers: headersMissingSecret,
+      body,
+      expectedStatus: 401,
+    });
+    await expectJsonErrorStatus(plannerUrl, {
+      method: "POST",
+      headers: headersWrongSecret,
+      body,
+      expectedStatus: 403,
+    });
+  }
 
   // 1) Direct validation endpoint
   {
