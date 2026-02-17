@@ -1,0 +1,63 @@
+﻿sintraprime-brain    | INFO:     Started server process [1]
+sintraprime-brain    | INFO:     Waiting for application startup.
+sintraprime-brain    | INFO:     Application startup complete.
+sintraprime-airlock  | ≡ƒöÆ Airlock server running on port 3000
+sintraprime-airlock  |    Environment: production
+sintraprime-airlock  |    Max body size: 10485760 bytes
+sintraprime-brain    | INFO:     Uvicorn running on http://0.0.0.0:8011 (Press CTRL+C to quit)
+sintraprime-airlock  |    Max files per payload: 10
+sintraprime-airlock  |    Timestamp window: 300s
+sintraprime-brain    | INFO:     172.19.0.6:53316 - "GET /health HTTP/1.1" 200 OK
+sintraprime-airlock  |    Rate limit: 60 req/60000ms
+sintraprime-airlock  |    CORS origin: *
+sintraprime-airlock  |    Make webhook: http://127.0.0.1:8999/replace-me
+sintraprime-airlock  |    Temp storage: /app/airlock_server/tmp/files
+sintraprime-fastapi  | 2026-02-17 12:48:40 [info     ] ledger_initialized             path=/app/backend/data/ledger.json
+sintraprime-fastapi  | 2026-02-17 12:48:40 [info     ] knowledge_base_initialized     patterns=6
+sintraprime-fastapi  | INFO:     Started server process [1]
+sintraprime-fastapi  | INFO:     Waiting for application startup.
+sintraprime-fastapi  | INFO:     Application startup complete.
+sintraprime-webapp   | [OAuth] Initialized with baseURL: 
+sintraprime-fastapi  | INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+sintraprime-fastapi  | INFO:     172.19.0.6:51080 - "GET /health HTTP/1.1" 200 OK
+sintraprime-fastapi  | Run time of job "sync_all_databases (trigger: interval[0:05:00], next run at: 2026-02-17 12:58:41 UTC)" was missed by 0:00:02.698056
+sintraprime-webapp   | [OAuth] ERROR: OAUTH_SERVER_URL is not configured! Set OAUTH_SERVER_URL environment variable.
+sintraprime-webapp   | [SendGrid] Email notifications disabled (SENDGRID_API_KEY not set)
+sintraprime-webapp   | [dotenv@17.2.3] injecting env (0) from ../.env -- tip: ΓÜÖ∩╕Å  load multiple .env files with { path: ['.env.local', '.env'] }
+sintraprime-webapp   | [dotenv@17.2.3] injecting env (0) from ../.env.local -- tip: ≡ƒôí add observability to secrets: https://dotenvx.com/ops
+sintraprime-webapp   | [dotenv@17.2.3] injecting env (0) from ../../.env -- tip: ≡ƒ¢á∩╕Å  run anywhere with `dotenvx run -- yourcommand`
+sintraprime-webapp   | [dotenv@17.2.3] injecting env (0) from ../../.env.local -- tip: ≡ƒöÉ prevent building .env in docker: https://dotenvx.com/prebuild
+sintraprime-webapp   | [WebSocket] Socket.io server initialized
+sintraprime-webapp   | [WebSocket] Collaborative workspace manager initialized
+sintraprime-webapp   | [IntelligenceWS] WebSocket server initialized
+sintraprime-webapp   | [AgentProgress] Socket.IO instance registered
+sintraprime-webapp   | [Web Monitoring] Starting scheduler (6-hour interval)
+sintraprime-webapp   | Server running on http://localhost:3002/
+sintraprime-webapp   | [Alert Monitoring] Starting with 5-minute interval
+sintraprime-webapp   | [Report Scheduler] Starting with 60-minute interval
+sintraprime-webapp   | [Report Scheduler] Found 0 due reports
+sintraprime-webapp   | [Web Monitoring] Checked 0 sites, 0 changes detected, 0 errors
+sintraprime-webapp   | [Alert Monitoring] Checking 0 active configurations
+sintraprime-webapp   | [Alert Monitoring] Check complete
+sintraprime-webapp   | [Alert Monitoring] Checking 0 active configurations
+sintraprime-webapp   | [Alert Monitoring] Check complete
+sintraprime-mysql    | 2026-02-17 12:18:17+00:00 [Note] [Entrypoint]: Entrypoint script for MySQL Server 8.0.45-1.el9 started.
+sintraprime-mysql    | 2026-02-17 12:18:17+00:00 [Note] [Entrypoint]: Switching to dedicated user 'mysql'
+sintraprime-mysql    | 2026-02-17 12:18:17+00:00 [Note] [Entrypoint]: Entrypoint script for MySQL Server 8.0.45-1.el9 started.
+sintraprime-mysql    | '/var/lib/mysql/mysql.sock' -> '/var/run/mysqld/mysqld.sock'
+sintraprime-mysql    | 2026-02-17T12:18:18.340646Z 0 [Warning] [MY-011068] [Server] The syntax '--skip-host-cache' is deprecated and will be removed in a future release. Please use SET GLOBAL host_cache_size=0 instead.
+sintraprime-mysql    | 2026-02-17T12:18:18.340710Z 0 [Warning] [MY-010915] [Server] 'NO_ZERO_DATE', 'NO_ZERO_IN_DATE' and 'ERROR_FOR_DIVISION_BY_ZERO' sql modes should be used with strict mode. They will be merged with strict mode in a future release.
+sintraprime-mysql    | 2026-02-17T12:18:18.342970Z 0 [System] [MY-010116] [Server] /usr/sbin/mysqld (mysqld 8.0.45) starting as process 1
+sintraprime-mysql    | 2026-02-17T12:18:18.350951Z 0 [Warning] [MY-013907] [InnoDB] Deprecated configuration parameters innodb_log_file_size and/or innodb_log_files_in_group have been used to compute innodb_redo_log_capacity=268435456. Please use innodb_redo_log_capacity instead.
+sintraprime-mysql    | 2026-02-17T12:18:18.353879Z 1 [System] [MY-013576] [InnoDB] InnoDB initialization has started.
+sintraprime-mysql    | 2026-02-17T12:18:18.748863Z 1 [System] [MY-013577] [InnoDB] InnoDB initialization has ended.
+sintraprime-mysql    | 2026-02-17T12:18:19.038063Z 0 [Warning] [MY-010068] [Server] CA certificate ca.pem is self signed.
+sintraprime-mysql    | 2026-02-17T12:18:19.038120Z 0 [System] [MY-013602] [Server] Channel mysql_main configured to support TLS. Encrypted connections are now supported for this channel.
+sintraprime-mysql    | 2026-02-17T12:18:19.041920Z 0 [Warning] [MY-011810] [Server] Insecure configuration for --pid-file: Location '/var/run/mysqld' in the path is accessible to all OS users. Consider choosing a different directory.
+sintraprime-mysql    | 2026-02-17T12:18:19.080214Z 0 [System] [MY-011323] [Server] X Plugin ready for connections. Bind-address: '::' port: 33060, socket: /var/run/mysqld/mysqlx.sock
+sintraprime-mysql    | 2026-02-17T12:18:19.080337Z 0 [System] [MY-010931] [Server] /usr/sbin/mysqld: ready for connections. Version: '8.0.45'  socket: '/var/run/mysqld/mysqld.sock'  port: 3306  MySQL Community Server - GPL.
+sintraprime-mysql    | 2026-02-17T12:21:38.779669Z 45 [Warning] [MY-013360] [Server] Plugin sha256_password reported: ''sha256_password' is deprecated and will be removed in a future release. Please use caching_sha2_password instead'
+sintraprime-mysql    | 2026-02-17T12:21:41.385113Z 47 [Warning] [MY-013360] [Server] Plugin sha256_password reported: ''sha256_password' is deprecated and will be removed in a future release. Please use caching_sha2_password instead'
+sintraprime-mysql    | 2026-02-17T12:21:41.387692Z 48 [Warning] [MY-013360] [Server] Plugin sha256_password reported: ''sha256_password' is deprecated and will be removed in a future release. Please use caching_sha2_password instead'
+sintraprime-mysql    | 2026-02-17T12:21:41.598443Z 49 [Warning] [MY-013360] [Server] Plugin sha256_password reported: ''sha256_password' is deprecated and will be removed in a future release. Please use caching_sha2_password instead'
+sintraprime-mysql    | 2026-02-17T12:21:41.794452Z 50 [Warning] [MY-013360] [Server] Plugin sha256_password reported: ''sha256_password' is deprecated and will be removed in a future release. Please use caching_sha2_password instead'
