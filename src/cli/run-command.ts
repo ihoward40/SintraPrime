@@ -560,8 +560,8 @@ function enforceValidJsonTailIfPresent(command: string) {
   // This keeps behavior stable for other commands that may contain braces.
   const isBuild = /^\/build\b/i.test(trimmed);
   const isLogs = /^\/logs\b/i.test(trimmed);
-  const isValidate = /^\/validate\b/i.test(trimmed);
   const isValidateBatch = /^\/validate-batch\b/i.test(trimmed);
+  const isValidate = !isValidateBatch && /^\/validate\b/i.test(trimmed);
   const isBuildBatch = /^\/build-batch\b/i.test(trimmed);
   if (!isBuild && !isLogs && !isValidate && !isValidateBatch && !isBuildBatch) return;
 
@@ -1005,24 +1005,7 @@ async function run() {
   // - /build-batch (runs /build for each item; per-item isolation)
   if (/^\/validate-batch\b/i.test(command.trim())) {
     const validationUrl = mustEnv("VALIDATION_WEBHOOK_URL");
-    const payload = tryParseJsonArgTail(command);
-    if (!payload) {
-      process.exitCode = 2;
-      process.stdout.write(
-        JSON.stringify(
-          {
-            kind: "NeedInput",
-            reason: "Invalid JSON payload for /validate-batch",
-            expected: {
-              tasks: "array of {taskId:string, payload:object}",
-            },
-          },
-          null,
-          0
-        )
-      );
-      return;
-    }
+    const payload = tryParseJsonArgTail(command)!;
 
     const tasksRaw = payload?.tasks;
     if (!Array.isArray(tasksRaw)) {
@@ -1059,9 +1042,13 @@ async function run() {
 
       const validateCmd = `/validate ${taskId} ${JSON.stringify(itemPayload)}`;
       try {
+        const itemThreadId =
+          threadId != null && threadId !== ""
+            ? `${threadId}/validate-${taskId || i}`
+            : `validate-${taskId || i}`;
         const validation = await sendMessage({
           webhookUrl: validationUrl,
-          threadId,
+          threadId: itemThreadId,
           message: validateCmd,
         });
 
@@ -1122,24 +1109,7 @@ async function run() {
   }
 
   if (/^\/build-batch\b/i.test(command.trim())) {
-    const payload = tryParseJsonArgTail(command);
-    if (!payload) {
-      process.exitCode = 2;
-      process.stdout.write(
-        JSON.stringify(
-          {
-            kind: "NeedInput",
-            reason: "Invalid JSON payload for /build-batch",
-            expected: {
-              agents: "array of {agent:string, payload:object}",
-            },
-          },
-          null,
-          0
-        )
-      );
-      return;
-    }
+    const payload = tryParseJsonArgTail(command)!;
 
     const agentsRaw = payload?.agents;
     if (!Array.isArray(agentsRaw)) {
@@ -1167,18 +1137,22 @@ async function run() {
     const execArgsPrefix: string[] = [...process.execArgv, entry];
 
     const runOne = (childCommand: string, childEnv: NodeJS.ProcessEnv) =>
-      new Promise<{ code: number; stderr: string }>((resolve, reject) => {
+      new Promise<{ code: number; stderr: string; stdout: string }>((resolve, reject) => {
         const child = spawn(process.execPath, [...execArgsPrefix, childCommand], {
           env: childEnv,
-          stdio: ["ignore", "ignore", "pipe"] as const,
+          stdio: ["ignore", "pipe", "pipe"] as const,
         });
 
+        let stdout = "";
         let stderr = "";
+        child.stdout.on("data", (d: unknown) => {
+          if (stdout.length < 4000) stdout += String(d);
+        });
         child.stderr.on("data", (d: unknown) => {
           if (stderr.length < 2000) stderr += String(d);
         });
         child.on("error", reject);
-        child.on("exit", (code: number | null) => resolve({ code: code ?? 1, stderr }));
+        child.on("exit", (code: number | null) => resolve({ code: code ?? 1, stderr, stdout }));
       });
 
     const results: any[] = [];
@@ -1199,7 +1173,7 @@ async function run() {
       const buildCmd = `/build ${agent} ${JSON.stringify(agentPayload)}`;
 
       try {
-        const { code, stderr } = await runOne(buildCmd, {
+        const { code, stderr, stdout } = await runOne(buildCmd, {
           ...process.env,
           THREAD_ID: childThreadId,
         });
@@ -1210,7 +1184,12 @@ async function run() {
           agent,
           ok,
           exitCode: code,
-          ...(ok ? {} : { stderr_preview: String(stderr).trim().slice(0, 800) || null }),
+          ...(ok
+            ? {}
+            : {
+                stderr_preview: String(stderr).trim().slice(0, 800) || null,
+                stdout_preview: String(stdout).trim().slice(0, 800) || null,
+              }),
         });
       } catch (err: any) {
         anyFailure = true;
