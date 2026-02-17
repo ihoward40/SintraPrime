@@ -52,3 +52,28 @@ To run a specific command through the pipeline:
 - `npm run smoke:local -- "/build validation-agent {\"dry_run\":true}"`
 
 If you want to run live Notion writes, configure the required env vars and run with approvals enabled.
+
+## Webhook smoke (planner + validation)
+
+This is a fast contract check for the two webhook endpoints:
+
+- `POST /validation` (validator)
+- `POST /planner` (planner)
+
+It assumes a mock server is already running (default `http://localhost:8787`).
+
+### Start the mock server
+
+```powershell
+$env:WEBHOOK_SECRET='local_dev_secret'
+npm run mock:server
+```
+
+### Run the dual-endpoint smoke
+
+```powershell
+$env:WEBHOOK_SECRET='local_dev_secret'
+node .\scripts\smoke-webhook-dual.js
+```
+
+If `:8787` is busy, run the mock server on another port and set `MOCK_BASE_URL` for the smoke script.
