@@ -252,8 +252,8 @@ docker network inspect sintraprime_default
 
 ## Related Documentation
 
-- [DOCKER_DEPLOYMENT.md](../../DOCKER_DEPLOYMENT.md) - Full deployment guide
-- [DOCKER_BEST_PRACTICES.md](../DOCKER_BEST_PRACTICES.md) - Best practices
+- [DOCKER_DEPLOYMENT.md](../../../DOCKER_DEPLOYMENT.md) - Full deployment guide
+- [DOCKER_BEST_PRACTICES.md](../../DOCKER_BEST_PRACTICES.md) - Best practices
 - [OPERATOR_RUNBOOK.md](../../../OPERATOR_RUNBOOK.md) - Operations procedures
 - [CHANGELOG.md](../../../CHANGELOG.md) - Version history
 
