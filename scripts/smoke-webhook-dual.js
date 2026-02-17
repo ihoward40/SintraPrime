@@ -127,6 +127,7 @@ async function main() {
   const expectedPath = "./docs";
   const statusMessage = "/status validation-agent";
   const expectedAgent = "validation-agent";
+  const validateMessage = '/validate task-1 {"check":"syntax"}';
 
   const headers = {
     "Content-Type": "application/json",
@@ -256,6 +257,48 @@ async function main() {
     }
   }
 
+  // 1e) Direct validation endpoint: /validate
+  {
+    const { status, ok, json } = await httpJson(validationUrl, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ type: "user_message", threadId, message: validateMessage }),
+    });
+
+    if (!ok) {
+      throw new Error(`POST /validation(/validate) failed (${status}): ${JSON.stringify(json).slice(0, 500)}`);
+    }
+
+    const inner = unwrapAgentResponse(json);
+    if (inner?.kind !== "ValidatedCommand" || inner?.allowed !== true) {
+      throw new Error("Expected allowed ValidatedCommand for /validate");
+    }
+    if (inner?.intent !== "validate") {
+      throw new Error(`Expected intent=validate; got: ${inner?.intent}`);
+    }
+    if (inner?.args?.taskId !== "task-1") {
+      throw new Error(`Expected args.taskId=task-1; got: ${JSON.stringify(inner?.args).slice(0, 200)}`);
+    }
+  }
+
+  // 1f) Direct validation endpoint: /validate missing taskId should return NeedInput
+  {
+    const { status, ok, json } = await httpJson(validationUrl, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ type: "user_message", threadId, message: "/validate" }),
+    });
+
+    if (!ok) {
+      throw new Error(`POST /validation(/validate missing) failed (${status}): ${JSON.stringify(json).slice(0, 500)}`);
+    }
+
+    const inner = unwrapAgentResponse(json);
+    if (inner?.kind !== "NeedInput") {
+      throw new Error(`Expected NeedInput for missing taskId; got: ${inner?.kind}`);
+    }
+  }
+
   // 2) Direct planner endpoint
   {
     const { status, ok, json } = await httpJson(plannerUrl, {
@@ -355,6 +398,60 @@ async function main() {
     await expectCliFailure('/logs validation-agent {"lines":', env, {
       stderrIncludes: "Invalid JSON payload",
     });
+
+    // JSON-tail enforcement should also cover /validate and batch commands.
+    await expectCliFailure('/validate task-1 {"check":', env, {
+      stderrIncludes: "Invalid JSON payload",
+    });
+    await expectCliFailure('/validate-batch {"tasks":', env, {
+      stderrIncludes: "Invalid JSON payload",
+    });
+    await expectCliFailure('/build-batch {"agents":', env, {
+      stderrIncludes: "Invalid JSON payload",
+    });
+
+    // /validate-batch should return a deterministic per-item result list.
+    const validateBatchCmd =
+      '/validate-batch {"tasks":[{"taskId":"task-1","payload":{"check":"syntax"}},{"taskId":"bad-task","payload":{"check":"syntax"}}]}';
+    const vbRes = await runCliCommand(validateBatchCmd, env);
+    if (vbRes.code === 0) {
+      // code 0 only when all items are allowed
+      throw new Error(`Expected /validate-batch to report a failure for bad-task (non-zero exit), got 0.`);
+    }
+    let vbJson;
+    try {
+      vbJson = JSON.parse(vbRes.stdout);
+    } catch {
+      throw new Error(`Expected JSON stdout from /validate-batch, got:\n${vbRes.stdout.slice(0, 1200)}`);
+    }
+    if (vbJson?.kind !== "ValidateBatchResult" || !Array.isArray(vbJson?.results)) {
+      throw new Error(`Unexpected /validate-batch output: ${JSON.stringify(vbJson).slice(0, 500)}`);
+    }
+    if (vbJson.results.length !== 2) {
+      throw new Error(`Expected 2 /validate-batch results, got ${vbJson.results.length}`);
+    }
+
+    // /build-batch should run /build for each agent with isolation.
+    const buildBatchCmd =
+      '/build-batch {"agents":[{"agent":"validation-agent","payload":{}},{"agent":"document-intake","payload":{"path":"./docs"}}]}';
+    const bbRes = await runCliCommand(buildBatchCmd, env);
+    if (bbRes.code !== 0) {
+      throw new Error(
+        `CLI /build-batch failed (exit ${bbRes.code}).\nSTDOUT:\n${bbRes.stdout.slice(0, 2000)}\nSTDERR:\n${bbRes.stderr.slice(0, 2000)}`
+      );
+    }
+    let bbJson;
+    try {
+      bbJson = JSON.parse(bbRes.stdout);
+    } catch {
+      throw new Error(`Expected JSON stdout from /build-batch, got:\n${bbRes.stdout.slice(0, 1200)}`);
+    }
+    if (bbJson?.kind !== "BuildBatchResult" || !Array.isArray(bbJson?.results)) {
+      throw new Error(`Unexpected /build-batch output: ${JSON.stringify(bbJson).slice(0, 500)}`);
+    }
+    if (bbJson.results.length !== 2 || bbJson.results.some((r) => r?.ok !== true)) {
+      throw new Error(`Expected both /build-batch items to succeed, got: ${JSON.stringify(bbJson.results).slice(0, 800)}`);
+    }
   }
 
   // 4) Direct validation again (ensures repeated calls remain stable and authenticated)
@@ -387,10 +484,13 @@ async function main() {
         checks: [
           "POST /validation contract",
           "POST /validation /status contract",
+          "POST /validation /validate contract",
           "POST /planner contract",
           "POST /planner /status contract",
           "CLI /build end-to-end",
           "CLI /status end-to-end",
+          "CLI /validate-batch",
+          "CLI /build-batch",
           "Repeat /validation stability",
         ],
       },
