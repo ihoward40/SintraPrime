@@ -112,6 +112,7 @@ function matchPathParam(pathname, prefix) {
 // Clean mock server implementation (Tier 5.2 + Tier 6.0/6.1/6.2). Tier 7 is intentionally not implemented yet.
 const liveNotionPages = new Map();
 const flipStatusToDoneAfterRead = new Set();
+const mockConfigStore = new Map();
 
 function getLiveNotionPage(pageId) {
   const status = liveNotionPages.get(pageId) || "Todo";
@@ -150,6 +151,59 @@ const server = http.createServer(async (req, res) => {
     }
     if (req.method === "GET" && url.pathname === "/status/500") {
       sendJson(res, 500, { ok: false });
+      return;
+    }
+
+    // Issue #67: agent-mode helper endpoints (executed by plans)
+    if (req.method === "GET" && url.pathname === "/agent/status") {
+      const agent = url.searchParams.get("agent");
+      if (!agent || !String(agent).trim()) {
+        sendJson(res, 400, { error: "Missing agent" });
+        return;
+      }
+      sendJson(res, 200, { ok: true, agent: String(agent), status: "ok" });
+      return;
+    }
+
+    if (req.method === "POST" && url.pathname === "/agent/logs") {
+      const body = await readJson(req);
+      const agent = body?.agent;
+      const linesRaw = body?.lines;
+      const lines = Number.isFinite(Number(linesRaw)) ? Number(linesRaw) : 100;
+      if (typeof agent !== "string" || !agent.trim()) {
+        sendJson(res, 400, { error: "Missing agent" });
+        return;
+      }
+      const safeLines = Math.max(1, Math.min(500, Math.floor(lines)));
+      const entries = Array.from({ length: safeLines }, (_, i) => ({
+        ts: `2024-01-01T00:00:${String(i).padStart(2, "0")}Z`,
+        line: `mock log ${i + 1}`,
+      }));
+      sendJson(res, 200, { ok: true, agent, lines: safeLines, entries });
+      return;
+    }
+
+    if (req.method === "GET" && url.pathname === "/agent/config") {
+      const key = url.searchParams.get("key");
+      if (!key || !String(key).trim()) {
+        sendJson(res, 400, { error: "Missing key" });
+        return;
+      }
+      const value = mockConfigStore.has(String(key)) ? mockConfigStore.get(String(key)) : null;
+      sendJson(res, 200, { ok: true, key: String(key), value });
+      return;
+    }
+
+    if (req.method === "POST" && url.pathname === "/agent/config") {
+      const body = await readJson(req);
+      const key = body?.key;
+      const value = body?.value;
+      if (typeof key !== "string" || !key.trim()) {
+        sendJson(res, 400, { error: "Missing key" });
+        return;
+      }
+      mockConfigStore.set(String(key), value);
+      sendJson(res, 200, { ok: true, key: String(key), value });
       return;
     }
 
@@ -343,6 +397,92 @@ const server = http.createServer(async (req, res) => {
     const agentVersions = { validator: "1.2.0", planner: "1.1.3" };
 
     if (url.pathname === "/validation") {
+      const knownAgents = new Set(["validation-agent", "document-intake"]);
+
+      const statusMatch = message.match(/^\/status\s+(\S+)\s*$/i);
+      if (statusMatch) {
+        const agent = statusMatch[1];
+        const ok = knownAgents.has(agent);
+        const validated = ok
+          ? {
+              kind: "ValidatedCommand",
+              allowed: true,
+              intent: "status",
+              command: message,
+              args: { agent },
+              ...(process.env.MOCK_INCLUDE_THREADID === "1" ? { threadId } : {}),
+            }
+          : {
+              kind: "ValidatedCommand",
+              allowed: false,
+              intent: "status",
+              denial_reason: "Unknown agent",
+              required_inputs: [],
+              ...(process.env.MOCK_INCLUDE_THREADID === "1" ? { threadId } : {}),
+            };
+        sendJson(res, 200, wrapAgentResponse(threadId, validated));
+        return;
+      }
+
+      const logsMatch = message.match(/^\/logs\s+(\S+)\b/i);
+      if (logsMatch) {
+        const agent = logsMatch[1];
+        const tail = parseTrailingJsonObject(message);
+        const linesRaw = tail?.lines;
+        const lines = Number.isFinite(Number(linesRaw)) ? Number(linesRaw) : 100;
+        const ok = knownAgents.has(agent);
+        const validated = ok
+          ? {
+              kind: "ValidatedCommand",
+              allowed: true,
+              intent: "logs",
+              command: message,
+              args: { agent, lines: Math.max(1, Math.min(500, Math.floor(lines))) },
+              ...(process.env.MOCK_INCLUDE_THREADID === "1" ? { threadId } : {}),
+            }
+          : {
+              kind: "ValidatedCommand",
+              allowed: false,
+              intent: "logs",
+              denial_reason: "Unknown agent",
+              required_inputs: [],
+              ...(process.env.MOCK_INCLUDE_THREADID === "1" ? { threadId } : {}),
+            };
+        sendJson(res, 200, wrapAgentResponse(threadId, validated));
+        return;
+      }
+
+      const cfgGetMatch = message.match(/^\/config\s+get\s+(\S+)\s*$/i);
+      if (cfgGetMatch) {
+        const key = cfgGetMatch[1];
+        const validated = {
+          kind: "ValidatedCommand",
+          allowed: true,
+          intent: "config.get",
+          command: message,
+          args: { key },
+          ...(process.env.MOCK_INCLUDE_THREADID === "1" ? { threadId } : {}),
+        };
+        sendJson(res, 200, wrapAgentResponse(threadId, validated));
+        return;
+      }
+
+      const cfgSetMatch = message.match(/^\/config\s+set\s+(\S+)\s+(.+)$/i);
+      if (cfgSetMatch) {
+        const key = cfgSetMatch[1];
+        const value = cfgSetMatch[2];
+        const validated = {
+          kind: "ValidatedCommand",
+          allowed: true,
+          intent: "config.set",
+          command: message,
+          args: { key, value },
+          ...(process.env.MOCK_INCLUDE_THREADID === "1" ? { threadId } : {}),
+        };
+        sendJson(res, 200, wrapAgentResponse(threadId, validated));
+        return;
+      }
+
       // Domain: document intake
       if (message.startsWith("/build document-intake")) {
         const args = parseTrailingJsonObject(message) ?? {};
@@ -404,6 +544,138 @@ const server = http.createServer(async (req, res) => {
     }
 
     // planner
+
+    const statusMatch = message.match(/^\/status\s+(\S+)\s*$/i);
+    if (statusMatch) {
+      const agent = statusMatch[1];
+      const plan = {
+        kind: "ExecutionPlan",
+        execution_id: "exec_mock_status_001",
+        threadId,
+        dry_run: true,
+        goal: `Status for ${agent}`,
+        required_capabilities: [],
+        agent_versions: agentVersions,
+        assumptions: ["Generated by local mock planner"],
+        required_secrets: [],
+        steps: [
+          {
+            step_id: "status",
+            action: "agent.status",
+            adapter: "WebhookAdapter",
+            method: "GET",
+            read_only: true,
+            url: `${baseUrl}/agent/status?agent=${encodeURIComponent(agent)}`,
+            headers: { "Cache-Control": "no-store" },
+            expects: { http_status: [200], json_paths_present: ["ok", "agent", "status"] },
+            idempotency_key: null,
+          },
+        ],
+      };
+      sendJson(res, 200, wrapAgentResponse(threadId, plan));
+      return;
+    }
+
+    const logsMatch = message.match(/^\/logs\s+(\S+)\b/i);
+    if (logsMatch) {
+      const agent = logsMatch[1];
+      const tail = parseTrailingJsonObject(message);
+      const linesRaw = tail?.lines;
+      const lines = Number.isFinite(Number(linesRaw)) ? Number(linesRaw) : 100;
+      const safeLines = Math.max(1, Math.min(500, Math.floor(lines)));
+
+      const plan = {
+        kind: "ExecutionPlan",
+        execution_id: "exec_mock_logs_001",
+        threadId,
+        dry_run: true,
+        goal: `Logs for ${agent}`,
+        required_capabilities: [],
+        agent_versions: agentVersions,
+        assumptions: ["Generated by local mock planner"],
+        required_secrets: [],
+        steps: [
+          {
+            step_id: "logs",
+            action: "agent.logs",
+            adapter: "WebhookAdapter",
+            method: "POST",
+            read_only: true,
+            url: `${baseUrl}/agent/logs`,
+            headers: { "Cache-Control": "no-store" },
+            payload: { agent, lines: safeLines },
+            expects: { http_status: [200], json_paths_present: ["ok", "agent", "entries"] },
+            idempotency_key: null,
+          },
+        ],
+      };
+      sendJson(res, 200, wrapAgentResponse(threadId, plan));
+      return;
+    }
+
+    const cfgGetMatch = message.match(/^\/config\s+get\s+(\S+)\s*$/i);
+    if (cfgGetMatch) {
+      const key = cfgGetMatch[1];
+      const plan = {
+        kind: "ExecutionPlan",
+        execution_id: "exec_mock_config_get_001",
+        threadId,
+        dry_run: true,
+        goal: `Config get ${key}`,
+        required_capabilities: [],
+        agent_versions: agentVersions,
+        assumptions: ["Generated by local mock planner"],
+        required_secrets: [],
+        steps: [
+          {
+            step_id: "config-get",
+            action: "config.get",
+            adapter: "WebhookAdapter",
+            method: "GET",
+            read_only: true,
+            url: `${baseUrl}/agent/config?key=${encodeURIComponent(key)}`,
+            headers: { "Cache-Control": "no-store" },
+            expects: { http_status: [200], json_paths_present: ["ok", "key"] },
+            idempotency_key: null,
+          },
+        ],
+      };
+      sendJson(res, 200, wrapAgentResponse(threadId, plan));
+      return;
+    }
+
+    const cfgSetMatch = message.match(/^\/config\s+set\s+(\S+)\s+(.+)$/i);
+    if (cfgSetMatch) {
+      const key = cfgSetMatch[1];
+      const value = cfgSetMatch[2];
+      const plan = {
+        kind: "ExecutionPlan",
+        execution_id: "exec_mock_config_set_001",
+        threadId,
+        dry_run: true,
+        goal: `Config set ${key}`,
+        required_capabilities: [],
+        agent_versions: agentVersions,
+        assumptions: ["Generated by local mock planner"],
+        required_secrets: [],
+        steps: [
+          {
+            step_id: "config-set",
+            action: "config.set",
+            adapter: "WebhookAdapter",
+            method: "POST",
+            read_only: true,
+            url: `${baseUrl}/agent/config`,
+            headers: { "Cache-Control": "no-store" },
+            payload: { key, value },
+            expects: { http_status: [200], json_paths_present: ["ok", "key"] },
+            idempotency_key: null,
+          },
+        ],
+      };
+      sendJson(res, 200, wrapAgentResponse(threadId, plan));
+      return;
+    }
 
     if (message.startsWith("/build policy-domain-denied")) {
       const plan = {

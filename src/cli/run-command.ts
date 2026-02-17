@@ -557,16 +557,59 @@ function enforceValidJsonTailIfPresent(command: string) {
   const trimmed = command.trim();
   // Only enforce for commands that are expected to carry a JSON payload tail.
   // This keeps behavior stable for other commands that may contain braces.
-  if (!/^\/build\b/i.test(trimmed)) return;
+  const isBuild = /^\/build\b/i.test(trimmed);
+  const isLogs = /^\/logs\b/i.test(trimmed);
+  if (!isBuild && !isLogs) return;
 
   const brace = trimmed.indexOf("{");
   if (brace === -1) return;
 
   const parsed = tryParseJsonArgTail(trimmed);
   if (parsed === null) {
+    const example = isLogs
+      ? "/logs validation-agent {\"lines\":100}"
+      : "/build document-intake {\"path\":\"./docs\"}";
     throw new Error(
-      "Invalid JSON payload. Expected a JSON object after the command, e.g. /build document-intake {\"path\":\"./docs\"}"
+      `Invalid JSON payload. Expected a JSON object after the command, e.g. ${example}`
     );
+  }
+}
+
+function enforceCommandUsage(command: string) {
+  const trimmed = command.trim();
+
+  if (/^\/status\b/i.test(trimmed)) {
+    if (!/^\/status\s+\S+\s*$/i.test(trimmed)) {
+      throw new Error("Usage: /status <agent>");
+    }
+    return;
+  }
+
+  if (/^\/logs\b/i.test(trimmed)) {
+    // JSON tail is optional, but the agent argument is required.
+    if (!/^\/logs\s+\S+(?:\s+\{[\s\S]*\})?\s*$/i.test(trimmed)) {
+      throw new Error('Usage: /logs <agent> {"lines": 100}');
+    }
+    return;
+  }
+
+  if (/^\/config\b/i.test(trimmed)) {
+    if (/^\/config\s+get\b/i.test(trimmed)) {
+      if (!/^\/config\s+get\s+\S+\s*$/i.test(trimmed)) {
+        throw new Error("Usage: /config get <key>");
+      }
+      return;
+    }
+
+    if (/^\/config\s+set\b/i.test(trimmed)) {
+      // Value may contain spaces; require at least one non-space char.
+      if (!/^\/config\s+set\s+\S+\s+.+\s*$/i.test(trimmed)) {
+        throw new Error("Usage: /config set <key> <value>");
+      }
+      return;
+    }
+
+    throw new Error("Usage: /config get <key> | /config set <key> <value>");
   }
 }
 
@@ -684,6 +727,7 @@ async function run() {
 
   // Negative-test hardening: fail fast on malformed JSON tails.
   enforceValidJsonTailIfPresent(command);
+  enforceCommandUsage(command);
 
   {
     const now_iso = fixedNowIso();

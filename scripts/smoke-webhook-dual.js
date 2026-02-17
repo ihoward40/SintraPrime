@@ -125,6 +125,8 @@ async function main() {
   const threadId = process.env.THREAD_ID || `smoke_dual_${Date.now()}`;
   const message = '/build document-intake {"path":"./docs"}';
   const expectedPath = "./docs";
+  const statusMessage = "/status validation-agent";
+  const expectedAgent = "validation-agent";
 
   const headers = {
     "Content-Type": "application/json",
@@ -230,6 +232,30 @@ async function main() {
     });
   }
 
+  // 1d) Direct validation endpoint: /status
+  {
+    const { status, ok, json } = await httpJson(validationUrl, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ type: "user_message", threadId, message: statusMessage }),
+    });
+
+    if (!ok) {
+      throw new Error(`POST /validation(/status) failed (${status}): ${JSON.stringify(json).slice(0, 500)}`);
+    }
+
+    const inner = unwrapAgentResponse(json);
+    if (inner?.kind !== "ValidatedCommand" || inner?.allowed !== true) {
+      throw new Error("Expected allowed ValidatedCommand for /status");
+    }
+    if (inner?.intent !== "status") {
+      throw new Error(`Expected intent=status; got: ${inner?.intent}`);
+    }
+    if (!jsonEq(inner?.args, { agent: expectedAgent })) {
+      throw new Error(`Expected args.agent=${expectedAgent}; got: ${JSON.stringify(inner?.args)}`);
+    }
+  }
+
   // 2) Direct planner endpoint
   {
     const { status, ok, json } = await httpJson(plannerUrl, {
@@ -262,6 +288,34 @@ async function main() {
     }
   }
 
+  // 2b) Direct planner endpoint: /status
+  {
+    const { status, ok, json } = await httpJson(plannerUrl, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ type: "user_message", threadId, message: statusMessage }),
+    });
+
+    if (!ok) {
+      throw new Error(`POST /planner(/status) failed (${status}): ${JSON.stringify(json).slice(0, 500)}`);
+    }
+
+    const inner = unwrapAgentResponse(json);
+    if (inner?.kind !== "ExecutionPlan") {
+      throw new Error(`Expected ExecutionPlan from /planner(/status); got: ${inner?.kind}`);
+    }
+    if (!Array.isArray(inner?.steps) || inner.steps.length < 1) {
+      throw new Error("Expected planner to return at least 1 step for /status");
+    }
+    const step0 = inner.steps[0];
+    if (step0?.action !== "agent.status") {
+      throw new Error(`Expected first step action=agent.status; got: ${step0?.action}`);
+    }
+    if (step0?.url !== `${baseUrl}/agent/status?agent=${expectedAgent}`) {
+      throw new Error(`Expected first step url=${baseUrl}/agent/status?agent=${expectedAgent}; got: ${step0?.url}`);
+    }
+  }
+
   // 3) CLI run (executes validator + planner + executor against the mock server)
   {
     const env = {
@@ -282,6 +336,23 @@ async function main() {
 
     // CLI should fail fast on malformed JSON payload tails (before sending).
     await expectCliFailure('/build document-intake {"path":', env, {
+      stderrIncludes: "Invalid JSON payload",
+    });
+
+    // CLI should successfully execute additional command types.
+    const statusRes = await runCliCommand(statusMessage, env);
+    if (statusRes.code !== 0) {
+      throw new Error(
+        `CLI /status failed (exit ${statusRes.code}).\nSTDOUT:\n${statusRes.stdout.slice(0, 2000)}\nSTDERR:\n${statusRes.stderr.slice(0, 2000)}`
+      );
+    }
+
+    // CLI should emit deterministic usage errors for invalid syntax.
+    await expectCliFailure("/status", env, { stderrIncludes: "Usage: /status <agent>" });
+    await expectCliFailure("/config get", env, { stderrIncludes: "Usage: /config get <key>" });
+
+    // JSON-tail enforcement should also cover /logs.
+    await expectCliFailure('/logs validation-agent {"lines":', env, {
       stderrIncludes: "Invalid JSON payload",
     });
   }
@@ -315,8 +386,11 @@ async function main() {
         threadId,
         checks: [
           "POST /validation contract",
+          "POST /validation /status contract",
           "POST /planner contract",
+          "POST /planner /status contract",
           "CLI /build end-to-end",
+          "CLI /status end-to-end",
           "Repeat /validation stability",
         ],
       },
