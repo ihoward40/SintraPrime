@@ -76,6 +76,20 @@ function runCliCommand(command, env) {
   });
 }
 
+async function expectCliFailure(command, env, { stderrIncludes }) {
+  const res = await runCliCommand(command, env);
+  if (res.code === 0) {
+    throw new Error(
+      `Expected CLI failure, but exit=0 for: ${command}\nSTDOUT:\n${res.stdout.slice(0, 800)}\nSTDERR:\n${res.stderr.slice(0, 800)}`
+    );
+  }
+  if (stderrIncludes && !String(res.stderr).includes(stderrIncludes)) {
+    throw new Error(
+      `Expected CLI stderr to include '${stderrIncludes}', got:\n${res.stderr.slice(0, 1200)}`
+    );
+  }
+}
+
 function unwrapAgentResponse(envelope) {
   const responseText = envelope?.response;
   if (typeof responseText !== "string" || responseText.trim() === "") {
@@ -181,6 +195,41 @@ async function main() {
     }
   }
 
+  // 1b) Direct validation deny: unknown build target
+  {
+    const denyMessage = "/build does-not-exist {}";
+    const { status, ok, json } = await httpJson(validationUrl, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ type: "user_message", threadId, message: denyMessage }),
+    });
+
+    if (!ok) {
+      throw new Error(`POST /validation(deny) failed (${status}): ${JSON.stringify(json).slice(0, 500)}`);
+    }
+
+    const inner = unwrapAgentResponse(json);
+    if (inner?.kind !== "ValidatedCommand") {
+      throw new Error(`Expected ValidatedCommand deny from /validation; got: ${inner?.kind}`);
+    }
+    if (inner?.allowed !== false) {
+      throw new Error("Expected validation allowed=false for unknown build target");
+    }
+    if (typeof inner?.denial_reason !== "string" || inner.denial_reason.trim() === "") {
+      throw new Error("Expected denial_reason for unknown build target");
+    }
+  }
+
+  // 1c) Invalid JSON request body to webhook should yield 400 JSON error
+  {
+    await expectJsonErrorStatus(validationUrl, {
+      method: "POST",
+      headers,
+      body: "{",
+      expectedStatus: 400,
+    });
+  }
+
   // 2) Direct planner endpoint
   {
     const { status, ok, json } = await httpJson(plannerUrl, {
@@ -230,6 +279,11 @@ async function main() {
         `CLI command failed (exit ${res.code}).\nSTDOUT:\n${res.stdout.slice(0, 2000)}\nSTDERR:\n${res.stderr.slice(0, 2000)}`
       );
     }
+
+    // CLI should fail fast on malformed JSON payload tails (before sending).
+    await expectCliFailure('/build document-intake {"path":', env, {
+      stderrIncludes: "Invalid JSON payload",
+    });
   }
 
   // 4) Direct validation again (ensures repeated calls remain stable and authenticated)

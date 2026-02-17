@@ -553,6 +553,23 @@ function tryParseJsonArgTail(command: string): any | null {
   }
 }
 
+function enforceValidJsonTailIfPresent(command: string) {
+  const trimmed = command.trim();
+  // Only enforce for commands that are expected to carry a JSON payload tail.
+  // This keeps behavior stable for other commands that may contain braces.
+  if (!/^\/build\b/i.test(trimmed)) return;
+
+  const brace = trimmed.indexOf("{");
+  if (brace === -1) return;
+
+  const parsed = tryParseJsonArgTail(trimmed);
+  if (parsed === null) {
+    throw new Error(
+      "Invalid JSON payload. Expected a JSON object after the command, e.g. /build document-intake {\"path\":\"./docs\"}"
+    );
+  }
+}
+
 function computeReceiptHashForLog(runLog: unknown) {
   const payload = JSON.stringify(runLog);
   return crypto.createHash("sha256").update(payload).digest("hex");
@@ -664,6 +681,9 @@ async function run() {
   const domain_id = domainPrefix?.domain_id ?? null;
   const original_command = domainPrefix?.original_command ?? normalizedCommand;
   const command = domainPrefix?.inner_command ?? normalizedCommand;
+
+  // Negative-test hardening: fail fast on malformed JSON tails.
+  enforceValidJsonTailIfPresent(command);
 
   {
     const now_iso = fixedNowIso();
@@ -2422,6 +2442,12 @@ async function run() {
       message: command,
     });
 
+    if (!validation.ok) {
+      throw new Error(
+        `Validation webhook failed (${validation.status}): ${JSON.stringify(validation.response).slice(0, 500)}`
+      );
+    }
+
     const validatedRaw = parseJsonFromAgentResponse(validation.response);
     const validatedOut = ValidatorOutputSchema.parse(validatedRaw);
 
@@ -2499,6 +2525,12 @@ async function run() {
         // Locked transport: commands are interpreted from message text
         message: forwardedCommand,
       });
+
+      if (!planned.ok) {
+        throw new Error(
+          `Planner webhook failed (${planned.status}): ${JSON.stringify(planned.response).slice(0, 500)}`
+        );
+      }
 
       // Retry-once policy for planner output variability (disabled in strict mode).
       try {

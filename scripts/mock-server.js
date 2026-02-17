@@ -371,7 +371,12 @@ const server = http.createServer(async (req, res) => {
         return;
       }
 
+      const buildMatch = message.match(/^\/build\s+(\S+)\b/i);
+      const buildTarget = buildMatch?.[1] ? String(buildMatch[1]).trim() : null;
+      const knownBuildTargets = new Set(["document-intake", "validation-agent"]);
+
       const isUnknown =
+        (buildTarget !== null && !knownBuildTargets.has(buildTarget)) ||
         message.includes("does-not-exist") ||
         message.includes("unknown") ||
         message.includes("/build does-not-exist");
@@ -1076,7 +1081,12 @@ const server = http.createServer(async (req, res) => {
     };
     sendJson(res, 200, wrapAgentResponse(threadId, plan));
   } catch (err) {
-    sendJson(res, 500, { error: String(err?.message || err) });
+    const msg = String(err?.message || err);
+    if (msg.startsWith("Invalid JSON body:")) {
+      sendJson(res, 400, { error: msg });
+      return;
+    }
+    sendJson(res, 500, { error: msg });
   }
 });
 
