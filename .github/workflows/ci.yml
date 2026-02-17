@@ -61,6 +61,12 @@ jobs:
           sleep 1
           curl -sSf http://localhost:8787/status/200 >/dev/null
 
+      - name: Webhook smoke (dual endpoints)
+        env:
+          WEBHOOK_SECRET: test-secret
+          MOCK_BASE_URL: http://localhost:8787
+        run: node ./scripts/smoke-webhook-dual.js
+
       - name: Smoke vectors (strict)
         env:
           WEBHOOK_SECRET: test-secret

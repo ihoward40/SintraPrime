@@ -63,9 +63,24 @@ export async function sendMessage(input: SendMessageInput): Promise<SendMessageO
   const secret = process.env.WEBHOOK_SECRET;
   if (!secret) throw new Error("Missing WEBHOOK_SECRET env var");
 
+  const writeWebhookReceipts = process.env.WRITE_WEBHOOK_CALL_RECEIPTS === "1";
+  const enableIdempotencyHeader = process.env.WEBHOOK_IDEMPOTENCY === "1";
+
   const timeoutMs = input.timeoutMs ?? 30_000;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+  const requestBody = { type, threadId, message };
+  const requestBodyText = JSON.stringify(requestBody);
+  const requestBodySha256 = crypto.createHash("sha256").update(requestBodyText, "utf8").digest("hex");
+  const messageSha256 = crypto.createHash("sha256").update(message, "utf8").digest("hex");
+
+  const idempotencyKey = enableIdempotencyHeader
+    ? crypto
+        .createHash("sha256")
+        .update(`${webhookUrl}|${requestBodySha256}`, "utf8")
+        .digest("hex")
+    : null;
 
   const budgetConfig = readLlmBudgetConfig();
   const estimatedCreditsCharged = budgetConfig.creditsPerCallEstimate;
@@ -125,6 +140,7 @@ export async function sendMessage(input: SendMessageInput): Promise<SendMessageO
   }
 
   try {
+    const startedAtMs = Date.now();
     const res = await fetch(webhookUrl, {
       method: "POST",
       signal: controller.signal,
@@ -132,8 +148,9 @@ export async function sendMessage(input: SendMessageInput): Promise<SendMessageO
         "Content-Type": "application/json",
         "X-Webhook-Secret": secret,
         "Cache-Control": "no-store",
+        ...(idempotencyKey ? { "X-Idempotency-Key": idempotencyKey } : {}),
       },
-      body: JSON.stringify({ type, threadId, message }),
+      body: requestBodyText,
     });
 
     const text = await res.text();
@@ -145,7 +162,61 @@ export async function sendMessage(input: SendMessageInput): Promise<SendMessageO
     }
 
     if (json === null) {
+      if (writeWebhookReceipts) {
+        try {
+          await persistReceipt({
+            kind: "WebhookCallReceipt",
+            receipt_id: crypto.randomUUID(),
+            ts: new Date().toISOString(),
+            webhook_url: webhookUrl,
+            threadId,
+            type,
+            status: res.status,
+            ok: res.ok,
+            latency_ms: Date.now() - startedAtMs,
+            timeout_ms: timeoutMs,
+            idempotency_key: idempotencyKey,
+            request_body_sha256: requestBodySha256,
+            request_body_len: requestBodyText.length,
+            message_sha256: messageSha256,
+            message_len: message.length,
+            response_text_sha256: crypto.createHash("sha256").update(text ?? "", "utf8").digest("hex"),
+            response_text_len: String(text ?? "").length,
+            parse_error: true,
+          });
+        } catch {
+          // ignore receipt failures
+        }
+      }
       throw new Error(`Non-JSON response (${res.status}): ${text}`);
+    }
+
+    if (writeWebhookReceipts) {
+      try {
+        await persistReceipt({
+          kind: "WebhookCallReceipt",
+          receipt_id: crypto.randomUUID(),
+          ts: new Date().toISOString(),
+          webhook_url: webhookUrl,
+          threadId,
+          type,
+          status: res.status,
+          ok: res.ok,
+          latency_ms: Date.now() - startedAtMs,
+          timeout_ms: timeoutMs,
+          idempotency_key: idempotencyKey,
+          request_body_sha256: requestBodySha256,
+          request_body_len: requestBodyText.length,
+          message_sha256: messageSha256,
+          message_len: message.length,
+          response_json_sha256: crypto
+            .createHash("sha256")
+            .update(JSON.stringify(json), "utf8")
+            .digest("hex"),
+        });
+      } catch {
+        // ignore receipt failures
+      }
     }
 
     if (budgetConfig.enabled && budgetDateUtc) {
