@@ -102,3 +102,115 @@ node verify.js
 ```
 
 A passing verification exits 0.
+
+## Docker Operations (O2+)
+
+### Starting and Stopping Services
+
+**Start all services:**
+```bash
+docker-compose up -d
+```
+
+**Stop all services (preserves data):**
+```bash
+docker-compose down
+```
+
+**Restart specific service:**
+```bash
+docker-compose restart brain
+docker-compose restart airlock
+```
+
+### Health Verification
+
+**Check all container status:**
+```bash
+docker-compose ps
+```
+
+**Verify health endpoints:**
+```bash
+curl http://localhost:3000/health  # Airlock
+curl http://localhost:8011/health  # Brain
+curl http://localhost:8000/health  # FastAPI
+curl http://localhost:3002/health  # WebApp
+```
+
+### Viewing Logs
+
+**View all logs:**
+```bash
+docker-compose logs
+```
+
+**Follow specific service logs (live):**
+```bash
+docker-compose logs -f brain
+docker-compose logs -f airlock
+```
+
+**View last 100 lines:**
+```bash
+docker-compose logs --tail=100 brain
+```
+
+### Database Operations
+
+**Access MySQL shell:**
+```bash
+docker-compose exec mysql mysql -u root -p
+```
+
+**Backup database:**
+```bash
+docker-compose exec mysql mysqldump -u root -p sintraprime > backup.sql
+```
+
+**Restore database:**
+```bash
+docker-compose exec -T mysql mysql -u root -p sintraprime < backup.sql
+```
+
+### Resource Monitoring
+
+**Real-time resource usage:**
+```bash
+docker stats
+```
+
+**Check disk usage:**
+```bash
+docker system df
+```
+
+### Troubleshooting
+
+**Container won't start - check logs:**
+```bash
+docker-compose logs <service-name>
+```
+
+**Service unhealthy - restart:**
+```bash
+docker-compose restart <service-name>
+```
+
+**Database connection issues - verify MySQL:**
+```bash
+docker-compose exec mysql mysqladmin ping
+```
+
+**Full reset (⚠️ WARNING: Deletes all data):**
+```bash
+docker-compose down -v
+docker-compose up -d
+```
+
+### Related Documentation
+
+For comprehensive Docker deployment documentation, see:
+- [DOCKER_DEPLOYMENT.md](DOCKER_DEPLOYMENT.md) - Full deployment guide
+- [docs/DOCKER_BEST_PRACTICES.md](docs/DOCKER_BEST_PRACTICES.md) - Best practices
+- [docs/snapshots/phase3-baseline/](docs/snapshots/phase3-baseline/) - Baseline metrics
