@@ -37,6 +37,12 @@ For live runs, do **not** set:
 - `SMOKE_VECTORS_USE_REMOTE`
 - smoke-runner vars (anything you only use for smoke harness)
 
+## Local personal/WIP files
+
+Put personal notes, scratch output, and other WIP files under `local/` at the repo root.
+
+`local/` is intentionally ignored by git, so it won’t show up in `git status` and can’t be accidentally committed.
+
 ## Live Notion read (O2)
 
 ### Required env

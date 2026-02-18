@@ -1,0 +1,60 @@
+CREATE TABLE `cpa_review_comments` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`reviewId` int NOT NULL,
+	`userId` int NOT NULL,
+	`commentText` text NOT NULL,
+	`commentType` enum('question','suggestion','issue','approval','general') NOT NULL DEFAULT 'general',
+	`referenceType` varchar(100),
+	`referenceId` int,
+	`parentCommentId` int,
+	`isResolved` boolean NOT NULL DEFAULT false,
+	`resolvedBy` int,
+	`resolvedAt` timestamp,
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT `cpa_review_comments_id` PRIMARY KEY(`id`)
+);
+--> statement-breakpoint
+CREATE TABLE `cpa_reviews` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`trustAccountId` int NOT NULL,
+	`submittedBy` int NOT NULL,
+	`reviewedBy` int,
+	`status` enum('pending','in_review','changes_requested','approved','rejected') NOT NULL DEFAULT 'pending',
+	`reviewType` enum('k1_review','form1041_review','full_return_review','quarterly_review') NOT NULL,
+	`taxYear` int NOT NULL,
+	`submissionNotes` text,
+	`reviewNotes` text,
+	`changesRequested` json,
+	`approvalSignature` text,
+	`approvedAt` timestamp,
+	`submittedAt` timestamp NOT NULL DEFAULT (now()),
+	`reviewStartedAt` timestamp,
+	`completedAt` timestamp,
+	`metadata` json,
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT `cpa_reviews_id` PRIMARY KEY(`id`)
+);
+--> statement-breakpoint
+CREATE TABLE `payment_transactions` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`userId` int NOT NULL,
+	`trustAccountId` int,
+	`stripePaymentIntentId` varchar(255) NOT NULL,
+	`stripeCustomerId` varchar(255),
+	`amount` int NOT NULL,
+	`currency` varchar(10) NOT NULL DEFAULT 'usd',
+	`status` enum('pending','processing','succeeded','failed','canceled','refunded') NOT NULL DEFAULT 'pending',
+	`paymentMethod` varchar(100),
+	`description` text,
+	`receiptUrl` text,
+	`receiptNumber` varchar(100),
+	`serviceType` enum('k1_preparation','form1041_filing','tax_consultation','audit_support','full_service') NOT NULL,
+	`taxYear` int NOT NULL,
+	`metadata` json,
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT `payment_transactions_id` PRIMARY KEY(`id`),
+	CONSTRAINT `payment_transactions_stripePaymentIntentId_unique` UNIQUE(`stripePaymentIntentId`)
+);

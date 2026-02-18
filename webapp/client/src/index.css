@@ -1,0 +1,359 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ============================================================================
+   SINTRA PRIME - MILITARY-GRADE INTELLIGENCE PLATFORM
+   Design System: Sophisticated, Spacious, Purposeful
+   ============================================================================ */
+
+@theme inline {
+  /* === Radius System === */
+  --radius-sm: 0.25rem;   /* 4px */
+  --radius: 0.5rem;       /* 8px */
+  --radius-md: 0.75rem;   /* 12px */
+  --radius-lg: 1rem;      /* 16px */
+  --radius-xl: 1.5rem;    /* 24px */
+  
+  /* === Color Mappings === */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+:root {
+  /* === Light Theme (Tactical Light Mode) === */
+  --primary: oklch(0.55 0.22 220);           /* Tactical blue */
+  --primary-foreground: oklch(0.985 0 0);
+  --success: oklch(0.65 0.18 145);           /* Success green */
+  --warning: oklch(0.75 0.15 85);            /* Warning amber */
+  --background: oklch(0.98 0.002 264);       /* Light gray */
+  --foreground: oklch(0.15 0.01 264);        /* Dark text */
+  --card: oklch(1 0 0);                      /* White cards */
+  --card-foreground: oklch(0.15 0.01 264);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.15 0.01 264);
+  --secondary: oklch(0.92 0.005 264);
+  --secondary-foreground: oklch(0.2 0.01 264);
+  --muted: oklch(0.95 0.003 264);
+  --muted-foreground: oklch(0.5 0.01 264);
+  --accent: oklch(0.55 0.22 220);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.60 0.24 25);
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: oklch(0.88 0.005 264);
+  --input: oklch(0.88 0.005 264);
+  --ring: oklch(0.55 0.22 220);
+  --sidebar: oklch(1 0 0);
+  --sidebar-foreground: oklch(0.15 0.01 264);
+  --sidebar-primary: oklch(0.55 0.22 220);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.95 0.003 264);
+  --sidebar-accent-foreground: oklch(0.15 0.01 264);
+  --sidebar-border: oklch(0.88 0.005 264);
+  --sidebar-ring: oklch(0.55 0.22 220);
+}
+
+.dark {
+  /* === Dark Theme (Military-Grade Tactical) === */
+  --primary: oklch(0.70 0.20 200);           /* Bright tactical blue #00d4ff */
+  --primary-foreground: oklch(0.10 0.01 264);
+  --success: oklch(0.75 0.22 145);           /* Bright green #00ff88 */
+  --warning: oklch(0.80 0.18 85);            /* Bright amber #ffb800 */
+  --background: oklch(0.10 0.01 264);        /* Deep charcoal #0a0e14 */
+  --foreground: oklch(0.97 0.002 264);       /* Crisp white */
+  --card: oklch(0.16 0.01 264);              /* Panel background #1a1f2e */
+  --card-foreground: oklch(0.97 0.002 264);
+  --popover: oklch(0.16 0.01 264);
+  --popover-foreground: oklch(0.97 0.002 264);
+  --secondary: oklch(0.30 0.01 264);         /* Muted slate */
+  --secondary-foreground: oklch(0.97 0.002 264);
+  --muted: oklch(0.20 0.01 264);             /* Subtle gray */
+  --muted-foreground: oklch(0.65 0.01 264);  /* Muted text */
+  --accent: oklch(0.70 0.20 200);
+  --accent-foreground: oklch(0.10 0.01 264);
+  --destructive: oklch(0.65 0.25 25);        /* Alert red */
+  --destructive-foreground: oklch(0.97 0.002 264);
+  --border: oklch(0.30 0.01 264);
+  --input: oklch(0.30 0.01 264);
+  --ring: oklch(0.70 0.20 200);
+  --sidebar: oklch(0.14 0.01 264);
+  --sidebar-foreground: oklch(0.97 0.002 264);
+  --sidebar-primary: oklch(0.70 0.20 200);
+  --sidebar-primary-foreground: oklch(0.10 0.01 264);
+  --sidebar-accent: oklch(0.20 0.01 264);
+  --sidebar-accent-foreground: oklch(0.97 0.002 264);
+  --sidebar-border: oklch(0.30 0.01 264);
+  --sidebar-ring: oklch(0.70 0.20 200);
+}
+
+@layer base {
+  /* === Base Styles === */
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  html {
+    font-size: 16px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-size: 0.875rem; /* 14px */
+    line-height: 1.6;
+    letter-spacing: -0.01em;
+  }
+
+  /* === Typography === */
+  h1, h2, h3, h4, h5, h6 {
+    font-weight: 600;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+    color: hsl(var(--foreground));
+  }
+
+  h1 {
+    @apply text-5xl font-extrabold mb-6;  /* 48px */
+  }
+
+  h2 {
+    @apply text-3xl font-bold mb-4;       /* 32px */
+  }
+
+  h3 {
+    @apply text-2xl font-semibold mb-3;   /* 24px */
+  }
+
+  h4 {
+    @apply text-xl font-semibold mb-3;    /* 20px */
+  }
+
+  h5 {
+    @apply text-lg font-semibold mb-2;    /* 16px */
+  }
+
+  h6 {
+    @apply text-sm font-semibold mb-2 uppercase tracking-wider;  /* 14px */
+  }
+
+  p {
+    @apply mb-4 text-muted-foreground;
+  }
+
+  /* === Monospace for Data/Code === */
+  code, pre, .font-mono {
+    font-family: 'JetBrains Mono', 'Courier New', monospace;
+  }
+
+  /* === Interactive Elements === */
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  [type="button"]:not(:disabled),
+  [type="submit"]:not(:disabled),
+  [type="reset"]:not(:disabled),
+  a[href],
+  select:not(:disabled),
+  input[type="checkbox"]:not(:disabled),
+  input[type="radio"]:not(:disabled) {
+    @apply cursor-pointer;
+  }
+
+  /* === Scrollbar Styling === */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-background;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-muted rounded;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-border;
+  }
+}
+
+@layer components {
+  /* === Container with Generous Spacing === */
+  .container {
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 2rem;  /* 32px - increased from 16px */
+    padding-right: 2rem;
+  }
+
+  @media (min-width: 640px) {
+    .container {
+      padding-left: 2.5rem;  /* 40px */
+      padding-right: 2.5rem;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .container {
+      padding-left: 3rem;  /* 48px - increased from 32px */
+      padding-right: 3rem;
+      max-width: 1600px;   /* Increased from 1280px */
+    }
+  }
+
+  /* === Flex Items Don't Collapse === */
+  .flex {
+    min-height: 0;
+    min-width: 0;
+  }
+
+  /* === Panel System === */
+  .panel {
+    @apply bg-card border border-border rounded-xl shadow-lg transition-all duration-300;
+    padding: 2.5rem; /* 40px - increased from 32px */
+  }
+
+  .panel:hover {
+    @apply shadow-xl border-primary/30;
+  }
+
+  .panel-header {
+    @apply mb-6 pb-4 border-b border-border;
+  }
+
+  .panel-title {
+    @apply text-xl font-semibold text-foreground flex items-center gap-3;
+  }
+
+  .panel-description {
+    @apply text-sm text-muted-foreground mt-2;
+  }
+
+  /* === Status Indicators === */
+  .status-indicator {
+    @apply inline-flex items-center gap-2 px-3 py-1 rounded-md text-xs font-semibold uppercase tracking-wider;
+  }
+
+  .status-active {
+    @apply bg-success/10 text-success;
+  }
+
+  .status-warning {
+    @apply bg-warning/10 text-warning;
+  }
+
+  .status-error {
+    @apply bg-destructive/10 text-destructive;
+  }
+
+  .status-info {
+    @apply bg-primary/10 text-primary;
+  }
+
+  /* === Data Tables with Spacious Rows === */
+  .data-table {
+    @apply w-full border-separate border-spacing-0;
+  }
+
+  .data-table th {
+    @apply bg-muted text-muted-foreground text-xs font-semibold uppercase tracking-wider px-4 py-4 text-left border-b border-border;
+  }
+
+  .data-table td {
+    @apply px-4 py-4 border-b border-border/50 text-foreground text-sm;
+  }
+
+  .data-table tr:hover {
+    @apply bg-muted/30;
+  }
+
+  .data-table tr:last-child td {
+    @apply border-b-0;
+  }
+
+  /* === Loading States === */
+  .skeleton {
+    @apply bg-muted rounded animate-pulse;
+  }
+
+  .spinner {
+    @apply w-6 h-6 border-3 border-muted border-t-primary rounded-full animate-spin;
+  }
+
+  /* === Tactical Grid Background === */
+  .tactical-grid {
+    background-image: 
+      linear-gradient(hsl(var(--border) / 0.1) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--border) / 0.1) 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+
+  /* === Glow Effect === */
+  .glow {
+    box-shadow: 0 0 20px hsl(var(--primary) / 0.3);
+  }
+
+  /* === Smooth Transitions === */
+  button, a, [role="button"] {
+    @apply transition-all duration-300 ease-in-out;
+  }
+
+  button:hover, a:hover, [role="button"]:hover {
+    @apply -translate-y-0.5;
+  }
+
+  button:active, a:active, [role="button"]:active {
+    @apply translate-y-0;
+  }
+}
+
+@layer utilities {
+  /* === Spacing Utilities === */
+  .space-y-6 > * + * {
+    margin-top: 1.5rem;  /* 24px */
+  }
+
+  .space-y-8 > * + * {
+    margin-top: 2rem;    /* 32px */
+  }
+
+  .space-x-4 > * + * {
+    margin-left: 1rem;   /* 16px */
+  }
+
+  .space-x-6 > * + * {
+    margin-left: 1.5rem; /* 24px */
+  }
+}
