@@ -90,6 +90,9 @@ Omega_VOICE_QUEUE/
 # Local extracted bundles
 SintraPrime_AgentMode_v2.1_TimeHumanLayer/
 
+# Local personal/WIP files (intentionally untracked)
+local/
+
 # OpenCodeSafe - Private keys and seal artifacts
 *.ed25519
 !*.ed25519.pub
