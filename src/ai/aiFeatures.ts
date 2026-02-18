@@ -233,24 +233,41 @@ Provide the complete code with explanation.
       throw new Error('Web search features not enabled');
     }
 
-    // In a real implementation, this would perform actual web searches
+    const { webSearchDuckDuckGoInstantAnswer } = await import(
+      "../browser/webSearch/duckduckgoInstantAnswer.js"
+    );
+
+    const search = await webSearchDuckDuckGoInstantAnswer({ query, maxResults: 8, timeoutMs: 8_000 });
+    const sources = search.results
+      .map((r, i) => `${i + 1}. ${r.title}\n   ${r.url}${r.snippet ? `\n   ${r.snippet}` : ""}`)
+      .join("\n\n");
+
     const prompt = `
-Research the following topic and provide a comprehensive synthesis:
+Use the provided web search sources to write a synthesis.
 
 Query: ${query}
 
-Provide:
-1. Key findings from multiple sources
-2. Consensus views
-3. Contrasting perspectives
-4. Recent developments
-5. Actionable insights
-6. Source citations
+Sources (cite with [#]):
+${sources || "(no sources returned)"}
 
-Synthesize the information into a clear, actionable summary.
+Write:
+1. Key findings (with citations)
+2. Consensus views (with citations)
+3. Contrasting perspectives (with citations)
+4. Recent developments (if present)
+5. Actionable next steps
 `;
 
-    return this.callAI(prompt, { webSearch: true });
+    const synthesis = await this.callAI(prompt, { webSearch: true, provider: search.provider, partial: search.partial });
+
+    return {
+      query,
+      provider: search.provider,
+      partial: search.partial,
+      warnings: search.warnings,
+      results: search.results,
+      synthesis,
+    };
   }
 
   /**
