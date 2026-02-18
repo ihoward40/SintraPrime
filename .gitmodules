@@ -1,0 +1,13 @@
+[submodule "skills-upstream/openai-skills"]
+	path = skills-upstream/openai-skills
+	url = https://github.com/openai/skills.git
+[submodule "skills-upstream/openclaw-skills"]
+	path = skills-upstream/openclaw-skills
+	url = https://github.com/openclaw/skills.git
+	ignore = dirty
+[submodule "skills-upstream/obra-superpowers"]
+	path = skills-upstream/obra-superpowers
+	url = https://github.com/obra/superpowers.git
+[submodule "skills-upstream/anthropics-skills"]
+	path = skills-upstream/anthropics-skills
+	url = https://github.com/anthropics/skills.git
