@@ -10,6 +10,7 @@ import {
 import { readApprovalState, writeApprovalState, approvalStatePath } from "../approval/approvalState.js";
 import { computePlanHash } from "../utils/planHash.js";
 import crypto from "node:crypto";
+import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -559,7 +560,10 @@ function enforceValidJsonTailIfPresent(command: string) {
   // This keeps behavior stable for other commands that may contain braces.
   const isBuild = /^\/build\b/i.test(trimmed);
   const isLogs = /^\/logs\b/i.test(trimmed);
-  if (!isBuild && !isLogs) return;
+  const isValidateBatch = /^\/validate-batch\b/i.test(trimmed);
+  const isValidate = !isValidateBatch && /^\/validate\b/i.test(trimmed);
+  const isBuildBatch = /^\/build-batch\b/i.test(trimmed);
+  if (!isBuild && !isLogs && !isValidate && !isValidateBatch && !isBuildBatch) return;
 
   const brace = trimmed.indexOf("{");
   if (brace === -1) return;
@@ -568,7 +572,13 @@ function enforceValidJsonTailIfPresent(command: string) {
   if (parsed === null) {
     const example = isLogs
       ? "/logs validation-agent {\"lines\":100}"
-      : "/build document-intake {\"path\":\"./docs\"}";
+      : isValidate
+        ? "/validate task-123 {\"check\":\"syntax\"}"
+        : isValidateBatch
+          ? "/validate-batch {\"tasks\":[{\"taskId\":\"task-1\",\"payload\":{}}]}"
+          : isBuildBatch
+            ? "/build-batch {\"agents\":[{\"agent\":\"validation-agent\",\"payload\":{}}]}"
+            : "/build document-intake {\"path\":\"./docs\"}";
     throw new Error(
       `Invalid JSON payload. Expected a JSON object after the command, e.g. ${example}`
     );
@@ -577,6 +587,27 @@ function enforceValidJsonTailIfPresent(command: string) {
 
 function enforceCommandUsage(command: string) {
   const trimmed = command.trim();
+
+  if (/^\/validate-batch\b/i.test(trimmed)) {
+    if (!/^\/validate-batch\s+\{[\s\S]*\}\s*$/i.test(trimmed)) {
+      throw new Error('Usage: /validate-batch {"tasks": [{"taskId":"task-1","payload":{...}}]}');
+    }
+    return;
+  }
+
+  if (/^\/build-batch\b/i.test(trimmed)) {
+    if (!/^\/build-batch\s+\{[\s\S]*\}\s*$/i.test(trimmed)) {
+      throw new Error('Usage: /build-batch {"agents": [{"agent":"validation-agent","payload":{...}}]}');
+    }
+    return;
+  }
+
+  if (/^\/validate\b/i.test(trimmed)) {
+    if (!/^\/validate\s+\S+\s+\{[\s\S]*\}\s*$/i.test(trimmed)) {
+      throw new Error('Usage: /validate <taskId> {"check":"syntax"}');
+    }
+    return;
+  }
 
   if (/^\/status\b/i.test(trimmed)) {
     if (!/^\/status\s+\S+\s*$/i.test(trimmed)) {
@@ -966,6 +997,262 @@ async function run() {
       );
     }
     return;
+  }
+
+  // Issue #63: batch operations
+  // - /validate (validator-only)
+  // - /validate-batch (validator-only; per-item isolation)
+  // - /build-batch (runs /build for each item; per-item isolation)
+  if (/^\/validate-batch\b/i.test(command.trim())) {
+    const validationUrl = mustEnv("VALIDATION_WEBHOOK_URL");
+    const payload = tryParseJsonArgTail(command)!;
+
+    const tasksRaw = payload?.tasks;
+    if (!Array.isArray(tasksRaw)) {
+      process.exitCode = 2;
+      process.stdout.write(
+        JSON.stringify(
+          {
+            kind: "NeedInput",
+            reason: "Missing required field tasks",
+            expected: {
+              tasks: "array of {taskId:string, payload:object}",
+            },
+          },
+          null,
+          0
+        )
+      );
+      return;
+    }
+
+    const results: any[] = [];
+    let anyFailure = false;
+
+    for (let i = 0; i < tasksRaw.length; i++) {
+      const t = tasksRaw[i];
+      const taskId = typeof t?.taskId === "string" ? t.taskId.trim() : "";
+      const itemPayload = isRecord(t?.payload) ? t.payload : {};
+
+      if (!taskId) {
+        anyFailure = true;
+        results.push({ index: i, ok: false, error: "Missing taskId" });
+        continue;
+      }
+
+      const validateCmd = `/validate ${taskId} ${JSON.stringify(itemPayload)}`;
+      try {
+        const itemThreadId =
+          threadId != null && threadId !== ""
+            ? `${threadId}/validate-${taskId || i}`
+            : `validate-${taskId || i}`;
+        const validation = await sendMessage({
+          webhookUrl: validationUrl,
+          threadId: itemThreadId,
+          message: validateCmd,
+        });
+
+        if (!validation.ok) {
+          anyFailure = true;
+          results.push({
+            index: i,
+            taskId,
+            ok: false,
+            error: `Validation webhook failed (${validation.status})`,
+          });
+          continue;
+        }
+
+        const validatedRaw = parseJsonFromAgentResponse(validation.response);
+        const validatedOut = ValidatorOutputSchema.parse(validatedRaw);
+
+        if (validatedOut.kind === "NeedInput") {
+          anyFailure = true;
+          results.push({
+            index: i,
+            taskId,
+            ok: false,
+            kind: "NeedInput",
+            question: validatedOut.question,
+            missing: validatedOut.missing ?? [],
+          });
+          continue;
+        }
+
+        const validated = ValidatedCommandSchema.parse(validatedOut);
+        const allowed = validated.allowed === true;
+        if (!allowed) anyFailure = true;
+
+        results.push({
+          index: i,
+          taskId,
+          ok: true,
+          allowed,
+          intent: validated.intent ?? null,
+          denial_reason: validated.denial_reason ?? null,
+          required_inputs: validated.required_inputs ?? [],
+        });
+      } catch (err: any) {
+        anyFailure = true;
+        results.push({
+          index: i,
+          taskId,
+          ok: false,
+          error: String(err?.message ?? err),
+        });
+      }
+    }
+
+    process.exitCode = anyFailure ? 1 : 0;
+    process.stdout.write(JSON.stringify({ kind: "ValidateBatchResult", threadId, results }, null, 0));
+    return;
+  }
+
+  if (/^\/build-batch\b/i.test(command.trim())) {
+    const payload = tryParseJsonArgTail(command)!;
+
+    const agentsRaw = payload?.agents;
+    if (!Array.isArray(agentsRaw)) {
+      process.exitCode = 2;
+      process.stdout.write(
+        JSON.stringify(
+          {
+            kind: "NeedInput",
+            reason: "Missing required field agents",
+            expected: {
+              agents: "array of {agent:string, payload:object}",
+            },
+          },
+          null,
+          0
+        )
+      );
+      return;
+    }
+
+    const entry = process.argv[1];
+    if (typeof entry !== "string" || !entry.trim()) {
+      throw new Error("Internal error: missing CLI entry path (process.argv[1])");
+    }
+    const execArgsPrefix: string[] = [...process.execArgv, entry];
+
+    const runOne = (childCommand: string, childEnv: NodeJS.ProcessEnv) =>
+      new Promise<{ code: number; stderr: string; stdout: string }>((resolve, reject) => {
+        const child = spawn(process.execPath, [...execArgsPrefix, childCommand], {
+          env: childEnv,
+          stdio: ["ignore", "pipe", "pipe"] as const,
+        });
+
+        let stdout = "";
+        let stderr = "";
+        child.stdout.on("data", (d: unknown) => {
+          if (stdout.length < 4000) stdout += String(d);
+        });
+        child.stderr.on("data", (d: unknown) => {
+          if (stderr.length < 2000) stderr += String(d);
+        });
+        child.on("error", reject);
+        child.on("exit", (code: number | null) => resolve({ code: code ?? 1, stderr, stdout }));
+      });
+
+    const results: any[] = [];
+    let anyFailure = false;
+
+    for (let i = 0; i < agentsRaw.length; i++) {
+      const a = agentsRaw[i];
+      const agent = typeof a?.agent === "string" ? a.agent.trim() : "";
+      const agentPayload = isRecord(a?.payload) ? a.payload : {};
+
+      if (!agent) {
+        anyFailure = true;
+        results.push({ index: i, ok: false, error: "Missing agent" });
+        continue;
+      }
+
+      const childThreadId = `${threadId}_batch_${i}`;
+      const buildCmd = `/build ${agent} ${JSON.stringify(agentPayload)}`;
+
+      try {
+        const { code, stderr, stdout } = await runOne(buildCmd, {
+          ...process.env,
+          THREAD_ID: childThreadId,
+        });
+        const ok = code === 0;
+        if (!ok) anyFailure = true;
+        results.push({
+          index: i,
+          agent,
+          ok,
+          exitCode: code,
+          ...(ok
+            ? {}
+            : {
+                stderr_preview: String(stderr).trim().slice(0, 800) || null,
+                stdout_preview: String(stdout).trim().slice(0, 800) || null,
+              }),
+        });
+      } catch (err: any) {
+        anyFailure = true;
+        results.push({ index: i, agent, ok: false, error: String(err?.message ?? err) });
+      }
+    }
+
+    process.exitCode = anyFailure ? 1 : 0;
+    process.stdout.write(JSON.stringify({ kind: "BuildBatchResult", threadId, results }, null, 0));
+    return;
+  }
+
+  if (/^\/validate\b/i.test(command.trim())) {
+    const validationUrl = mustEnv("VALIDATION_WEBHOOK_URL");
+    try {
+      const validation = await sendMessage({
+        webhookUrl: validationUrl,
+        threadId,
+        message: command,
+      });
+
+      if (!validation.ok) {
+        process.exitCode = 1;
+        process.stdout.write(
+          JSON.stringify(
+            {
+              kind: "ValidateError",
+              message: `Validation webhook failed (${validation.status})`,
+            },
+            null,
+            0
+          )
+        );
+        return;
+      }
+
+      const validatedRaw = parseJsonFromAgentResponse(validation.response);
+      const validatedOut = ValidatorOutputSchema.parse(validatedRaw);
+
+      if (validatedOut.kind === "NeedInput") {
+        process.exitCode = 2;
+        process.stdout.write(JSON.stringify(validatedOut, null, 0));
+        return;
+      }
+
+      const validated = ValidatedCommandSchema.parse(validatedOut);
+      process.exitCode = validated.allowed === true ? 0 : 1;
+      process.stdout.write(JSON.stringify(validated, null, 0));
+      return;
+    } catch (err: any) {
+      process.exitCode = 1;
+      process.stdout.write(
+        JSON.stringify(
+          {
+            kind: "ValidateError",
+            message: String(err?.message ?? err),
+          },
+          null,
+          0
+        )
+      );
+      return;
+    }
   }
 
   if (process.env.CLI_DSL_DEBUG === "1" && domainPrefix) {

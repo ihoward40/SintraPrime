@@ -483,6 +483,60 @@ const server = http.createServer(async (req, res) => {
         return;
       }
 
+      // Domain: task validation (validator-only; used by /validate-batch)
+      if (/^\/validate\b/i.test(message)) {
+        const validateMatch = message.match(/^\/validate\s+(\S+)\b/i);
+        if (!validateMatch) {
+          const need = {
+            kind: "NeedInput",
+            question: "What taskId should I validate?",
+            missing: ["taskId"],
+            ...(process.env.MOCK_INCLUDE_THREADID === "1" ? { threadId } : {}),
+          };
+          sendJson(res, 200, wrapAgentResponse(threadId, need));
+          return;
+        }
+
+        const taskId = String(validateMatch[1]).trim();
+        const payload = parseTrailingJsonObject(message);
+        if (!payload) {
+          const need = {
+            kind: "NeedInput",
+            question: "What payload should I validate for this task?",
+            missing: ["payload"],
+            ...(process.env.MOCK_INCLUDE_THREADID === "1" ? { threadId } : {}),
+          };
+          sendJson(res, 200, wrapAgentResponse(threadId, need));
+          return;
+        }
+
+        const isUnknown =
+          taskId.includes("bad") ||
+          taskId.includes("unknown") ||
+          taskId.includes("does-not-exist");
+
+        const validated = isUnknown
+          ? {
+              kind: "ValidatedCommand",
+              allowed: false,
+              intent: "validate",
+              denial_reason: "Unknown task",
+              required_inputs: [],
+              ...(process.env.MOCK_INCLUDE_THREADID === "1" ? { threadId } : {}),
+            }
+          : {
+              kind: "ValidatedCommand",
+              allowed: true,
+              intent: "validate",
+              command: message,
+              args: { taskId, payload },
+              ...(process.env.MOCK_INCLUDE_THREADID === "1" ? { threadId } : {}),
+            };
+
+        sendJson(res, 200, wrapAgentResponse(threadId, validated));
+        return;
+      }
+
       // Domain: document intake
       if (message.startsWith("/build document-intake")) {
         const args = parseTrailingJsonObject(message) ?? {};
