@@ -1,4 +1,4 @@
-import { sendMessage } from './sendMessage.js';
+import { sendMessage } from '../sendMessage.js';
 
 const webhookUrl = process.env.WEBHOOK_URL;
 const webhookSecret = process.env.WEBHOOK_SECRET;
