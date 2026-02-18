@@ -5,6 +5,29 @@ on:
   pull_request:
 
 jobs:
+  agent-registry-drift:
+    name: agent-registry-drift
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Agent registry drift
+        run: npm run -s check:agents
+
   smoke-pr:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -39,7 +62,6 @@ jobs:
         run: |
           npm run -s typecheck
           npm run -s validate:schemas
-
       - name: Tests
         run: npm test
       - name: DeepThink gates
