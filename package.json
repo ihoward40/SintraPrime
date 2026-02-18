@@ -48,7 +48,8 @@
     "automations:schema-snapshot": "node scripts/schema-snapshot-automations.mjs",
     "skills:revoke": "node scripts/skills-revoke-one.mjs",
     "skills:check": "node scripts/skills-check-revoked.mjs",
-    "skills:status": "node scripts/skills-status.mjs"
+    "skills:status": "node scripts/skills-status.mjs",
+    "check:agents": "node ./tools/check-agents.mjs"
   },
   "dependencies": {
     "express": "^4.21.2",

@@ -1,0 +1,49 @@
+{
+  "code_agents": [
+    "CreditGuardian",
+    "EcommerceAutomationAgent",
+    "TrustGuardian"
+  ],
+  "agent_hub": [
+    "SintraPrime_Planner_v1",
+    "SintraPrime_Validation_Agent",
+    "Trust_Orchestrator_Agent",
+    "Watchtower_Reporting_Agent",
+    "Tiktok_Sentinel_Agent",
+    "Telecom_Enforcement_Agent",
+    "Email_Sentinel_Agent",
+    "Trust_Records_Guardian_Agent"
+  ],
+  "make_ai_agents": [
+    "Affidavit Generator Agent",
+    "Legal-Document-Generator-Agent",
+    "TikTok-Lead-Capture-Agent",
+    "STEVEN - IKE SOLUTIONS LEGAL EVIDENCE AGENT"
+  ],
+  "sintra_specialists": [
+    "Vizzy",
+    "Soshie",
+    "Buddy",
+    "Dexter",
+    "Commet",
+    "Gigi",
+    "Emmie",
+    "Seomi",
+    "Scouty",
+    "Penn",
+    "Milli",
+    "Cassie"
+  ],
+  "legacy_archive": [
+    "Core Engineer",
+    "Infisical Agent",
+    "Trademark Agent",
+    "Stripe Agent",
+    "Zillow Agent",
+    "IRS Agent",
+    "VA Benefits Agent",
+    "Trello Agent",
+    "Tave Agent",
+    "TurboTax Agent"
+  ]
+}
