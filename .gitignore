@@ -52,6 +52,47 @@ airlock_server/package-lock.json
 # OS / tooling noise
 Thumbs.db
 
+# Visual Studio (Windows)
+.vs/
+
+# Python caches
+**/__pycache__/
+**/*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Local virtual environments
+.venv/
+venv/
+
+# Local DB/state artifacts
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs / runtime
+*.log
+*.pid
+
+# Local archives (generally large, non-source)
+*.zip
+*.7z
+*.tar
+*.gz
+*.rar
+
+# Local voice/runtime queues (generated)
+Omega_VOICE_QUEUE/
+Ω_VOICE_QUEUE/
+Î©_VOICE_QUEUE/
+
+# Local extracted bundles
+SintraPrime_AgentMode_v2.1_TimeHumanLayer/
+
+# Local personal/WIP files (intentionally untracked)
+local/
+
 # OpenCodeSafe - Private keys and seal artifacts
 *.ed25519
 !*.ed25519.pub
