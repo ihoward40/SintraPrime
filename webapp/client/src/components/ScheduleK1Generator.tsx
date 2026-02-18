@@ -1,0 +1,342 @@
+import React, { useState } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { FileText, Download, Mail, Users } from "lucide-react";
+import { toast } from "sonner";
+import { trpc } from "@/lib/trpc";
+import jsPDF from "jspdf";
+
+interface K1Data {
+  beneficiaryName: string;
+  beneficiarySSN: string;
+  beneficiaryAddress: string;
+  trustName: string;
+  trustEIN: string;
+  taxYear: number;
+  interest: number;
+  dividends: number;
+  capitalGains: number;
+  ordinaryIncome: number;
+  deductions: number;
+  dniShare: number;
+}
+
+export function ScheduleK1Generator() {
+  const [selectedTrustId, setSelectedTrustId] = useState<number | null>(null);
+  const [selectedBeneficiaryId, setSelectedBeneficiaryId] = useState<number | null>(null);
+
+  const { data: trustAccounts } = trpc.trustAccounting.getTrustAccounts.useQuery({});
+  const [dniCalculations, setDniCalculations] = useState<any>(null);
+
+  const selectedTrust = trustAccounts?.find((t) => t.id === selectedTrustId);
+  const beneficiaries = (selectedTrust?.metadata?.beneficiaries as Array<{
+    name: string;
+    ssn?: string;
+    relationship: string;
+    distributionPercentage: number;
+  }> || []).map((b, idx) => ({
+    id: idx + 1,
+    name: b.name,
+    ssn: b.ssn || "XXX-XX-XXXX",
+    address: "Address not provided",
+    share: b.distributionPercentage,
+  }));
+
+  // Load DNI calculations when trust is selected
+  React.useEffect(() => {
+    if (selectedTrustId && selectedTrust) {
+      // Mock DNI calculations for now
+      setDniCalculations({
+        interestIncome: 10000,
+        dividendIncome: 5000,
+        capitalGains: 15000,
+        ordinaryIncome: 20000,
+        deductions: 8000,
+        dni: 42000,
+      });
+    }
+  }, [selectedTrustId, selectedTrust]);
+
+  const generateK1PDF = (k1Data: K1Data) => {
+    const doc = new jsPDF();
+
+    // Title
+    doc.setFontSize(16);
+    doc.setFont("helvetica", "bold");
+    doc.text("Schedule K-1 (Form 1041)", 105, 20, { align: "center" });
+    doc.setFontSize(10);
+    doc.text("Beneficiary's Share of Income, Deductions, Credits, etc.", 105, 27, { align: "center" });
+    doc.text(`For calendar year ${k1Data.taxYear}`, 105, 32, { align: "center" });
+
+    // Trust Information
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.text("Part I: Information About the Estate or Trust", 20, 45);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.text(`A. Estate's or trust's name: ${k1Data.trustName}`, 20, 52);
+    doc.text(`B. Estate's or trust's EIN: ${k1Data.trustEIN}`, 20, 59);
+
+    // Beneficiary Information
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.text("Part II: Information About the Beneficiary", 20, 72);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.text(`C. Beneficiary's name: ${k1Data.beneficiaryName}`, 20, 79);
+    doc.text(`D. Beneficiary's SSN: ${k1Data.beneficiarySSN}`, 20, 86);
+    doc.text(`E. Beneficiary's address: ${k1Data.beneficiaryAddress}`, 20, 93);
+
+    // Income and Deductions
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.text("Part III: Beneficiary's Share of Current Year Income, Deductions, Credits, and Other Items", 20, 106);
+    
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    let yPos = 116;
+
+    const formatCurrency = (amount: number) => {
+      return new Intl.NumberFormat("en-US", {
+        style: "currency",
+        currency: "USD",
+      }).format(amount);
+    };
+
+    // Line items
+    doc.text("1. Interest income", 25, yPos);
+    doc.text(formatCurrency(k1Data.interest), 160, yPos, { align: "right" });
+    yPos += 7;
+
+    doc.text("2a. Ordinary dividends", 25, yPos);
+    doc.text(formatCurrency(k1Data.dividends), 160, yPos, { align: "right" });
+    yPos += 7;
+
+    doc.text("3. Net short-term capital gain", 25, yPos);
+    doc.text(formatCurrency(k1Data.capitalGains), 160, yPos, { align: "right" });
+    yPos += 7;
+
+    doc.text("5. Ordinary business income", 25, yPos);
+    doc.text(formatCurrency(k1Data.ordinaryIncome), 160, yPos, { align: "right" });
+    yPos += 7;
+
+    doc.text("11. Final year deductions", 25, yPos);
+    doc.text(formatCurrency(k1Data.deductions), 160, yPos, { align: "right" });
+    yPos += 7;
+
+    yPos += 5;
+    doc.setFont("helvetica", "bold");
+    doc.text("Distributable Net Income (DNI) Share", 25, yPos);
+    doc.text(formatCurrency(k1Data.dniShare), 160, yPos, { align: "right" });
+
+    // Footer
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "italic");
+    doc.text("This is a computer-generated Schedule K-1. Please consult with a tax professional.", 105, 280, { align: "center" });
+    doc.text("Generated by SintraPrime IKE Tax Agent", 105, 285, { align: "center" });
+
+    return doc;
+  };
+
+  const handleGenerateK1 = () => {
+    if (!selectedTrust || !selectedBeneficiaryId) {
+      toast.error("Please select a trust and beneficiary");
+      return;
+    }
+
+    const beneficiary = beneficiaries.find((b) => b.id === selectedBeneficiaryId);
+    if (!beneficiary) {
+      toast.error("Beneficiary not found");
+      return;
+    }
+
+    // Calculate beneficiary's share based on their percentage
+    const share = beneficiary.share / 100;
+    const k1Data: K1Data = {
+      beneficiaryName: beneficiary.name,
+      beneficiarySSN: beneficiary.ssn,
+      beneficiaryAddress: beneficiary.address,
+      trustName: selectedTrust.trustName,
+      trustEIN: selectedTrust.ein,
+      taxYear: selectedTrust.taxYear,
+      interest: (dniCalculations?.interestIncome || 0) * share,
+      dividends: (dniCalculations?.dividendIncome || 0) * share,
+      capitalGains: (dniCalculations?.capitalGains || 0) * share,
+      ordinaryIncome: (dniCalculations?.ordinaryIncome || 0) * share,
+      deductions: (dniCalculations?.deductions || 0) * share,
+      dniShare: (dniCalculations?.dni || 0) * share,
+    };
+
+    const doc = generateK1PDF(k1Data);
+    doc.save(`Schedule-K1-${beneficiary.name.replace(/\s+/g, "-")}-${selectedTrust.taxYear}.pdf`);
+    toast.success(`Schedule K-1 generated for ${beneficiary.name}`);
+  };
+
+  const handleGenerateAllK1s = () => {
+    if (!selectedTrust || beneficiaries.length === 0) {
+      toast.error("Please select a trust with beneficiaries");
+      return;
+    }
+
+    beneficiaries.forEach((beneficiary) => {
+      const share = beneficiary.share / 100;
+      const k1Data: K1Data = {
+        beneficiaryName: beneficiary.name,
+        beneficiarySSN: beneficiary.ssn,
+        beneficiaryAddress: beneficiary.address,
+        trustName: selectedTrust.trustName,
+        trustEIN: selectedTrust.ein,
+        taxYear: selectedTrust.taxYear,
+        interest: (dniCalculations?.interestIncome || 0) * share,
+        dividends: (dniCalculations?.dividendIncome || 0) * share,
+        capitalGains: (dniCalculations?.capitalGains || 0) * share,
+        ordinaryIncome: (dniCalculations?.ordinaryIncome || 0) * share,
+        deductions: (dniCalculations?.deductions || 0) * share,
+        dniShare: (dniCalculations?.dni || 0) * share,
+      };
+
+      const doc = generateK1PDF(k1Data);
+      doc.save(`Schedule-K1-${beneficiary.name.replace(/\s+/g, "-")}-${selectedTrust.taxYear}.pdf`);
+    });
+
+    toast.success(`Generated ${beneficiaries.length} Schedule K-1 forms`);
+  };
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="w-5 h-5" />
+            Schedule K-1 Generator
+          </CardTitle>
+          <CardDescription>
+            Generate beneficiary Schedule K-1 forms from trust DNI calculations
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Trust Selection */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Select Trust Account</label>
+            <Select
+              value={selectedTrustId?.toString()}
+              onValueChange={(value) => setSelectedTrustId(parseInt(value))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select a trust account" />
+              </SelectTrigger>
+              <SelectContent>
+                {trustAccounts?.map((trust) => (
+                  <SelectItem key={trust.id} value={trust.id.toString()}>
+                    {trust.trustName} ({trust.taxYear})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Beneficiary Selection */}
+          {selectedTrustId && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Select Beneficiary</label>
+              <Select
+                value={selectedBeneficiaryId?.toString()}
+                onValueChange={(value) => setSelectedBeneficiaryId(parseInt(value))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a beneficiary" />
+                </SelectTrigger>
+                <SelectContent>
+                  {beneficiaries.map((beneficiary) => (
+                    <SelectItem key={beneficiary.id} value={beneficiary.id.toString()}>
+                      {beneficiary.name} ({beneficiary.share}%)
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {/* DNI Summary */}
+          {selectedTrustId && dniCalculations && (
+            <Card className="bg-muted/50">
+              <CardHeader>
+                <CardTitle className="text-base">DNI Calculation Summary</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span>Interest Income:</span>
+                  <span className="font-mono">${dniCalculations.interestIncome.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Dividend Income:</span>
+                  <span className="font-mono">${dniCalculations.dividendIncome.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Capital Gains:</span>
+                  <span className="font-mono">${dniCalculations.capitalGains.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Ordinary Income:</span>
+                  <span className="font-mono">${dniCalculations.ordinaryIncome.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Deductions:</span>
+                  <span className="font-mono">${dniCalculations.deductions.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between pt-2 border-t font-bold">
+                  <span>Total DNI:</span>
+                  <span className="font-mono">${dniCalculations.dni.toLocaleString()}</span>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Actions */}
+          <div className="flex gap-3">
+            <Button
+              onClick={handleGenerateK1}
+              disabled={!selectedTrustId || !selectedBeneficiaryId}
+              className="flex-1"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Generate K-1 for Selected Beneficiary
+            </Button>
+            <Button
+              onClick={handleGenerateAllK1s}
+              disabled={!selectedTrustId || beneficiaries.length === 0}
+              variant="outline"
+              className="flex-1"
+            >
+              <Users className="w-4 h-4 mr-2" />
+              Generate All K-1s ({beneficiaries.length})
+            </Button>
+          </div>
+
+          {/* Beneficiaries List */}
+          {selectedTrustId && beneficiaries.length > 0 && (
+            <div className="space-y-2">
+              <h4 className="text-sm font-medium">Beneficiaries</h4>
+              <div className="space-y-2">
+                {beneficiaries.map((beneficiary) => (
+                  <div
+                    key={beneficiary.id}
+                    className="flex items-center justify-between p-3 border rounded-lg"
+                  >
+                    <div>
+                      <p className="font-medium">{beneficiary.name}</p>
+                      <p className="text-sm text-muted-foreground">{beneficiary.ssn}</p>
+                    </div>
+                    <Badge variant="outline">{beneficiary.share}% share</Badge>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

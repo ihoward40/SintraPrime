@@ -1,0 +1,1 @@
+ALTER TABLE `research_documents` ADD `embedding` json;

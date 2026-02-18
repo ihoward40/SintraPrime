@@ -1,0 +1,1 @@
+ALTER TABLE `nanobot_repairs` ADD `metadata` json;

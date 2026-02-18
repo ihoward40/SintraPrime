@@ -1,0 +1,126 @@
+# CODEOWNERS - Code Ownership and Protection
+# 
+# This file defines code ownership for critical files in the SintraPrime repository.
+# Changes to protected files require approval from designated owners.
+#
+# Format: <file-pattern> <owner-username>
+# Documentation: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# ==============================================================================
+# GOVERNANCE & CONSTITUTION
+# ==============================================================================
+
+# Agent constitution - requires owner approval for any changes
+/AGENTS.md @ihoward40
+
+# Productization configuration - requires owner approval
+/productize.config.json @ihoward40
+
+# Code owners file itself - requires owner approval
+/CODEOWNERS @ihoward40
+
+# ==============================================================================
+# SECURITY & SECRETS
+# ==============================================================================
+
+# Security policy and vulnerability reporting
+/SECURITY.md @ihoward40
+
+# GitHub workflows (CI/CD, security scanning)
+/.github/workflows/ @ihoward40
+
+# Dependabot configuration
+/.github/dependabot.yml @ihoward40
+
+# ==============================================================================
+# DATABASE & SCHEMA
+# ==============================================================================
+
+# Database schema - requires careful review for breaking changes
+/drizzle/schema.ts @ihoward40
+
+# Database migrations - must be reviewed for data integrity
+/drizzle/migrations/ @ihoward40
+
+# ==============================================================================
+# CORE INFRASTRUCTURE
+# ==============================================================================
+
+# Server core infrastructure
+/server/_core/ @ihoward40
+
+# Environment configuration template
+/.env.example @ihoward40
+
+# Package dependencies - review for security vulnerabilities
+/package.json @ihoward40
+/package-lock.json @ihoward40
+/pnpm-lock.yaml @ihoward40
+
+# ==============================================================================
+# KILO CODE SKILLS
+# ==============================================================================
+
+# Kilo Code skills directory - requires governance review
+/.kilocode/ @ihoward40
+
+# ==============================================================================
+# DOCUMENTATION
+# ==============================================================================
+
+# Contributing guidelines
+/CONTRIBUTING.md @ihoward40
+
+# Changelog - must follow semantic versioning
+/CHANGELOG.md @ihoward40
+
+# ==============================================================================
+# DEPLOYMENT & PRODUCTION
+# ==============================================================================
+
+# Production deployment scripts
+/scripts/deploy/ @ihoward40
+
+# Docker configuration
+/Dockerfile @ihoward40
+/docker-compose.yml @ihoward40
+
+# ==============================================================================
+# AUDIT & COMPLIANCE
+# ==============================================================================
+
+# Audit trail implementation
+/server/routes/auditTrail.ts @ihoward40
+
+# Receipt ledger system
+/server/lib/receiptLedger.ts @ihoward40
+
+# ==============================================================================
+# PAYMENT PROCESSING
+# ==============================================================================
+
+# Stripe payment integration - critical for financial operations
+/server/routes/stripePayment.ts @ihoward40
+
+# Subscription billing system
+/server/routes/subscriptionBilling.ts @ihoward40
+
+# Refund processing
+/server/routes/refundManagement.ts @ihoward40
+
+# ==============================================================================
+# IRS E-FILE INTEGRATION
+# ==============================================================================
+
+# IRS e-file router - critical for tax filing compliance
+/server/routes/irsEfile.ts @ihoward40
+
+# IRS credentials management
+/server/routes/irsConfig.ts @ihoward40
+
+# ==============================================================================
+# DEFAULT OWNER
+# ==============================================================================
+
+# All other files - default owner
+* @ihoward40

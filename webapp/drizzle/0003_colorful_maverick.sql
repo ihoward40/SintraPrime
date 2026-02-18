@@ -1,0 +1,1 @@
+ALTER TABLE `users` ADD `onboardingComplete` boolean DEFAULT false NOT NULL;

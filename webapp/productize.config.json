@@ -1,0 +1,78 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Kilo-Org/kilocode/main/schemas/productize.config.schema.json",
+  "version": "1.0.0",
+  "repositories": [
+    {
+      "owner": "ihoward40",
+      "repo": "sintraprime",
+      "description": "Revolutionary legal technology platform combining AI-powered case management, real-time legal intelligence, dual-browser quantum workspace, and coalition coordination tools for legal professionals and pro se litigants",
+      "homepage": "https://sintraprime.manus.space",
+      "topics": [
+        "legal-tech",
+        "ai-agents",
+        "case-management",
+        "trust-administration",
+        "tax-preparation",
+        "irs-efile",
+        "stripe-payments",
+        "cpa-collaboration",
+        "legal-intelligence",
+        "kilo-code",
+        "governance",
+        "audit-trail",
+        "typescript",
+        "react",
+        "trpc"
+      ],
+      "badges": {
+        "style": "flat-square",
+        "ci": {
+          "enabled": true,
+          "workflow": "ci.yml",
+          "verifyBeforeDisplay": true
+        },
+        "codeql": {
+          "enabled": true,
+          "workflow": "codeql.yml",
+          "verifyBeforeDisplay": true
+        },
+        "license": {
+          "enabled": true,
+          "type": "Apache-2.0"
+        },
+        "version": {
+          "enabled": true,
+          "source": "package.json"
+        },
+        "custom": [
+          {
+            "label": "Kilo Code",
+            "message": "Compliant",
+            "color": "00d4ff",
+            "logo": "github",
+            "url": "https://github.com/Kilo-Org/kilocode"
+          },
+          {
+            "label": "Governance",
+            "message": "v1.0",
+            "color": "00ff88",
+            "logo": "shield",
+            "url": "./AGENTS.md"
+          }
+        ]
+      },
+      "pullRequest": {
+        "enabled": true,
+        "branch": "productize/update-badges",
+        "title": "chore: Update repository badges and metadata",
+        "body": "This PR updates repository badges and metadata according to productize.config.json.\n\n**Changes:**\n- Updated repository description\n- Added/updated topics\n- Updated badges with CI verification\n- Ensured badge honesty (only showing passing workflows)\n\n**Verification:**\n- [ ] All CI workflows are passing\n- [ ] CodeQL security scan is passing\n- [ ] Badge links are correct\n- [ ] Repository metadata is accurate\n\n**Risk Assessment:** LOW - Metadata and badge updates only, no code changes."
+      }
+    }
+  ],
+  "settings": {
+    "verifyCI": true,
+    "dryRun": false,
+    "verbose": true,
+    "failOnError": false
+  }
+}
