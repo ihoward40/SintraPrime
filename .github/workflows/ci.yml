@@ -26,7 +26,7 @@ jobs:
         run: npm ci
 
       - name: Agent registry drift
-        run: npm run -s check:agents
+        run: npm run check:agents
 
   smoke-pr:
     runs-on: ubuntu-latest

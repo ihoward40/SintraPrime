@@ -1,0 +1,23 @@
+{
+  "include_dirs": [
+    "src"
+  ],
+  "exclude_dir_parts": [
+    "SintraPrime",
+    "skills",
+    "vendor",
+    "third_party",
+    "node_modules",
+    "dist",
+    "build",
+    "out",
+    "coverage",
+    ".next",
+    ".turbo",
+    ".cache",
+    ".git",
+    ".venv",
+    "generated",
+    "upstream"
+  ]
+}
