@@ -100,6 +100,15 @@ function getStatusBadge(embeddable: boolean) {
   );
 }
 
+function isSameOriginUrl(targetUrl: string): boolean {
+  try {
+    const targetOrigin = new URL(targetUrl, window.location.href).origin;
+    return targetOrigin === window.location.origin;
+  } catch {
+    return false;
+  }
+}
+
 // Split window manager
 async function openInSplitView(url: string) {
   try {
@@ -329,17 +338,21 @@ export default function QuantumWorkspaceEnhanced() {
       // Try to capture iframe content
       let canvas;
       try {
+        if (!isSameOriginUrl(url)) {
+          throw new Error("Cross-origin iframe; cannot access DOM");
+        }
+
         const iframeDoc = iframeRef.current.contentDocument;
-        if (iframeDoc && iframeDoc.body) {
-          // If we can access iframe content (same-origin)
-          canvas = await html2canvas(iframeDoc.body, {
-            allowTaint: true,
-            useCORS: true,
-            logging: false,
-          });
-        } else {
+        if (!iframeDoc?.body) {
           throw new Error("Cannot access iframe content");
         }
+
+        // Same-origin: capture DOM directly for higher fidelity.
+        canvas = await html2canvas(iframeDoc.body, {
+          allowTaint: true,
+          useCORS: true,
+          logging: false,
+        });
       } catch (iframeError) {
         // Fallback: capture the iframe container itself
         const container = iframeRef.current.parentElement;
@@ -494,7 +507,7 @@ export default function QuantumWorkspaceEnhanced() {
           <div className="text-center space-y-3 max-w-md px-4">
             <AlertCircle className="h-12 w-12 mx-auto text-yellow-500" />
             <div>
-              <p className="text-sm font-medium">This site disallows embedding (security policy)</p>
+              <p className="text-sm font-medium">Preview may be unavailable for some sites.</p>
               <p className="text-xs text-muted-foreground mt-1">
                 Open in a new tab for the full experience.
               </p>
@@ -505,7 +518,7 @@ export default function QuantumWorkspaceEnhanced() {
                 className="mt-2"
               >
                 <ExternalLink className="h-4 w-4 mr-2" />
-                Open in New Tab
+                Open in new tab
               </Button>
             </div>
             <Button
@@ -524,18 +537,26 @@ export default function QuantumWorkspaceEnhanced() {
 
     return (
       <div className="relative">
+        <div className="absolute top-2 right-2 z-20">
+          <Button
+            onClick={() => window.open(url, "_blank", "noopener,noreferrer")}
+            variant="outline"
+            size="sm"
+            className="h-7"
+          >
+            <ExternalLink className="h-3 w-3 mr-2" />
+            Open in new tab
+          </Button>
+        </div>
         {preflight.allowed === null && (
           <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between gap-2 bg-background/90 px-3 py-2 text-xs text-muted-foreground">
-            <span>Preview may be unavailable. Open in a new tab.</span>
-            <Button
-              onClick={() => window.open(url, "_blank", "noopener,noreferrer")}
-              variant="outline"
-              size="sm"
-              className="h-7"
-            >
-              <ExternalLink className="h-3 w-3 mr-2" />
-              Open in New Tab
-            </Button>
+            <span>Preview may be unavailable for some sites.</span>
+          </div>
+        )}
+        {status === "error" && (
+          <div className="absolute top-0 left-0 right-0 z-10 flex items-center gap-2 bg-background/90 px-3 py-2 text-xs text-muted-foreground">
+            <AlertTriangle className="h-3 w-3" />
+            <span>Preview may be unavailable for some sites.</span>
           </div>
         )}
         {status === "loading" && (
