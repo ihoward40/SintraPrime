@@ -1,0 +1,43 @@
+CREATE TABLE `narratives` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`case_id` int NOT NULL,
+	`user_id` int NOT NULL,
+	`title` varchar(500) NOT NULL,
+	`content` text NOT NULL,
+	`narrative_type` varchar(100) NOT NULL,
+	`template` varchar(100),
+	`timeline_event_ids` json,
+	`generated_by` varchar(50) NOT NULL DEFAULT 'ai',
+	`is_published` boolean NOT NULL DEFAULT false,
+	`published_at` timestamp,
+	`metadata` json,
+	`created_at` timestamp DEFAULT (now()),
+	`updated_at` timestamp DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT `narratives_id` PRIMARY KEY(`id`)
+);
+--> statement-breakpoint
+CREATE TABLE `timeline_events` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`case_id` int NOT NULL,
+	`user_id` int NOT NULL,
+	`title` varchar(500) NOT NULL,
+	`description` text,
+	`event_date` date NOT NULL,
+	`event_time` varchar(20),
+	`event_type` varchar(100) NOT NULL,
+	`category` varchar(100),
+	`importance` varchar(50) NOT NULL DEFAULT 'medium',
+	`linked_document_ids` json,
+	`linked_evidence_ids` json,
+	`linked_party_ids` json,
+	`location` varchar(300),
+	`outcome` text,
+	`notes` text,
+	`color` varchar(20) DEFAULT '#00d4ff',
+	`icon` varchar(50),
+	`position` int DEFAULT 0,
+	`metadata` json,
+	`created_at` timestamp DEFAULT (now()),
+	`updated_at` timestamp DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT `timeline_events_id` PRIMARY KEY(`id`)
+);
