@@ -1,0 +1,82 @@
+{
+  "schema_version": 1,
+  "captured_at": "2026-02-18T23:16:11.8146247-05:00",
+  "repo": "ihoward40/SintraPrime",
+  "pr_number": 84,
+  "pr_title": "security: harden airlock server (split from #12)",
+  "base": "master",
+  "head_sha": "23ff79f8edc20b0f4ee8d9fc401717e542fb1fb6",
+  "merge_commit_sha": "b47d17875ae08926bbd8eaea9e456979fa27c454",
+  "status_check_rollup": [
+    {
+      "name": "augment",
+      "status": "COMPLETED",
+      "conclusion": "SKIPPED"
+    },
+    {
+      "name": "Analyze Code",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS"
+    },
+    {
+      "name": "Guard solo-team BP symmetry",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS"
+    },
+    {
+      "name": "enforce-approvals",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS"
+    },
+    {
+      "name": "agent-registry-drift",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS"
+    },
+    {
+      "name": "agent-registry-drift",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS"
+    },
+    {
+      "name": "wiring-scope",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS"
+    },
+    {
+      "name": "wiring-scope",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS"
+    },
+    {
+      "name": "smoke-pr",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS"
+    },
+    {
+      "name": "smoke-pr",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS"
+    },
+    {
+      "name": "ci/integration-local-mock",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS"
+    },
+    {
+      "name": "ci/integration-local-mock",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS"
+    },
+    {
+      "name": ".github/dependabot.yml",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS"
+    },
+    {
+      "name": "CodeQL",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS"
+    }
+  ]
+}
