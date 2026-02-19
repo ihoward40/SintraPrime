@@ -1,5 +1,14 @@
 {
   "schema_version": 1,
+  "captured_by": "admin@DESKTOP-7RJIO6V",
+  "source_endpoints": [
+    "gh: pr view 84 --json number,title,headRefOid,mergeCommit,baseRefName,statusCheckRollup"
+  ],
+  "tool_versions": {
+    "gh": "gh version 2.86.0 (2026-01-21)",
+    "git": "git version 2.53.0.windows.1",
+    "node": "v24.13.1"
+  },
   "captured_at": "2026-02-18T23:16:11.8146247-05:00",
   "repo": "ihoward40/SintraPrime",
   "pr_number": 84,
