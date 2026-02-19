@@ -1,36 +1,17 @@
 version: 2
 updates:
-  # Daily security-only updates
-  - package-ecosystem: "npm"
-    directory: "/"
-    schedule:
-      interval: "daily"
-    open-pull-requests-limit: 5
-    labels: ["security", "dependencies"]
-    commit-message:
-      prefix: "chore(security)"
-
-  # Weekly dev dependencies
+  # Root dependencies (Dependabot requires unique package-ecosystem + directory)
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
       interval: "weekly"
       day: "monday"
     open-pull-requests-limit: 10
+    labels: ["security", "dependencies"]
     groups:
       development-dependencies:
         dependency-type: "development"
         update-types: ["minor", "patch"]
-    commit-message:
-      prefix: "chore(deps-dev)"
-
-  # Weekly production dependencies
-  - package-ecosystem: "npm"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-    groups:
       production-dependencies:
         dependency-type: "production"
         update-types: ["patch"]
