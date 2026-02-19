@@ -24,6 +24,12 @@ jobs:
           node-version: 20
           cache: npm
 
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate receipts (schema)
+        run: npm run -s validate:receipts
+
       - name: Verify required contexts (PR-safe; warn-only if no admin token)
         if: github.event_name == 'pull_request'
         env:
