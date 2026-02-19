@@ -32,6 +32,12 @@ artifacts/
 governance/make-lint/lint-report.json
 governance/slack-workflows/workflows-report.json
 
+# Agent drift tooling outputs (generated)
+audit/agent_map.generated.json
+audit/agent_map.diff.json
+audit/agent_map.generated.*
+audit/agent_map.diff.*
+
 # Phase X runtime output
 governance/freeze/phaseX.roothash.txt
 
