@@ -29,6 +29,12 @@ function diff(a, b) {
   return a.filter((x) => !bs.has(x));
 }
 
+function printDiffSummary({ missing, extra }) {
+  const summary = { missing, extra };
+  process.stderr.write("diff_summary:\n");
+  process.stderr.write(`${JSON.stringify(summary, null, 2)}\n`);
+}
+
 function parseArgs(argv) {
   const out = {
     repo: process.env.GITHUB_REPOSITORY || "",
@@ -129,6 +135,7 @@ async function main() {
     process.stderr.write(`branch protection drift detected for ${args.repo}@${branch}\n`);
     if (missing.length) process.stderr.write(`missing: ${missing.join(", ")}\n`);
     if (extra.length) process.stderr.write(`extra: ${extra.join(", ")}\n`);
+    printDiffSummary({ missing, extra });
     process.exit(1);
   }
 

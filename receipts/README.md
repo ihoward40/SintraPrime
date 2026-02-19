@@ -25,3 +25,9 @@ Receipts may also include optional provenance fields:
 ## Pinned Required Contexts
 
 `required-contexts.master.json` pins the expected required context strings for `master` so repo expectations stay aligned with branch protection.
+
+## Schema Validation
+
+`schema.v1.json` describes the v1 receipt JSON shapes in this folder.
+
+- Local validation: `npm run -s validate:receipts`
