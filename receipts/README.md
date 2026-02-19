@@ -13,3 +13,15 @@ This repo captures both:
 - `pr-*-checks-receipt-*.json`: snapshot of a PR’s `statusCheckRollup` (the merge-path view).
 
 Both receipt types include a `schema_version` so the JSON structure can evolve without breaking downstream tooling.
+
+## Provenance
+
+Receipts may also include optional provenance fields:
+
+- `captured_by`: who/where captured the receipt (e.g. `USERNAME@COMPUTERNAME`).
+- `source_endpoints`: the exact API endpoints or CLI queries used to generate the receipt.
+- `tool_versions`: versions of tools used (e.g. `gh`, `git`, `node`).
+
+## Pinned Required Contexts
+
+`required-contexts.master.json` pins the expected required context strings for `master` so repo expectations stay aligned with branch protection.

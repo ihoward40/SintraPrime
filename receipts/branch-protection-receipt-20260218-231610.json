@@ -1,5 +1,17 @@
 {
   "schema_version": 1,
+  "captured_by": "admin@DESKTOP-7RJIO6V",
+  "source_endpoints": [
+    "GET repos/ihoward40/SintraPrime/commits/master",
+    "GET repos/ihoward40/SintraPrime/commits/{sha}/check-runs",
+    "GET repos/ihoward40/SintraPrime/commits/{sha}/status",
+    "GET repos/ihoward40/SintraPrime/branches/master/protection"
+  ],
+  "tool_versions": {
+    "gh": "gh version 2.86.0 (2026-01-21)",
+    "git": "git version 2.53.0.windows.1",
+    "node": "v24.13.1"
+  },
   "captured_at": "2026-02-18T23:16:10.7079016-05:00",
   "repo": "ihoward40/SintraPrime",
   "branch": "master",
