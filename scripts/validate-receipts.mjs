@@ -2,6 +2,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import childProcess from "node:child_process";
 import process from "node:process";
 
 import Ajv from "ajv/dist/2020.js";
@@ -27,6 +28,33 @@ function listReceiptJsonFiles(receiptsDir) {
     .filter((n) => n.endsWith(".json"))
     .filter((n) => n !== "schema.v1.json")
     .map((n) => path.join(receiptsDir, n));
+}
+
+function toPosixPath(p) {
+  return String(p).split(path.sep).join("/");
+}
+
+function listGitTrackedReceiptJsonFiles(repoRoot, receiptsDir, schemaPath) {
+  const receiptsDirRel = toPosixPath(path.relative(repoRoot, receiptsDir));
+  const schemaRel = toPosixPath(path.relative(repoRoot, schemaPath));
+  const pathspec = `:(glob)${receiptsDirRel}/*.json`;
+
+  try {
+    const out = childProcess.execFileSync("git", ["ls-files", "--", pathspec], {
+      cwd: repoRoot,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    });
+
+    return out
+      .split(/\r?\n/)
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .filter((p) => p !== schemaRel)
+      .map((p) => path.resolve(repoRoot, p));
+  } catch {
+    return listReceiptJsonFiles(receiptsDir);
+  }
 }
 
 function formatAjvErrors(errors) {
@@ -57,6 +85,7 @@ function parseArgs(argv) {
   const out = {
     receiptsDir: "receipts",
     schemaPath: "receipts/schema.v1.json",
+    includeUntracked: false,
   };
 
   for (let i = 0; i < argv.length; i++) {
@@ -64,6 +93,7 @@ function parseArgs(argv) {
     if (a === "--help" || a === "-h") out.help = true;
     else if (a === "--receipts") out.receiptsDir = argv[++i] || out.receiptsDir;
     else if (a === "--schema") out.schemaPath = argv[++i] || out.schemaPath;
+    else if (a === "--include-untracked") out.includeUntracked = true;
     else fail(`Unknown arg: ${a}`);
   }
   return out;
@@ -71,10 +101,14 @@ function parseArgs(argv) {
 
 function printHelp() {
   process.stdout.write("Usage: node scripts/validate-receipts.mjs [options]\n\n");
-  process.stdout.write("Validates receipts/*.json against receipts/schema.v1.json.\n\n");
+  process.stdout.write("Validates receipts JSON files against receipts/schema.v1.json.\n\n");
+  process.stdout.write(
+    "By default, validates only git-tracked receipts (so untracked local files under receipts/ won't break validation).\n\n",
+  );
   process.stdout.write("Options:\n");
   process.stdout.write("  --receipts <dir>    default: receipts\n");
   process.stdout.write("  --schema <path>     default: receipts/schema.v1.json\n");
+  process.stdout.write("  --include-untracked validate all receipts/*.json on disk (including untracked)\n");
 }
 
 async function main() {
@@ -95,7 +129,9 @@ async function main() {
   const ajv = new Ajv({ allErrors: true, strict: false });
   const validate = ajv.compile(schema);
 
-  const receiptFiles = listReceiptJsonFiles(receiptsDir);
+  const receiptFiles = args.includeUntracked
+    ? listReceiptJsonFiles(receiptsDir)
+    : listGitTrackedReceiptJsonFiles(repoRoot, receiptsDir, schemaPath);
   if (!receiptFiles.length) {
     process.stdout.write("No receipts found to validate.\n");
     process.exit(0);
