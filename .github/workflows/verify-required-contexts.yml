@@ -1,0 +1,50 @@
+name: Verify Required Contexts
+
+on:
+  pull_request:
+  schedule:
+    - cron: "19 6 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  administration: read
+
+jobs:
+  verify-required-contexts:
+    name: governance/verify-required-contexts
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Verify required contexts (PR-safe; warn-only if no admin token)
+        if: github.event_name == 'pull_request'
+        env:
+          BRANCH_PROTECTION_TOKEN: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_API_URL: ${{ github.api_url }}
+        run: |
+          node scripts/verify-branch-protection.mjs \
+            --expected receipts/required-contexts.master.json \
+            --branch master \
+            --allow-missing-token
+
+      - name: Verify required contexts (scheduled/manual; fail-closed)
+        if: github.event_name != 'pull_request'
+        env:
+          BRANCH_PROTECTION_TOKEN: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_API_URL: ${{ github.api_url }}
+        run: |
+          node scripts/verify-branch-protection.mjs \
+            --expected receipts/required-contexts.master.json \
+            --branch master
