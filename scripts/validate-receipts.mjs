@@ -40,6 +40,19 @@ function formatAjvErrors(errors) {
     .join("\n");
 }
 
+function enforceFilenameMatchesReceiptId(repoRoot, filePath, doc) {
+  const rid = doc?.meta?.receipt_id;
+  if (!rid) return [];
+
+  const actual = path.basename(filePath);
+  const expected = `${rid}.json`;
+  if (actual === expected) return [];
+
+  return [
+    `filename mismatch: expected receipts/${expected} but found receipts/${actual}`,
+  ];
+}
+
 function parseArgs(argv) {
   const out = {
     receiptsDir: "receipts",
@@ -91,6 +104,14 @@ async function main() {
   let ok = true;
   for (const filePath of receiptFiles) {
     const doc = readJson(filePath);
+
+    const filenameErrors = enforceFilenameMatchesReceiptId(repoRoot, filePath, doc);
+    if (filenameErrors.length) {
+      ok = false;
+      process.stderr.write(`INVALID: ${path.relative(repoRoot, filePath)}\n`);
+      for (const e of filenameErrors) process.stderr.write(`  - ${e}\n`);
+    }
+
     const valid = validate(doc);
     if (!valid) {
       ok = false;
