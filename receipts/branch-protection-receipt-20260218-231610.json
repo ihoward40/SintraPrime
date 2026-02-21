@@ -1,0 +1,112 @@
+{
+  "schema_version": 1,
+  "captured_by": "admin@DESKTOP-7RJIO6V",
+  "source_endpoints": [
+    "GET repos/ihoward40/SintraPrime/commits/master",
+    "GET repos/ihoward40/SintraPrime/commits/{sha}/check-runs",
+    "GET repos/ihoward40/SintraPrime/commits/{sha}/status",
+    "GET repos/ihoward40/SintraPrime/branches/master/protection"
+  ],
+  "tool_versions": {
+    "gh": "gh version 2.86.0 (2026-01-21)",
+    "git": "git version 2.53.0.windows.1",
+    "node": "v24.13.1"
+  },
+  "captured_at": "2026-02-18T23:16:10.7079016-05:00",
+  "repo": "ihoward40/SintraPrime",
+  "branch": "master",
+  "sha": "b47d17875ae08926bbd8eaea9e456979fa27c454",
+  "required_status_checks": {
+    "url": "https://api.github.com/repos/ihoward40/SintraPrime/branches/master/protection/required_status_checks",
+    "strict": true,
+    "contexts": [
+      "smoke-pr",
+      "wiring-scope",
+      "Guard solo-team BP symmetry",
+      "ci/integration-local-mock",
+      "agent-registry-drift"
+    ],
+    "contexts_url": "https://api.github.com/repos/ihoward40/SintraPrime/branches/master/protection/required_status_checks/contexts",
+    "checks": [
+      {
+        "context": "smoke-pr",
+        "app_id": 15368
+      },
+      {
+        "context": "wiring-scope",
+        "app_id": 15368
+      },
+      {
+        "context": "Guard solo-team BP symmetry",
+        "app_id": 15368
+      },
+      {
+        "context": "ci/integration-local-mock",
+        "app_id": 15368
+      },
+      {
+        "context": "agent-registry-drift",
+        "app_id": 15368
+      }
+    ]
+  },
+  "required_pull_request_reviews": {
+    "url": "https://api.github.com/repos/ihoward40/SintraPrime/branches/master/protection/required_pull_request_reviews",
+    "dismiss_stale_reviews": true,
+    "require_code_owner_reviews": false,
+    "require_last_push_approval": false,
+    "required_approving_review_count": 0
+  },
+  "enforce_admins": true,
+  "check_runs": [
+    {
+      "name": "ci/integration-local-mock",
+      "app": "github-actions",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "Dependabot",
+      "app": "github-actions",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "Dependabot",
+      "app": "github-actions",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "agent-registry-drift",
+      "app": "github-actions",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "smoke-pr",
+      "app": "github-actions",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "wiring-scope",
+      "app": "github-actions",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "Verify Skills Governance",
+      "app": "github-actions",
+      "status": "completed",
+      "conclusion": "failure"
+    },
+    {
+      "name": "Analyze Code",
+      "app": "github-actions",
+      "status": "completed",
+      "conclusion": "success"
+    }
+  ],
+  "commit_statuses": []
+}
