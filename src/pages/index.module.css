@@ -1,0 +1,86 @@
+.heroBanner {
+  padding: 4rem 0;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.buttons {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.statsRow {
+  display: flex;
+  justify-content: center;
+  gap: 3rem;
+  margin: 2rem 0;
+  flex-wrap: wrap;
+}
+
+.statItem {
+  text-align: center;
+}
+
+.statNumber {
+  font-size: 2.5rem;
+  font-weight: 900;
+  color: rgba(255, 255, 255, 0.95);
+  line-height: 1;
+}
+
+.statLabel {
+  font-size: 0.8rem;
+  opacity: 0.65;
+  margin-top: 0.25rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.features {
+  display: flex;
+  align-items: stretch;
+  padding: 3rem 0;
+}
+
+.featureCol {
+  margin-bottom: 2rem;
+}
+
+.featureCard {
+  background: var(--ifm-background-surface-color);
+  border-radius: 12px;
+  padding: 2rem;
+  height: 100%;
+  border: 1px solid rgba(13, 148, 136, 0.12);
+  transition: all 0.3s ease;
+}
+
+.featureCard:hover {
+  border-color: var(--ifm-color-primary);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(13, 148, 136, 0.12);
+}
+
+.featureIcon {
+  font-size: 2rem;
+  margin-bottom: 1rem;
+}
+
+.ctaSection {
+  background: var(--ifm-background-surface-color);
+  border-top: 1px solid rgba(13, 148, 136, 0.1);
+}
+
+@media screen and (max-width: 768px) {
+  .statsRow {
+    gap: 1.5rem;
+  }
+  .statNumber {
+    font-size: 1.8rem;
+  }
+}

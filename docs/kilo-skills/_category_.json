@@ -1,0 +1,8 @@
+{
+  "label": "Kilo Skills",
+  "position": 7,
+  "link": {
+    "type": "generated-index",
+    "description": "Extensible skills framework for packaging and distributing automation capabilities."
+  }
+}

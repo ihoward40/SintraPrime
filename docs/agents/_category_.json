@@ -1,0 +1,8 @@
+{
+  "label": "Agents",
+  "position": 3,
+  "link": {
+    "type": "generated-index",
+    "description": "SintraPrime's multi-agent system with specialized agents for different domains."
+  }
+}

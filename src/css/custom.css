@@ -1,0 +1,58 @@
+/**
+ * SintraPrime Documentation Theme
+ */
+
+:root {
+  --ifm-color-primary: #0d9488;
+  --ifm-color-primary-dark: #0b8377;
+  --ifm-color-primary-darker: #0a7c71;
+  --ifm-color-primary-darkest: #08665d;
+  --ifm-color-primary-light: #0fa599;
+  --ifm-color-primary-lighter: #10aca0;
+  --ifm-color-primary-lightest: #13c4b6;
+  --ifm-code-font-size: 95%;
+  --ifm-font-size-base: 16px;
+  --ifm-heading-font-weight: 700;
+  --docusaurus-highlighted-code-line-bg: rgba(13, 148, 136, 0.1);
+}
+
+[data-theme="dark"] {
+  --ifm-color-primary: #14b8a6;
+  --ifm-color-primary-dark: #12a594;
+  --ifm-color-primary-darker: #119c8c;
+  --ifm-color-primary-darkest: #0e8073;
+  --ifm-color-primary-light: #2cc0b0;
+  --ifm-color-primary-lighter: #36c4b4;
+  --ifm-color-primary-lightest: #5dd0c4;
+  --ifm-background-color: #0f172a;
+  --ifm-background-surface-color: #1e293b;
+  --ifm-navbar-background-color: #0f172a;
+  --ifm-footer-background-color: #020617;
+  --docusaurus-highlighted-code-line-bg: rgba(20, 184, 166, 0.15);
+}
+
+.navbar { box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1); }
+.navbar__title { font-weight: 800; font-size: 1.2rem; letter-spacing: -0.02em; }
+.hero__title { font-size: 3.5rem; font-weight: 900; letter-spacing: -0.03em; line-height: 1.1; }
+.hero__subtitle { font-size: 1.4rem; opacity: 0.85; max-width: 700px; margin: 1rem auto; }
+
+[data-theme="dark"] .hero--primary {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+  --ifm-hero-text-color: #e2e8f0;
+}
+
+.menu__link { border-radius: 6px; font-size: 0.9rem; }
+.menu__link--active { font-weight: 600; }
+.prism-code { border-radius: 8px; }
+.admonition { border-radius: 8px; }
+
+table thead tr { background: rgba(13, 148, 136, 0.1); }
+[data-theme="dark"] table thead tr { background: rgba(20, 184, 166, 0.1); }
+
+div[class*="announcementBar"] { font-weight: 500; font-size: 0.9rem; }
+.footer__title { font-weight: 700; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 0.05em; }
+
+@media (max-width: 768px) {
+  .hero__title { font-size: 2.2rem; }
+  .hero__subtitle { font-size: 1.1rem; }
+}
