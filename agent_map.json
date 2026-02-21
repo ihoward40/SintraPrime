@@ -2,7 +2,8 @@
   "code_agents": [
     "CreditGuardian",
     "EcommerceAutomationAgent",
-    "TrustGuardian"
+    "TrustGuardian",
+    "SentinelGuardAgent"
   ],
   "agent_hub": [
     "SintraPrime_Planner_v1",
