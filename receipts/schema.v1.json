@@ -1,0 +1,251 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/sintraprime/receipts/schema.v1.json",
+  "title": "SintraPrime Governance Receipts (v1)",
+  "type": "object",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/requiredContextsPinned"
+    },
+    {
+      "$ref": "#/$defs/branchProtectionReceipt"
+    },
+    {
+      "$ref": "#/$defs/prChecksReceipt"
+    }
+  ],
+  "$defs": {
+    "meta": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "receipt_id": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "isoDateTime": {
+      "type": "string",
+      "minLength": 10
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "captured_by": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_endpoints": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "tool_versions": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "captured_at": {
+          "$ref": "#/$defs/isoDateTime"
+        }
+      }
+    },
+    "requiredContextsPinned": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "branch", "required_contexts", "strict"],
+      "properties": {
+        "schema_version": {
+          "const": 1
+        },
+        "meta": {
+          "$ref": "#/$defs/meta"
+        },
+        "branch": {
+          "type": "string",
+          "minLength": 1
+        },
+        "required_contexts": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "strict": {
+          "type": "boolean"
+        }
+      },
+      "not": {
+        "anyOf": [
+          { "required": ["required_status_checks"] },
+          { "required": ["status_check_rollup"] }
+        ]
+      }
+    },
+    "checkRun": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "app", "status", "conclusion"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "app": { "type": "string", "minLength": 1 },
+        "status": { "type": "string", "minLength": 1 },
+        "conclusion": { "type": "string", "minLength": 1 }
+      }
+    },
+    "requiredStatusChecks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["url", "strict", "contexts", "contexts_url", "checks"],
+      "properties": {
+        "url": { "type": "string", "minLength": 1 },
+        "strict": { "type": "boolean" },
+        "contexts": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "contexts_url": { "type": "string", "minLength": 1 },
+        "checks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["context", "app_id"],
+            "properties": {
+              "context": { "type": "string", "minLength": 1 },
+              "app_id": { "type": "integer" }
+            }
+          }
+        }
+      }
+    },
+    "requiredPullRequestReviews": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "url",
+        "dismiss_stale_reviews",
+        "require_code_owner_reviews",
+        "require_last_push_approval",
+        "required_approving_review_count"
+      ],
+      "properties": {
+        "url": { "type": "string", "minLength": 1 },
+        "dismiss_stale_reviews": { "type": "boolean" },
+        "require_code_owner_reviews": { "type": "boolean" },
+        "require_last_push_approval": { "type": "boolean" },
+        "required_approving_review_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "branchProtectionReceipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "captured_at",
+        "repo",
+        "branch",
+        "sha",
+        "required_status_checks",
+        "required_pull_request_reviews",
+        "enforce_admins",
+        "check_runs",
+        "commit_statuses"
+      ],
+      "properties": {
+        "schema_version": { "const": 1 },
+        "meta": { "$ref": "#/$defs/meta" },
+        "captured_by": { "type": "string" },
+        "source_endpoints": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "tool_versions": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "captured_at": { "$ref": "#/$defs/isoDateTime" },
+        "repo": { "type": "string", "minLength": 1 },
+        "branch": { "type": "string", "minLength": 1 },
+        "sha": {
+          "type": "string",
+          "minLength": 7
+        },
+        "required_status_checks": { "$ref": "#/$defs/requiredStatusChecks" },
+        "required_pull_request_reviews": { "$ref": "#/$defs/requiredPullRequestReviews" },
+        "enforce_admins": { "type": "boolean" },
+        "check_runs": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/checkRun" }
+        },
+        "commit_statuses": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        }
+      },
+      "not": {
+        "required": ["status_check_rollup"]
+      }
+    },
+    "statusCheckItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "status", "conclusion"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "status": { "type": "string", "minLength": 1 },
+        "conclusion": { "type": "string", "minLength": 1 }
+      }
+    },
+    "prChecksReceipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "captured_at",
+        "repo",
+        "pr_number",
+        "pr_title",
+        "base",
+        "head_sha",
+        "merge_commit_sha",
+        "status_check_rollup"
+      ],
+      "properties": {
+        "schema_version": { "const": 1 },
+        "meta": { "$ref": "#/$defs/meta" },
+        "captured_by": { "type": "string" },
+        "source_endpoints": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "tool_versions": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "captured_at": { "$ref": "#/$defs/isoDateTime" },
+        "repo": { "type": "string", "minLength": 1 },
+        "pr_number": { "type": "integer", "minimum": 1 },
+        "pr_title": { "type": "string" },
+        "base": { "type": "string", "minLength": 1 },
+        "head_sha": { "type": "string", "minLength": 7 },
+        "merge_commit_sha": { "type": "string", "minLength": 7 },
+        "status_check_rollup": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/statusCheckItem" }
+        }
+      },
+      "not": {
+        "required": ["required_status_checks"]
+      }
+    }
+  }
+}

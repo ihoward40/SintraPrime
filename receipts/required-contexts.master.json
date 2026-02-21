@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "branch": "master",
+  "required_contexts": [
+    "smoke-pr",
+    "wiring-scope",
+    "agent-registry-drift",
+    "Guard solo-team BP symmetry",
+    "ci/integration-local-mock"
+  ],
+  "strict": true
+}

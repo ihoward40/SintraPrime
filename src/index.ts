@@ -23,6 +23,12 @@ import { MetaAdsConnector } from './connectors/metaAdsConnector.js';
 import { GoogleDriveConnector } from './connectors/googleDriveConnector.js';
 import { EmailConnector } from './connectors/emailConnector.js';
 
+// SentinelGuard Cybersecurity Agent
+import { SentinelGuardAgent } from './agents/sentinelGuard/sentinelGuardAgent.js';
+import { NmapAdapter } from './tools/security/NmapAdapter.js';
+import { OsintTool } from './tools/security/OsintTool.js';
+import { PentestReportTool } from './tools/security/PentestReportTool.js';
+
 /**
  * Initialize the SintraPrime system
  */
@@ -65,11 +71,16 @@ export async function initializeSintraPrime() {
       highRiskActions: [
         'meta_ads_create_campaign',
         'shopify_delete_product',
-        'email_send_bulk'
+        'email_send_bulk',
+        'metasploit_exploit',
+        'sqlmap_scan',
+        'hydra_attack'
       ],
       autoApproveActions: [
         'web_search',
-        'generate_report'
+        'generate_report',
+        'nmap_scan',
+        'osint_gather'
       ]
     },
     receiptLedger
@@ -167,6 +178,29 @@ export async function initializeSintraPrime() {
     }
   });
 
+  // 13. Register SentinelGuard security tools in the ToolRegistry
+  toolRegistry.registerTool(new NmapAdapter());
+  toolRegistry.registerTool(new OsintTool());
+  toolRegistry.registerTool(new PentestReportTool(receiptLedger));
+
+  // 14. Initialize SentinelGuard Cybersecurity Agent
+  const scanTargets = (process.env.SENTINELGUARD_SCAN_TARGETS || '')
+    .split(',')
+    .map(t => t.trim())
+    .filter(Boolean);
+
+  const sentinelGuard = new SentinelGuardAgent({
+    receiptLedger,
+    policyGate,
+    scheduler: jobScheduler,
+    networkScanTargets: scanTargets,
+    scanSchedule: process.env.SENTINELGUARD_SCAN_SCHEDULE || '0 2 * * 0',
+    alertWebhook: process.env.SENTINELGUARD_ALERT_WEBHOOK,
+  });
+
+  // 15. Start SentinelGuard (non-blocking background service)
+  await sentinelGuard.start();
+
   console.log('SintraPrime initialized successfully!');
 
   return {
@@ -180,6 +214,7 @@ export async function initializeSintraPrime() {
     reportingEngine,
     howardTrustNavigator,
     aiFeatures,
+    sentinelGuard,
     connectors: {
       shopify: shopifyConnector,
       metaAds: metaAdsConnector,

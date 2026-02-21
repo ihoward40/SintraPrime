@@ -47,6 +47,23 @@
         "browser.l0.screenshot",
         "browser.l0.dom_extract"
       ]
+    },
+    {
+      "name": "sentinel-guard-agent",
+      "version": "2.0.0",
+      "capabilities": [
+        "security.threat.detect",
+        "security.vulnerability.scan.network",
+        "security.vulnerability.scan.web_app",
+        "security.osint.gather",
+        "security.exploit.attempt",
+        "security.pentest.run",
+        "security.incident.respond",
+        "security.report.generate",
+        "security.data.classify",
+        "security.access.audit",
+        "security.policy.enforce"
+      ]
     }
   ]
 }
