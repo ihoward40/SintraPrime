@@ -1,0 +1,1 @@
+"use strict";(globalThis.webpackChunksintraprime_docs=globalThis.webpackChunksintraprime_docs||[]).push([[1463],{3894(a){a.exports=JSON.parse('{"authors":[{"name":"Isiah Howard","title":"Creator of SintraPrime","url":"https://github.com/ihoward40","imageURL":"https://avatars.githubusercontent.com/u/1479693?v=4","key":"isiah_howard","page":null,"count":4}]}')}}]);

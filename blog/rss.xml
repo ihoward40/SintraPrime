@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="utf-8"?><?xml-stylesheet type="text/xsl" href="rss.xsl"?>
+<rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+    <channel>
+        <title>SintraPrime Blog</title>
+        <link>https://ihoward40.github.io/SintraPrime/blog</link>
+        <description>SintraPrime Blog</description>
+        <lastBuildDate>Thu, 26 Feb 2026 00:00:00 GMT</lastBuildDate>
+        <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
+        <generator>https://github.com/jpmonette/feed</generator>
+        <language>en</language>
+        <item>
+            <title><![CDATA[SintraPrime Project Status - February 2026]]></title>
+            <link>https://ihoward40.github.io/SintraPrime/blog/project-status-update-feb-2026</link>
+            <guid>https://ihoward40.github.io/SintraPrime/blog/project-status-update-feb-2026</guid>
+            <pubDate>Thu, 26 Feb 2026 00:00:00 GMT</pubDate>
+            <description><![CDATA[With the launch of the new documentation site, I wanted to provide an update on the current status of the SintraPrime project and what to expect in the coming months.]]></description>
+            <content:encoded><![CDATA[<p>With the launch of the new documentation site, I wanted to provide an update on the current status of the SintraPrime project and what to expect in the coming months.</p>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="current-status-v20--kilo-v10-unified">Current Status: v2.0 + Kilo v1.0 (Unified)<a href="https://ihoward40.github.io/SintraPrime/blog/project-status-update-feb-2026#current-status-v20--kilo-v10-unified" class="hash-link" aria-label="Direct link to Current Status: v2.0 + Kilo v1.0 (Unified)" title="Direct link to Current Status: v2.0 + Kilo v1.0 (Unified)" translate="no">​</a></h2>
+<p>The current version of SintraPrime unifies the v2.0 core with the v1.0 Kilo Skills system. The project is approximately <strong>90% complete</strong> towards its initial vision.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="whats-production-ready">What's Production-Ready?<a href="https://ihoward40.github.io/SintraPrime/blog/project-status-update-feb-2026#whats-production-ready" class="hash-link" aria-label="Direct link to What's Production-Ready?" title="Direct link to What's Production-Ready?" translate="no">​</a></h3>
+<ul>
+<li class=""><strong>Core Governance Engine</strong>: The fail-closed model, receipt ledger, and policy gates are stable and production-tested.</li>
+<li class=""><strong>Agent Mode Engine</strong>: The Validator -&gt; Planner -&gt; Executor pipeline is robust.</li>
+<li class=""><strong>Core Adapters</strong>: Gmail, Notion, Shell, and Browser adapters are fully operational.</li>
+<li class=""><strong>Evidence Systems</strong>: The core lifecycle, including ingest, verification, and storage, is complete. The Timeline Builder and Narrative Generator are functional but will see further refinement.</li>
+<li class=""><strong>Docker Deployment</strong>: The <code>docker-compose.full.yml</code> deployment is the recommended and most stable way to run SintraPrime.</li>
+</ul>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="whats-in-beta">What's in Beta?<a href="https://ihoward40.github.io/SintraPrime/blog/project-status-update-feb-2026#whats-in-beta" class="hash-link" aria-label="Direct link to What's in Beta?" title="Direct link to What's in Beta?" translate="no">​</a></h3>
+<ul>
+<li class=""><strong>Multi-Platform Bots</strong>: Integration with Facebook, Instagram, and WhatsApp is functional but undergoing further testing and refinement.</li>
+<li class=""><strong>Voice &amp; Transcription</strong>: The ElevenLabs integration is stable, but advanced transcription features like speaker diarization are still being improved.</li>
+<li class=""><strong>SMS Adapter</strong>: Core functionality is present, but provider-specific features are being added.</li>
+</ul>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="whats-in-alpha">What's in Alpha?<a href="https://ihoward40.github.io/SintraPrime/blog/project-status-update-feb-2026#whats-in-alpha" class="hash-link" aria-label="Direct link to What's in Alpha?" title="Direct link to What's in Alpha?" translate="no">​</a></h3>
+<ul>
+<li class=""><strong>TikTok Integration</strong>: Basic publishing is available, but the API is still evolving.</li>
+<li class=""><strong>Kubernetes Deployment</strong>: Helm charts and operator patterns are in early development.</li>
+</ul>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="development-roadmap">Development Roadmap<a href="https://ihoward40.github.io/SintraPrime/blog/project-status-update-feb-2026#development-roadmap" class="hash-link" aria-label="Direct link to Development Roadmap" title="Direct link to Development Roadmap" translate="no">​</a></h2>
+<p>Here is a look at the high-level priorities for the next 3-6 months:</p>
+<ol>
+<li class="">
+<p><strong>Stabilize Beta Features</strong>: Move all bot integrations and the voice/SMS adapters from Beta to Production status. This involves comprehensive testing, documentation, and bug fixing.</p>
+</li>
+<li class="">
+<p><strong>Enhance Evidence Systems</strong>: Improve the UI/UX for the Timeline Builder and Narrative Generator. Add more templates and advanced correlation features.</p>
+</li>
+<li class="">
+<p><strong>Expand Kilo Skills</strong>: Develop a community registry for Kilo Skills and add more built-in skills for common automation tasks.</p>
+</li>
+<li class="">
+<p><strong>Kubernetes Operator</strong>: Finalize the Kubernetes operator to simplify multi-node, high-availability deployments.</p>
+</li>
+<li class="">
+<p><strong>DeepThink v2</strong>: Begin development on the next version of the DeepThink analysis runner, focusing on more complex reasoning and proactive analysis.</p>
+</li>
+</ol>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="how-to-get-involved">How to Get Involved<a href="https://ihoward40.github.io/SintraPrime/blog/project-status-update-feb-2026#how-to-get-involved" class="hash-link" aria-label="Direct link to How to Get Involved" title="Direct link to How to Get Involved" translate="no">​</a></h2>
+<p>The best way to get involved is to start using SintraPrime and provide feedback.</p>
+<ul>
+<li class=""><strong>Report bugs</strong> and request features on <a href="https://github.com/ihoward40/SintraPrime/issues" target="_blank" rel="noopener noreferrer" class="">GitHub Issues</a>.</li>
+<li class=""><strong>Ask questions</strong> and share your projects on <a href="https://github.com/ihoward40/SintraPrime/discussions" target="_blank" rel="noopener noreferrer" class="">GitHub Discussions</a>.</li>
+<li class=""><strong>Contribute code or documentation</strong> by following the <a class="" href="https://ihoward40.github.io/SintraPrime/docs/contributing/guide">Contributing Guide</a>.</li>
+</ul>
+<p>Thank you for your support and interest in the project. The future of governed AI is bright, and SintraPrime is just getting started.</p>]]></content:encoded>
+            <category>sintraprime</category>
+            <category>update</category>
+            <category>roadmap</category>
+        </item>
+        <item>
+            <title><![CDATA[Building Court-Ready Evidence Systems for AI]]></title>
+            <link>https://ihoward40.github.io/SintraPrime/blog/court-ready-evidence-systems</link>
+            <guid>https://ihoward40.github.io/SintraPrime/blog/court-ready-evidence-systems</guid>
+            <pubDate>Tue, 24 Feb 2026 00:00:00 GMT</pubDate>
+            <description><![CDATA[For AI agents to operate in legally sensitive domains like trust administration or compliance, their actions must be backed by evidence that can stand up to scrutiny in a court of law. SintraPrime was designed from the ground up to meet this challenge with its court-ready evidence systems.]]></description>
+            <content:encoded><![CDATA[<p>For AI agents to operate in legally sensitive domains like trust administration or compliance, their actions must be backed by evidence that can stand up to scrutiny in a court of law. SintraPrime was designed from the ground up to meet this challenge with its <strong>court-ready evidence systems</strong>.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="what-is-court-ready-evidence">What is Court-Ready Evidence?<a href="https://ihoward40.github.io/SintraPrime/blog/court-ready-evidence-systems#what-is-court-ready-evidence" class="hash-link" aria-label="Direct link to What is Court-Ready Evidence?" title="Direct link to What is Court-Ready Evidence?" translate="no">​</a></h3>
+<p>Court-ready evidence must satisfy several key legal principles:</p>
+<ol>
+<li class=""><strong>Authenticity</strong>: Can you prove the evidence is what it purports to be?</li>
+<li class=""><strong>Integrity</strong>: Can you prove the evidence has not been altered since it was created?</li>
+<li class=""><strong>Chain of Custody</strong>: Can you document every person and system that has handled the evidence?</li>
+<li class=""><strong>Relevance</strong>: Is the evidence pertinent to the matter at hand?</li>
+<li class=""><strong>Best Evidence Rule</strong>: When the content of a document is at issue, the original document (or a reliable copy) must be produced.</li>
+</ol>
+<p>SintraPrime’s evidence lifecycle is designed to meet these standards.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="the-evidence-lifecycle-in-sintraprime">The Evidence Lifecycle in SintraPrime<a href="https://ihoward40.github.io/SintraPrime/blog/court-ready-evidence-systems#the-evidence-lifecycle-in-sintraprime" class="hash-link" aria-label="Direct link to The Evidence Lifecycle in SintraPrime" title="Direct link to The Evidence Lifecycle in SintraPrime" translate="no">​</a></h3>
+<ol>
+<li class="">
+<p><strong>Ingestion</strong>: Evidence is collected from multiple sources—emails, web pages, phone calls—through governed adapters. The moment data enters the system, its chain of custody begins.</p>
+</li>
+<li class="">
+<p><strong>Processing &amp; Verification</strong>: Raw data is processed into a structured format. Crucially, a <strong>SHA-256 hash</strong> is computed for the original content, and the entire evidence package is signed with an <strong>Ed25519 digital signature</strong>. This ensures both integrity and authenticity.</p>
+</li>
+<li class="">
+<p><strong>Storage</strong>: The verified evidence, along with its cryptographic hashes and signatures, is stored in a dedicated evidence locker. The associated <strong>receipt</strong> from the operation is permanently linked to the evidence.</p>
+</li>
+<li class="">
+<p><strong>Assembly</strong>: This is where SintraPrime’s high-level evidence tools come into play:</p>
+<ul>
+<li class="">The <strong>Timeline Builder</strong> correlates events from dozens or hundreds of individual evidence items into a single, chronological narrative of what happened.</li>
+<li class="">The <strong>Narrative Generator</strong> uses this timeline to produce a human-readable, legal-grade summary of events, complete with citations pointing directly to the underlying evidence.</li>
+<li class="">The <strong>Binder Assembly</strong> system compiles everything—the narrative, the timeline, the raw evidence, and the cryptographic verification reports—into a single, court-ready PDF binder.</li>
+</ul>
+</li>
+</ol>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="a-practical-example-web-snapshots">A Practical Example: Web Snapshots<a href="https://ihoward40.github.io/SintraPrime/blog/court-ready-evidence-systems#a-practical-example-web-snapshots" class="hash-link" aria-label="Direct link to A Practical Example: Web Snapshots" title="Direct link to A Practical Example: Web Snapshots" translate="no">​</a></h3>
+<p>Imagine you need to prove what a company’s terms of service page said on a specific date. SintraPrime’s <strong>Web Snapshot</strong> system handles this automatically:</p>
+<ol>
+<li class="">It periodically captures a full, evidence-grade screenshot and PDF of the page.</li>
+<li class="">It computes a hash of the page content. If the hash changes, it flags a modification.</li>
+<li class="">The capture is timestamped, signed, and stored with a complete chain of custody.</li>
+</ol>
+<p>When you need to produce this in court, you don’t just have a screenshot; you have a cryptographically verifiable artifact that proves what that page looked like at a precise moment in time, and that it hasn’t been tampered with since.</p>
+<p>By integrating these legal and forensic principles directly into the agent operating system, SintraPrime enables a new class of autonomous operations in regulated and high-stakes environments.</p>
+<p>Explore the full capabilities in the <a class="" href="https://ihoward40.github.io/SintraPrime/docs/evidence-systems/lifecycle"><strong>Evidence Systems documentation</strong></a>.</p>]]></content:encoded>
+            <category>sintraprime</category>
+            <category>evidence</category>
+            <category>compliance</category>
+            <category>legal</category>
+            <category>trust</category>
+        </item>
+        <item>
+            <title><![CDATA[Deep Dive: SintraPrime's Fail-Closed Governance Model]]></title>
+            <link>https://ihoward40.github.io/SintraPrime/blog/deep-dive-governance-model</link>
+            <guid>https://ihoward40.github.io/SintraPrime/blog/deep-dive-governance-model</guid>
+            <pubDate>Sun, 22 Feb 2026 00:00:00 GMT</pubDate>
+            <description><![CDATA[One of the core design principles of SintraPrime is its fail-closed governance model. This post explores what that means, why it's critical for safe AI operations, and how it's implemented throughout the system.]]></description>
+            <content:encoded><![CDATA[<p>One of the core design principles of SintraPrime is its <strong>fail-closed governance model</strong>. This post explores what that means, why it's critical for safe AI operations, and how it's implemented throughout the system.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="the-problem-with-fail-open">The Problem with Fail-Open<a href="https://ihoward40.github.io/SintraPrime/blog/deep-dive-governance-model#the-problem-with-fail-open" class="hash-link" aria-label="Direct link to The Problem with Fail-Open" title="Direct link to The Problem with Fail-Open" translate="no">​</a></h3>
+<p>Most software systems, including many AI agent frameworks, operate on a "fail-open" basis. This means that if a security check fails or a policy is not explicitly defined, the system defaults to allowing the operation. While this can make development easier, it creates significant security risks. A misconfigured policy, a bug in the governance logic, or an unforeseen edge case can lead to catastrophic failures.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="sintraprimes-fail-closed-approach">SintraPrime's Fail-Closed Approach<a href="https://ihoward40.github.io/SintraPrime/blog/deep-dive-governance-model#sintraprimes-fail-closed-approach" class="hash-link" aria-label="Direct link to SintraPrime's Fail-Closed Approach" title="Direct link to SintraPrime's Fail-Closed Approach" translate="no">​</a></h3>
+<p>SintraPrime takes the opposite approach. It operates on a <strong>fail-closed</strong> principle: <strong>deny by default, allow only with explicit authorization.</strong></p>
+<p>This means:</p>
+<ol>
+<li class=""><strong>No Ambiguity</strong>: If a policy is not defined for a specific operation, it is denied.</li>
+<li class=""><strong>Safety by Default</strong>: A misconfigured or missing policy results in a safer, more restrictive system, not a more permissive one.</li>
+<li class=""><strong>Explicit Authorization</strong>: Every action an agent takes must be explicitly permitted by the governance layer.</li>
+</ol>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="layers-of-governance">Layers of Governance<a href="https://ihoward40.github.io/SintraPrime/blog/deep-dive-governance-model#layers-of-governance" class="hash-link" aria-label="Direct link to Layers of Governance" title="Direct link to Layers of Governance" translate="no">​</a></h3>
+<p>This philosophy is enforced through multiple layers:</p>
+<ul>
+<li class=""><strong>AGENTS.md Constitution</strong>: A human-readable document that defines the fundamental rules and boundaries for all agents.</li>
+<li class=""><strong>Mode Governance</strong>: The system operates in one of three modes (<code>READ_ONLY</code>, <code>SINGLE_RUN_APPROVED</code>, <code>FROZEN</code>), with <code>READ_ONLY</code> as the default. Any action that modifies state requires an explicit mode transition.</li>
+<li class=""><strong>Policy Gates</strong>: Granular rules that control everything from spending limits to which domains the browser adapter can visit.</li>
+<li class=""><strong>Immutable Receipt Ledger</strong>: Every decision, whether an approval or a denial, is recorded in a cryptographic receipt, creating a permanent, tamper-evident audit trail.</li>
+</ul>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="an-example-the-shell-adapter">An Example: The Shell Adapter<a href="https://ihoward40.github.io/SintraPrime/blog/deep-dive-governance-model#an-example-the-shell-adapter" class="hash-link" aria-label="Direct link to An Example: The Shell Adapter" title="Direct link to An Example: The Shell Adapter" translate="no">​</a></h3>
+<p>The Shell adapter, which allows agents to execute system commands, is a powerful but potentially dangerous tool. Here’s how fail-closed governance protects it:</p>
+<ol>
+<li class=""><strong>Command Whitelist</strong>: The adapter maintains a strict whitelist of allowed commands (e.g., <code>ls</code>, <code>cat</code>, <code>grep</code>). If an agent tries to run a command not on this list (e.g., <code>rm</code>), the operation is denied instantly.</li>
+<li class=""><strong>Mode Check</strong>: Even if the command is on the whitelist, the system's governance mode must be <code>SINGLE_RUN_APPROVED</code>. If it's in <code>READ_ONLY</code> mode, the request is denied.</li>
+<li class=""><strong>Receipt Generation</strong>: The denial is recorded in a receipt, including which policy failed and why. This allows operators to audit not just what happened, but what was <em>prevented</em> from happening.</li>
+</ol>
+<p>By building on a foundation of fail-closed governance, SintraPrime provides the guarantees necessary for deploying autonomous AI agents in high-stakes, production environments. It shifts the security posture from "allow unless forbidden" to "deny unless explicitly permitted," a critical step forward for building trustworthy AI.</p>
+<p>Read more in the <a class="" href="https://ihoward40.github.io/SintraPrime/docs/core-concepts/governance-model"><strong>Governance Model documentation</strong></a>.</p>]]></content:encoded>
+            <category>sintraprime</category>
+            <category>governance</category>
+            <category>security</category>
+            <category>architecture</category>
+        </item>
+        <item>
+            <title><![CDATA[Announcing SintraPrime v2.0 — The Governance OS for AI Agents]]></title>
+            <link>https://ihoward40.github.io/SintraPrime/blog/announcing-sintraprime</link>
+            <guid>https://ihoward40.github.io/SintraPrime/blog/announcing-sintraprime</guid>
+            <pubDate>Fri, 20 Feb 2026 00:00:00 GMT</pubDate>
+            <description><![CDATA[Today, I am thrilled to announce the release of SintraPrime v2.0, a multi-branch governance operating system for AI agents. SintraPrime is the culmination of years of research and development into building safe, auditable, and court-ready AI systems.]]></description>
+            <content:encoded><![CDATA[<p>Today, I am thrilled to announce the release of <strong>SintraPrime v2.0</strong>, a multi-branch governance operating system for AI agents. SintraPrime is the culmination of years of research and development into building safe, auditable, and court-ready AI systems.</p>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="what-is-sintraprime">What is SintraPrime?<a href="https://ihoward40.github.io/SintraPrime/blog/announcing-sintraprime#what-is-sintraprime" class="hash-link" aria-label="Direct link to What is SintraPrime?" title="Direct link to What is SintraPrime?" translate="no">​</a></h2>
+<p>SintraPrime is an open-source (Apache 2.0) operating system built in Node.js/TypeScript that provides institution-grade evidence lifecycle management, cryptographic verification, and procedural memory for autonomous AI operations. It is designed for developers, enterprises, and trust administrators who need to build and deploy AI agents with strong governance and compliance guarantees.</p>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="key-features">Key Features<a href="https://ihoward40.github.io/SintraPrime/blog/announcing-sintraprime#key-features" class="hash-link" aria-label="Direct link to Key Features" title="Direct link to Key Features" translate="no">​</a></h2>
+<ul>
+<li class=""><strong>Immutable Receipt Ledger</strong>: Every operation generates a cryptographic receipt with SHA-256 hash chaining and Ed25519 digital signatures, creating an unbreakable audit trail.</li>
+<li class=""><strong>Fail-Closed Governance</strong>: The system defaults to denying any operation that is not explicitly authorized, ensuring safety even in the face of misconfiguration.</li>
+<li class=""><strong>Multi-Agent Architecture</strong>: Specialized agents like the <strong>Howard Trust Navigator</strong> for trust administration and <strong>SentinelGuard</strong> for security monitoring operate in parallel.</li>
+<li class=""><strong>Court-Ready Evidence Systems</strong>: A complete evidence lifecycle chain transforms raw data into court-admissible documentation, with features like the Timeline Builder and Narrative Generator.</li>
+<li class=""><strong>Governed Adapters</strong>: Receipt-backed access to external services like Gmail, Notion, Slack, and more.</li>
+</ul>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="why-sintraprime">Why SintraPrime?<a href="https://ihoward40.github.io/SintraPrime/blog/announcing-sintraprime#why-sintraprime" class="hash-link" aria-label="Direct link to Why SintraPrime?" title="Direct link to Why SintraPrime?" translate="no">​</a></h2>
+<p>As AI agents become more autonomous, the need for robust governance has never been greater. SintraPrime provides the foundational layer for building AI systems that are not only powerful but also accountable. Whether you are automating trust administration, building compliance workflows, or deploying enterprise-grade AI, SintraPrime gives you the tools to do so safely and responsibly.</p>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="get-started">Get Started<a href="https://ihoward40.github.io/SintraPrime/blog/announcing-sintraprime#get-started" class="hash-link" aria-label="Direct link to Get Started" title="Direct link to Get Started" translate="no">​</a></h2>
+<ul>
+<li class=""><strong>Explore the documentation</strong>: <a href="https://ihoward40.github.io/SintraPrime/" target="_blank" rel="noopener noreferrer" class="">https://ihoward40.github.io/SintraPrime/</a></li>
+<li class=""><strong>View the source on GitHub</strong>: <a href="https://github.com/ihoward40/SintraPrime" target="_blank" rel="noopener noreferrer" class="">https://github.com/ihoward40/SintraPrime</a></li>
+<li class=""><strong>Follow the Quick Start guide</strong>: <a class="" href="https://ihoward40.github.io/SintraPrime/docs/getting-started/quick-start-docker">Quick Start (Docker)</a></li>
+</ul>
+<p>I am incredibly excited to share SintraPrime with the community and look forward to seeing what you build with it.</p>]]></content:encoded>
+            <category>sintraprime</category>
+            <category>release</category>
+            <category>governance</category>
+            <category>ai</category>
+            <category>agents</category>
+        </item>
+    </channel>
+</rss>

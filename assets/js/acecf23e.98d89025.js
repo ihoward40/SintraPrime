@@ -1,0 +1,1 @@
+"use strict";(globalThis.webpackChunksintraprime_docs=globalThis.webpackChunksintraprime_docs||[]).push([[1903],{1912(s){s.exports=JSON.parse('{"blogBasePath":"/SintraPrime/blog","blogTitle":"Blog","authorsListPath":"/SintraPrime/blog/authors"}')}}]);
