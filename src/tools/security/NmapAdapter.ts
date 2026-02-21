@@ -58,7 +58,7 @@ export class NmapAdapter implements Tool {
     } catch (error: any) {
       // Nmap exits with code 1 for some warnings; still parse the output.
       if (error.stdout) {
-        stdout = error.stdout;
+        stdout = error.stdout as string;
       } else {
         throw new Error(`NmapAdapter: Scan failed for target '${sanitizedTarget}': ${error.message}`);
       }
@@ -87,15 +87,15 @@ export class NmapAdapter implements Tool {
       let hostMatch: RegExpExecArray | null;
 
       while ((hostMatch = hostRegex.exec(xml)) !== null) {
-        const hostBlock = hostMatch[1];
+        const hostBlock = hostMatch[1] ?? "";
 
         // Extract address
         const addrMatch = hostBlock.match(/<address\s+addr="([^"]+)"/);
-        const address = addrMatch ? addrMatch[1] : "unknown";
+        const address = addrMatch?.[1] ?? "unknown";
 
         // Extract status
         const statusMatch = hostBlock.match(/<status\s+state="([^"]+)"/);
-        const status = statusMatch ? statusMatch[1] : "unknown";
+        const status = statusMatch?.[1] ?? "unknown";
 
         // Extract ports
         const portRegex = /<port\s+protocol="([^"]+)"\s+portid="(\d+)">([\s\S]*?)<\/port>/g;
@@ -103,20 +103,20 @@ export class NmapAdapter implements Tool {
         const openPorts: NmapFinding["openPorts"] = [];
 
         while ((portMatch = portRegex.exec(hostBlock)) !== null) {
-          const protocol = portMatch[1];
-          const portId = parseInt(portMatch[2], 10);
-          const portBlock = portMatch[3];
+          const protocol = portMatch[1] ?? "";
+          const portId = parseInt(portMatch[2] ?? "0", 10);
+          const portBlock = portMatch[3] ?? "";
 
           // Check state
           const stateMatch = portBlock.match(/<state\s+state="([^"]+)"/);
-          const state = stateMatch ? stateMatch[1] : "unknown";
+          const state = stateMatch?.[1] ?? "unknown";
 
           if (state === "open") {
             // Extract service info
             const serviceMatch = portBlock.match(/<service\s+name="([^"]*)"(?:\s+product="([^"]*)")?(?:\s+version="([^"]*)")?/);
-            const serviceName = serviceMatch ? serviceMatch[1] : "unknown";
-            const product = serviceMatch ? serviceMatch[2] || "" : "";
-            const version = serviceMatch ? serviceMatch[3] || "" : "";
+            const serviceName = serviceMatch?.[1] ?? "unknown";
+            const product = serviceMatch?.[2] ?? "";
+            const version = serviceMatch?.[3] ?? "";
 
             openPorts.push({
               port: portId,
