@@ -55,7 +55,7 @@ export class WhatsAppAdapter implements PlatformAdapter {
         // Parse commands from text (e.g., "!start" or "/start")
         if (unified.text?.startsWith("/") || unified.text?.startsWith("!")) {
           const parts = unified.text.split(/\s+/);
-          unified.command = parts[0].replace("!", "/");
+          unified.command = (parts[0] ?? "").replace("!", "/");
           unified.commandArgs = parts.slice(1).join(" ");
         }
         break;

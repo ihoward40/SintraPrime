@@ -141,7 +141,7 @@ export class MessageRouter {
     }
     // 2. Check for callback handlers
     else if (message.callbackData) {
-      const prefix = message.callbackData.split(":")[0];
+      const prefix = message.callbackData.split(":")[0] ?? "";
       const handler = this.callbackHandlers.get(prefix);
       if (handler) {
         result = await handler(message, session);
