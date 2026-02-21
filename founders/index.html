@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SintraPrime Founder's Program — Shape the Future of Governed AI</title>
+    <meta name="description" content="Join the SintraPrime Founder's Program. Get exclusive early access, direct founder support, and shape the future of governed autonomous AI agents.">
+    <meta property="og:title" content="SintraPrime Founder's Program">
+    <meta property="og:description" content="Exclusive early access to the governed AI agent platform. Limited spots available.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://ihoward40.github.io/SintraPrime/founders/">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        /* ===== RESET & BASE ===== */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #0a0e17;
+            color: #e2e8f0;
+            line-height: 1.7;
+            overflow-x: hidden;
+        }
+        a { color: inherit; text-decoration: none; }
+        img { max-width: 100%; display: block; }
+
+        /* ===== ANIMATED BACKGROUND ===== */
+        .bg-grid {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-image:
+                linear-gradient(rgba(13, 148, 136, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(13, 148, 136, 0.03) 1px, transparent 1px);
+            background-size: 60px 60px;
+            z-index: 0;
+            pointer-events: none;
+        }
+        .bg-glow {
+            position: fixed;
+            width: 600px; height: 600px;
+            border-radius: 50%;
+            filter: blur(120px);
+            opacity: 0.15;
+            z-index: 0;
+            pointer-events: none;
+        }
+        .bg-glow-1 { background: #0d9488; top: -200px; left: -100px; }
+        .bg-glow-2 { background: #d4a017; bottom: -200px; right: -100px; opacity: 0.08; }
+        .bg-glow-3 { background: #0d9488; top: 50%; left: 50%; transform: translate(-50%, -50%); opacity: 0.05; }
+
+        /* ===== NAVBAR ===== */
+        .navbar {
+            position: fixed; top: 0; left: 0; right: 0;
+            z-index: 100;
+            padding: 1rem 2rem;
+            display: flex; align-items: center; justify-content: space-between;
+            background: rgba(10, 14, 23, 0.8);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(13, 148, 136, 0.1);
+            transition: all 0.3s ease;
+        }
+        .navbar.scrolled { background: rgba(10, 14, 23, 0.95); }
+        .nav-brand {
+            display: flex; align-items: center; gap: 0.75rem;
+            font-weight: 700; font-size: 1.25rem; color: #fff;
+        }
+        .nav-brand svg { width: 32px; height: 32px; }
+        .nav-links { display: flex; gap: 2rem; align-items: center; }
+        .nav-links a {
+            font-size: 0.9rem; font-weight: 500; color: #94a3b8;
+            transition: color 0.2s;
+        }
+        .nav-links a:hover { color: #0d9488; }
+        .nav-cta {
+            background: linear-gradient(135deg, #0d9488, #0b8377);
+            color: #fff !important; padding: 0.5rem 1.25rem;
+            border-radius: 8px; font-weight: 600;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .nav-cta:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 20px rgba(13, 148, 136, 0.4);
+        }
+
+        /* ===== HERO ===== */
+        .hero {
+            position: relative; z-index: 1;
+            min-height: 100vh;
+            display: flex; align-items: center; justify-content: center;
+            padding: 8rem 2rem 6rem;
+            text-align: center;
+        }
+        .hero-content { max-width: 800px; }
+        .hero-badge {
+            display: inline-flex; align-items: center; gap: 0.5rem;
+            background: rgba(212, 160, 23, 0.12);
+            border: 1px solid rgba(212, 160, 23, 0.3);
+            color: #d4a017;
+            padding: 0.4rem 1rem; border-radius: 100px;
+            font-size: 0.85rem; font-weight: 600;
+            margin-bottom: 2rem;
+            animation: pulse-badge 2s ease-in-out infinite;
+        }
+        @keyframes pulse-badge {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(212, 160, 23, 0.2); }
+            50% { box-shadow: 0 0 0 8px rgba(212, 160, 23, 0); }
+        }
+        .hero h1 {
+            font-size: clamp(2.5rem, 6vw, 4.5rem);
+            font-weight: 900; line-height: 1.1;
+            color: #fff;
+            margin-bottom: 1.5rem;
+        }
+        .hero h1 .gradient-text {
+            background: linear-gradient(135deg, #14b8a6, #0d9488, #d4a017);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .hero p {
+            font-size: 1.25rem; color: #94a3b8;
+            max-width: 600px; margin: 0 auto 2.5rem;
+            line-height: 1.8;
+        }
+        .hero-cta-group {
+            display: flex; gap: 1rem; justify-content: center;
+            flex-wrap: wrap;
+        }
+        .btn {
+            display: inline-flex; align-items: center; gap: 0.5rem;
+            padding: 0.9rem 2rem; border-radius: 10px;
+            font-size: 1rem; font-weight: 600;
+            transition: all 0.3s ease; cursor: pointer;
+            border: none;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #0d9488, #0b8377);
+            color: #fff;
+            box-shadow: 0 4px 20px rgba(13, 148, 136, 0.3);
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(13, 148, 136, 0.5);
+        }
+        .btn-gold {
+            background: linear-gradient(135deg, #d4a017, #b8860b);
+            color: #fff;
+            box-shadow: 0 4px 20px rgba(212, 160, 23, 0.3);
+        }
+        .btn-gold:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(212, 160, 23, 0.5);
+        }
+        .btn-outline {
+            background: transparent;
+            border: 2px solid rgba(13, 148, 136, 0.4);
+            color: #14b8a6;
+        }
+        .btn-outline:hover {
+            background: rgba(13, 148, 136, 0.1);
+            border-color: #0d9488;
+        }
+        .hero-stats {
+            display: flex; gap: 3rem; justify-content: center;
+            margin-top: 4rem; padding-top: 3rem;
+            border-top: 1px solid rgba(255,255,255,0.06);
+        }
+        .hero-stat { text-align: center; }
+        .hero-stat-value {
+            font-size: 2rem; font-weight: 800; color: #14b8a6;
+        }
+        .hero-stat-label {
+            font-size: 0.85rem; color: #64748b; margin-top: 0.25rem;
+        }
+
+        /* ===== SECTIONS ===== */
+        section { position: relative; z-index: 1; padding: 6rem 2rem; }
+        .container { max-width: 1100px; margin: 0 auto; }
+        .section-label {
+            display: inline-block;
+            font-size: 0.8rem; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 2px;
+            color: #0d9488; margin-bottom: 1rem;
+        }
+        .section-title {
+            font-size: clamp(2rem, 4vw, 3rem);
+            font-weight: 800; color: #fff;
+            margin-bottom: 1rem; line-height: 1.2;
+        }
+        .section-subtitle {
+            font-size: 1.1rem; color: #94a3b8;
+            max-width: 600px; margin-bottom: 3rem;
+        }
+
+        /* ===== WHAT YOU GET ===== */
+        .benefits-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+        .benefit-card {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 16px;
+            padding: 2rem;
+            transition: all 0.3s ease;
+        }
+        .benefit-card:hover {
+            background: rgba(13, 148, 136, 0.05);
+            border-color: rgba(13, 148, 136, 0.2);
+            transform: translateY(-4px);
+        }
+        .benefit-icon {
+            width: 48px; height: 48px;
+            background: rgba(13, 148, 136, 0.1);
+            border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.5rem; margin-bottom: 1.25rem;
+        }
+        .benefit-card h3 {
+            font-size: 1.15rem; font-weight: 700; color: #fff;
+            margin-bottom: 0.75rem;
+        }
+        .benefit-card p {
+            font-size: 0.95rem; color: #94a3b8; line-height: 1.7;
+        }
+
+        /* ===== TIERS ===== */
+        .tiers-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 2rem;
+            align-items: start;
+        }
+        .tier-card {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 20px;
+            padding: 2.5rem;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        .tier-card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(13, 148, 136, 0.3);
+        }
+        .tier-card.featured {
+            border-color: rgba(212, 160, 23, 0.4);
+            background: rgba(212, 160, 23, 0.04);
+        }
+        .tier-card.featured::before {
+            content: '';
+            position: absolute; top: 0; left: 0; right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #d4a017, #f0c040, #d4a017);
+        }
+        .tier-badge {
+            display: inline-block;
+            padding: 0.3rem 0.8rem; border-radius: 6px;
+            font-size: 0.75rem; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 1px;
+            margin-bottom: 1.25rem;
+        }
+        .tier-badge.gold {
+            background: rgba(212, 160, 23, 0.15); color: #d4a017;
+        }
+        .tier-badge.teal {
+            background: rgba(13, 148, 136, 0.15); color: #14b8a6;
+        }
+        .tier-card h3 {
+            font-size: 1.5rem; font-weight: 800; color: #fff;
+            margin-bottom: 0.5rem;
+        }
+        .tier-price {
+            font-size: 2.5rem; font-weight: 900; color: #fff;
+            margin-bottom: 0.25rem;
+        }
+        .tier-price span { font-size: 1rem; font-weight: 400; color: #64748b; }
+        .tier-period { font-size: 0.85rem; color: #64748b; margin-bottom: 1.5rem; }
+        .tier-features { list-style: none; margin-bottom: 2rem; }
+        .tier-features li {
+            display: flex; align-items: flex-start; gap: 0.75rem;
+            padding: 0.5rem 0; font-size: 0.95rem; color: #cbd5e1;
+        }
+        .tier-features li::before {
+            content: '\2713';
+            color: #14b8a6; font-weight: 700;
+            flex-shrink: 0; margin-top: 2px;
+        }
+        .tier-card.featured .tier-features li::before { color: #d4a017; }
+        .tier-btn {
+            display: block; width: 100%; text-align: center;
+            padding: 0.85rem; border-radius: 10px;
+            font-size: 1rem; font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        /* ===== WHAT IS SINTRAPRIME ===== */
+        .about-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4rem; align-items: center;
+        }
+        .about-visual {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 20px;
+            padding: 2rem;
+            position: relative;
+        }
+        .about-visual-inner {
+            background: linear-gradient(135deg, rgba(13, 148, 136, 0.1), rgba(10, 14, 23, 0.8));
+            border-radius: 12px;
+            padding: 2rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            color: #14b8a6;
+            line-height: 1.8;
+        }
+        .about-visual-inner .comment { color: #64748b; }
+        .about-visual-inner .keyword { color: #d4a017; }
+        .about-visual-inner .string { color: #34d399; }
+        .about-features { list-style: none; margin-top: 2rem; }
+        .about-features li {
+            display: flex; align-items: flex-start; gap: 1rem;
+            padding: 0.75rem 0;
+        }
+        .about-features li .icon {
+            width: 36px; height: 36px;
+            background: rgba(13, 148, 136, 0.1);
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0; font-size: 1.1rem;
+        }
+        .about-features li strong { color: #fff; display: block; margin-bottom: 0.25rem; }
+        .about-features li span { font-size: 0.9rem; color: #94a3b8; }
+
+        /* ===== TIMELINE ===== */
+        .timeline { position: relative; padding-left: 3rem; }
+        .timeline::before {
+            content: '';
+            position: absolute; left: 15px; top: 0; bottom: 0;
+            width: 2px;
+            background: linear-gradient(to bottom, #0d9488, rgba(13, 148, 136, 0.1));
+        }
+        .timeline-item {
+            position: relative; margin-bottom: 2.5rem;
+            padding-left: 1.5rem;
+        }
+        .timeline-item::before {
+            content: '';
+            position: absolute; left: -2.5rem; top: 0.5rem;
+            width: 12px; height: 12px;
+            background: #0d9488; border-radius: 50%;
+            border: 3px solid #0a0e17;
+        }
+        .timeline-item.active::before {
+            background: #d4a017;
+            box-shadow: 0 0 12px rgba(212, 160, 23, 0.5);
+        }
+        .timeline-date {
+            font-size: 0.8rem; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 1px;
+            color: #0d9488; margin-bottom: 0.5rem;
+        }
+        .timeline-item.active .timeline-date { color: #d4a017; }
+        .timeline-item h3 {
+            font-size: 1.15rem; font-weight: 700; color: #fff;
+            margin-bottom: 0.5rem;
+        }
+        .timeline-item p { font-size: 0.95rem; color: #94a3b8; }
+
+        /* ===== FAQ ===== */
+        .faq-list { max-width: 700px; }
+        .faq-item {
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            padding: 1.5rem 0;
+        }
+        .faq-question {
+            display: flex; justify-content: space-between; align-items: center;
+            cursor: pointer; font-weight: 600; color: #fff;
+            font-size: 1.05rem;
+        }
+        .faq-question::after {
+            content: '+'; font-size: 1.5rem; color: #0d9488;
+            transition: transform 0.3s;
+        }
+        .faq-item.open .faq-question::after {
+            content: '\2212';
+        }
+        .faq-answer {
+            max-height: 0; overflow: hidden;
+            transition: max-height 0.4s ease, padding 0.3s ease;
+            font-size: 0.95rem; color: #94a3b8; line-height: 1.8;
+        }
+        .faq-item.open .faq-answer {
+            max-height: 300px;
+            padding-top: 1rem;
+        }
+
+        /* ===== FINAL CTA ===== */
+        .final-cta {
+            text-align: center;
+            background: linear-gradient(135deg, rgba(13, 148, 136, 0.08), rgba(212, 160, 23, 0.04));
+            border: 1px solid rgba(13, 148, 136, 0.15);
+            border-radius: 24px;
+            padding: 4rem 2rem;
+            margin: 2rem auto;
+            max-width: 800px;
+        }
+        .final-cta h2 {
+            font-size: 2.5rem; font-weight: 800; color: #fff;
+            margin-bottom: 1rem;
+        }
+        .final-cta p {
+            font-size: 1.1rem; color: #94a3b8;
+            max-width: 500px; margin: 0 auto 2rem;
+        }
+
+        /* ===== FOOTER ===== */
+        footer {
+            position: relative; z-index: 1;
+            border-top: 1px solid rgba(255,255,255,0.06);
+            padding: 3rem 2rem;
+            text-align: center;
+        }
+        .footer-links {
+            display: flex; gap: 2rem; justify-content: center;
+            margin-bottom: 1.5rem; flex-wrap: wrap;
+        }
+        .footer-links a {
+            font-size: 0.9rem; color: #64748b;
+            transition: color 0.2s;
+        }
+        .footer-links a:hover { color: #14b8a6; }
+        .footer-copy { font-size: 0.85rem; color: #475569; }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 768px) {
+            .nav-links { display: none; }
+            .hero-stats { flex-direction: column; gap: 1.5rem; }
+            .about-grid { grid-template-columns: 1fr; }
+            .tiers-grid { grid-template-columns: 1fr; }
+            .hero { padding: 7rem 1.5rem 4rem; }
+            section { padding: 4rem 1.5rem; }
+        }
+
+        /* ===== ANIMATIONS ===== */
+        .fade-in {
+            opacity: 0; transform: translateY(30px);
+            transition: opacity 0.6s ease, transform 0.6s ease;
+        }
+        .fade-in.visible {
+            opacity: 1; transform: translateY(0);
+        }
+
+        /* ===== SPOTS COUNTER ===== */
+        .spots-bar {
+            background: rgba(255,255,255,0.05);
+            border-radius: 100px;
+            height: 8px;
+            margin-top: 1rem;
+            overflow: hidden;
+            max-width: 300px;
+            margin-left: auto; margin-right: auto;
+        }
+        .spots-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #d4a017, #f0c040);
+            border-radius: 100px;
+            width: 68%;
+            transition: width 1s ease;
+        }
+        .spots-text {
+            font-size: 0.85rem; color: #d4a017;
+            margin-top: 0.5rem; font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Background Effects -->
+<div class="bg-grid"></div>
+<div class="bg-glow bg-glow-1"></div>
+<div class="bg-glow bg-glow-2"></div>
+<div class="bg-glow bg-glow-3"></div>
+
+<!-- Navbar -->
+<nav class="navbar" id="navbar">
+    <a href="/SintraPrime/" class="nav-brand">
+        <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="32" height="32" rx="8" fill="#0d9488"/>
+            <path d="M8 16L14 10L20 16L14 22Z" fill="white" opacity="0.9"/>
+            <path d="M14 16L20 10L26 16L20 22Z" fill="white" opacity="0.6"/>
+        </svg>
+        SintraPrime
+    </a>
+    <div class="nav-links">
+        <a href="#benefits">Benefits</a>
+        <a href="#about">Platform</a>
+        <a href="#pricing">Pricing</a>
+        <a href="#roadmap">Roadmap</a>
+        <a href="#faq">FAQ</a>
+        <a href="#join" class="nav-cta">Apply Now</a>
+    </div>
+</nav>
+
+<!-- Hero Section -->
+<section class="hero">
+    <div class="hero-content">
+        <div class="hero-badge">
+            <span>&#9733;</span> Limited Founding Membership — Early Access
+        </div>
+        <h1>
+            Build the Future of<br>
+            <span class="gradient-text">Governed AI Agents</span>
+        </h1>
+        <p>
+            Join the SintraPrime Founder's Program and get exclusive early access to the
+            first autonomous agent platform with court-ready governance, immutable receipts,
+            and fail-closed safety built in from day one.
+        </p>
+        <div class="hero-cta-group">
+            <a href="#pricing" class="btn btn-gold">
+                <span>&#9733;</span> Claim Your Founder Spot
+            </a>
+            <a href="#about" class="btn btn-outline">
+                Learn More
+            </a>
+        </div>
+        <div class="hero-stats">
+            <div class="hero-stat">
+                <div class="hero-stat-value">50</div>
+                <div class="hero-stat-label">Founding Spots</div>
+            </div>
+            <div class="hero-stat">
+                <div class="hero-stat-value">4</div>
+                <div class="hero-stat-label">Agent Types</div>
+            </div>
+            <div class="hero-stat">
+                <div class="hero-stat-value">8+</div>
+                <div class="hero-stat-label">Platform Adapters</div>
+            </div>
+            <div class="hero-stat">
+                <div class="hero-stat-value">100%</div>
+                <div class="hero-stat-label">Receipt Coverage</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Benefits Section -->
+<section id="benefits">
+    <div class="container fade-in">
+        <span class="section-label">Founder Benefits</span>
+        <h2 class="section-title">What You Get as a Founder</h2>
+        <p class="section-subtitle">
+            Founding members receive exclusive access and direct influence over the platform's direction.
+        </p>
+        <div class="benefits-grid">
+            <div class="benefit-card">
+                <div class="benefit-icon">&#128272;</div>
+                <h3>Early Platform Access</h3>
+                <p>Be the first to deploy governed AI agents with full access to all features, adapters, and governance tools before public launch.</p>
+            </div>
+            <div class="benefit-card">
+                <div class="benefit-icon">&#128101;</div>
+                <h3>Direct Founder Access</h3>
+                <p>Private Discord channel with Isiah Howard. Weekly office hours, priority support, and direct input on the product roadmap.</p>
+            </div>
+            <div class="benefit-card">
+                <div class="benefit-icon">&#128640;</div>
+                <h3>Priority Feature Requests</h3>
+                <p>Your feature requests go to the top of the backlog. Shape the platform to fit your exact use case and workflow needs.</p>
+            </div>
+            <div class="benefit-card">
+                <div class="benefit-icon">&#127942;</div>
+                <h3>Lifetime Founder Pricing</h3>
+                <p>Lock in founding member pricing forever. As the platform grows and prices increase, your rate stays the same.</p>
+            </div>
+            <div class="benefit-card">
+                <div class="benefit-icon">&#128218;</div>
+                <h3>Exclusive Documentation</h3>
+                <p>Access to internal architecture docs, governance playbooks, and implementation guides not available to the public.</p>
+            </div>
+            <div class="benefit-card">
+                <div class="benefit-icon">&#128736;</div>
+                <h3>White-Glove Onboarding</h3>
+                <p>Personalized 1-on-1 setup session to configure SintraPrime for your specific use case, industry, and compliance requirements.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- About SintraPrime Section -->
+<section id="about" style="background: rgba(255,255,255,0.01);">
+    <div class="container fade-in">
+        <div class="about-grid">
+            <div>
+                <span class="section-label">The Platform</span>
+                <h2 class="section-title">What is SintraPrime?</h2>
+                <p class="section-subtitle" style="margin-bottom: 1.5rem;">
+                    SintraPrime is a multi-branch governance operating system for autonomous AI agents.
+                    Every action is receipted, every decision is auditable, and every workflow is fail-closed by default.
+                </p>
+                <ul class="about-features">
+                    <li>
+                        <div class="icon">&#128737;</div>
+                        <div>
+                            <strong>Governed Agents</strong>
+                            <span>Howard Trust Navigator, SentinelGuard, and specialized agents operate under constitutional governance.</span>
+                        </div>
+                    </li>
+                    <li>
+                        <div class="icon">&#9878;</div>
+                        <div>
+                            <strong>Court-Ready Evidence</strong>
+                            <span>SHA-256 chained, Ed25519-signed receipts produce court-admissible audit trails.</span>
+                        </div>
+                    </li>
+                    <li>
+                        <div class="icon">&#128279;</div>
+                        <div>
+                            <strong>Multi-Platform</strong>
+                            <span>Adapters for Gmail, Notion, Slack, Discord, Telegram, WhatsApp, and more.</span>
+                        </div>
+                    </li>
+                    <li>
+                        <div class="icon">&#9881;</div>
+                        <div>
+                            <strong>Workflow Engine</strong>
+                            <span>YAML/JSON declarative automation with Validator, Planner, and Executor pipeline.</span>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+            <div class="about-visual">
+                <div class="about-visual-inner">
+                    <span class="comment">// SintraPrime Governance Receipt</span><br>
+                    {<br>
+                    &nbsp;&nbsp;<span class="keyword">"receipt_id"</span>: <span class="string">"rx-2026-0221-001"</span>,<br>
+                    &nbsp;&nbsp;<span class="keyword">"agent"</span>: <span class="string">"HowardTrustNavigator"</span>,<br>
+                    &nbsp;&nbsp;<span class="keyword">"action"</span>: <span class="string">"trust_analysis"</span>,<br>
+                    &nbsp;&nbsp;<span class="keyword">"governance"</span>: {<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">"policy_gate"</span>: <span class="string">"PASS"</span>,<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">"risk_level"</span>: <span class="string">"low"</span>,<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">"approval"</span>: <span class="string">"auto"</span><br>
+                    &nbsp;&nbsp;},<br>
+                    &nbsp;&nbsp;<span class="keyword">"signature"</span>: <span class="string">"Ed25519:a7f3..."</span>,<br>
+                    &nbsp;&nbsp;<span class="keyword">"chain_hash"</span>: <span class="string">"SHA256:e9b1..."</span>,<br>
+                    &nbsp;&nbsp;<span class="keyword">"status"</span>: <span class="string">"&#10003; VERIFIED"</span><br>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Pricing Section -->
+<section id="pricing">
+    <div class="container fade-in">
+        <div style="text-align: center; margin-bottom: 3rem;">
+            <span class="section-label">Pricing</span>
+            <h2 class="section-title">Founder's Program Tiers</h2>
+            <p class="section-subtitle" style="margin: 0 auto;">
+                Choose the tier that fits your needs. All tiers include lifetime founder pricing.
+            </p>
+        </div>
+        <div class="tiers-grid">
+            <!-- Tier 1: Pioneer -->
+            <div class="tier-card">
+                <span class="tier-badge teal">Pioneer</span>
+                <h3>Pioneer Founder</h3>
+                <div class="tier-price">$49<span>/mo</span></div>
+                <div class="tier-period">Billed monthly. Lock in this rate forever.</div>
+                <ul class="tier-features">
+                    <li>Full platform access (all agents & adapters)</li>
+                    <li>Community Discord with Founder role</li>
+                    <li>Priority email support</li>
+                    <li>Access to Founder's office hours</li>
+                    <li>Governance receipt dashboard</li>
+                    <li>Up to 5 active agent workflows</li>
+                </ul>
+                <a href="mailto:isiah@sintraprime.com?subject=Founder%20Program%20-%20Pioneer&body=I%27m%20interested%20in%20the%20Pioneer%20Founder%20tier." class="btn btn-primary tier-btn">Get Started</a>
+            </div>
+
+            <!-- Tier 2: Architect (Featured) -->
+            <div class="tier-card featured">
+                <span class="tier-badge gold">Most Popular</span>
+                <h3>Architect Founder</h3>
+                <div class="tier-price">$149<span>/mo</span></div>
+                <div class="tier-period">Billed monthly. Lifetime rate guaranteed.</div>
+                <ul class="tier-features">
+                    <li>Everything in Pioneer, plus:</li>
+                    <li>1-on-1 onboarding session with Isiah</li>
+                    <li>Priority feature request queue</li>
+                    <li>Custom agent configuration support</li>
+                    <li>Exclusive architecture documentation</li>
+                    <li>Unlimited active agent workflows</li>
+                    <li>Early access to new adapters & agents</li>
+                </ul>
+                <a href="mailto:isiah@sintraprime.com?subject=Founder%20Program%20-%20Architect&body=I%27m%20interested%20in%20the%20Architect%20Founder%20tier." class="btn btn-gold tier-btn">Claim This Spot</a>
+            </div>
+
+            <!-- Tier 3: Visionary -->
+            <div class="tier-card">
+                <span class="tier-badge teal">Enterprise</span>
+                <h3>Visionary Founder</h3>
+                <div class="tier-price">$499<span>/mo</span></div>
+                <div class="tier-period">Billed monthly. Enterprise-grade SLA.</div>
+                <ul class="tier-features">
+                    <li>Everything in Architect, plus:</li>
+                    <li>Dedicated Slack/Discord channel</li>
+                    <li>Custom agent development (2/quarter)</li>
+                    <li>Compliance & audit report generation</li>
+                    <li>SLA with guaranteed response times</li>
+                    <li>On-call support for critical workflows</li>
+                    <li>Logo on SintraPrime website & docs</li>
+                    <li>Quarterly strategy call with founder</li>
+                </ul>
+                <a href="mailto:isiah@sintraprime.com?subject=Founder%20Program%20-%20Visionary&body=I%27m%20interested%20in%20the%20Visionary%20Founder%20tier." class="btn btn-primary tier-btn">Contact Us</a>
+            </div>
+        </div>
+        <div style="text-align: center; margin-top: 2rem;">
+            <div class="spots-bar"><div class="spots-bar-fill"></div></div>
+            <div class="spots-text">34 of 50 founding spots remaining</div>
+        </div>
+    </div>
+</section>
+
+<!-- Roadmap Section -->
+<section id="roadmap" style="background: rgba(255,255,255,0.01);">
+    <div class="container fade-in">
+        <span class="section-label">Roadmap</span>
+        <h2 class="section-title">What's Coming Next</h2>
+        <p class="section-subtitle">Founders get early access to every milestone.</p>
+        <div class="timeline">
+            <div class="timeline-item active">
+                <div class="timeline-date">Now — Q1 2026</div>
+                <h3>Founder's Program Launch</h3>
+                <p>Community Discord, Founder onboarding, governance receipt dashboard, and full platform access for founding members.</p>
+            </div>
+            <div class="timeline-item">
+                <div class="timeline-date">Q2 2026</div>
+                <h3>Trust Administration Suite</h3>
+                <p>Howard Trust Navigator v2 with advanced trust analysis, automated compliance reporting, and court-ready evidence binder generation.</p>
+            </div>
+            <div class="timeline-item">
+                <div class="timeline-date">Q3 2026</div>
+                <h3>Enterprise Governance Pack</h3>
+                <p>Multi-tenant governance, team roles and permissions, SSO integration, and enterprise audit log export.</p>
+            </div>
+            <div class="timeline-item">
+                <div class="timeline-date">Q4 2026</div>
+                <h3>Marketplace & Kilo Skills</h3>
+                <p>Community skills marketplace, custom agent templates, and third-party adapter ecosystem with revenue sharing for contributors.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- FAQ Section -->
+<section id="faq">
+    <div class="container fade-in">
+        <span class="section-label">FAQ</span>
+        <h2 class="section-title">Frequently Asked Questions</h2>
+        <p class="section-subtitle">Everything you need to know about the Founder's Program.</p>
+        <div class="faq-list">
+            <div class="faq-item">
+                <div class="faq-question">What exactly is the Founder's Program?</div>
+                <div class="faq-answer">The Founder's Program is an exclusive early-access membership for the first 50 users of SintraPrime. Founders get full platform access, direct communication with the creator (Isiah Howard), priority feature requests, and lifetime pricing that never increases — even as the platform grows and public pricing goes up.</div>
+            </div>
+            <div class="faq-item">
+                <div class="faq-question">What does "lifetime pricing" mean?</div>
+                <div class="faq-answer">The monthly rate you lock in as a Founder is your rate forever. If the Pioneer tier is $49/mo when you join, it stays $49/mo for as long as you maintain your membership — even if the public price increases to $99/mo or more in the future.</div>
+            </div>
+            <div class="faq-item">
+                <div class="faq-question">Do I need technical experience to use SintraPrime?</div>
+                <div class="faq-answer">SintraPrime is designed for both technical and non-technical users. The governance dashboard and agent workflows use a visual interface. For advanced use cases, you can write custom YAML/JSON configurations. Founders also receive white-glove onboarding to get you set up regardless of your technical background.</div>
+            </div>
+            <div class="faq-item">
+                <div class="faq-question">What industries is SintraPrime designed for?</div>
+                <div class="faq-answer">SintraPrime is particularly powerful for trust administration, legal compliance, financial services, and any industry where AI actions need to be auditable and court-admissible. However, the governed agent framework is general-purpose and works for any workflow automation use case.</div>
+            </div>
+            <div class="faq-item">
+                <div class="faq-question">Can I cancel my membership?</div>
+                <div class="faq-answer">Yes, you can cancel at any time with no penalties. However, if you cancel and later wish to rejoin, you will be subject to the current public pricing at that time — your founder rate cannot be reinstated.</div>
+            </div>
+            <div class="faq-item">
+                <div class="faq-question">How do I get support?</div>
+                <div class="faq-answer">Founders have access to a private Discord channel, weekly office hours with Isiah Howard, and priority email support. Architect and Visionary tier members also receive 1-on-1 sessions and dedicated support channels.</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Final CTA -->
+<section id="join">
+    <div class="container fade-in">
+        <div class="final-cta">
+            <h2>Ready to Build the Future?</h2>
+            <p>
+                Join the first 50 founders shaping the governed AI agent platform.
+                Lock in your lifetime rate before spots fill up.
+            </p>
+            <div class="hero-cta-group">
+                <a href="#pricing" class="btn btn-gold">
+                    <span>&#9733;</span> Claim Your Founder Spot
+                </a>
+                <a href="https://github.com/ihoward40/SintraPrime" target="_blank" class="btn btn-outline">
+                    View on GitHub
+                </a>
+            </div>
+            <div class="spots-bar" style="margin-top: 1.5rem;"><div class="spots-bar-fill"></div></div>
+            <div class="spots-text">Limited spots remaining — Don't miss out</div>
+        </div>
+    </div>
+</section>
+
+<!-- Footer -->
+<footer>
+    <div class="container">
+        <div class="footer-links">
+            <a href="/SintraPrime/">Home</a>
+            <a href="/SintraPrime/docs/getting-started/introduction">Documentation</a>
+            <a href="https://github.com/ihoward40/SintraPrime" target="_blank">GitHub</a>
+            <a href="/SintraPrime/blog">Blog</a>
+            <a href="mailto:isiah@sintraprime.com">Contact</a>
+        </div>
+        <div class="footer-copy">
+            &copy; 2026 Isiah Howard. SintraPrime — Apache 2.0 License.
+        </div>
+    </div>
+</footer>
+
+<script>
+    // Navbar scroll effect
+    window.addEventListener('scroll', () => {
+        const navbar = document.getElementById('navbar');
+        if (window.scrollY > 50) {
+            navbar.classList.add('scrolled');
+        } else {
+            navbar.classList.remove('scrolled');
+        }
+    });
+
+    // Intersection Observer for fade-in animations
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('visible');
+            }
+        });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+    // FAQ toggle
+    document.querySelectorAll('.faq-question').forEach(q => {
+        q.addEventListener('click', () => {
+            const item = q.parentElement;
+            const wasOpen = item.classList.contains('open');
+            document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('open'));
+            if (!wasOpen) item.classList.add('open');
+        });
+    });
+
+    // Smooth scroll for anchor links
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function(e) {
+            e.preventDefault();
+            const target = document.querySelector(this.getAttribute('href'));
+            if (target) {
+                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
