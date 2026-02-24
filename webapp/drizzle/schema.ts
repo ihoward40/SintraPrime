@@ -2289,3 +2289,9 @@ export * from './schema-workflows';
 export * from './schema-workflow-triggers';
 export * from './schema-trigger-alerts';
 export * from './schema-adapters';
+
+// ============================================================================
+// IKE BOT (Phase 3-2)
+// ============================================================================
+
+export * from './schema-ike-bot';

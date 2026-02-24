@@ -1,5 +1,14 @@
 import { Request, Response } from 'express';
-import { supabase } from '../config/supabase';
+import { randomUUID } from 'crypto';
+
+import { getDb } from '../db/mysql';
+import {
+  ikeAgentLogs,
+  ikeBeneficiaries,
+  ikeBillingEvents,
+  ikeCreditDisputes,
+  ikeEnforcementPackets,
+} from '../db/schema';
 
 /**
  * Handle webhooks from Make.com automation scenarios
@@ -39,8 +48,10 @@ export const handleMakeWebhook = async (req: Request, res: Response) => {
     }
 
     // Log to agent_logs
-    await supabase.from('agent_logs').insert({
-      trace_id: payload.trace_id || crypto.randomUUID(),
+    const database = getDb();
+    await database.insert(ikeAgentLogs).values({
+      id: randomUUID(),
+      trace_id: payload.trace_id || randomUUID(),
       level: 'info',
       message: `Make.com webhook processed: ${payload.action}`,
       action: payload.action,
@@ -56,7 +67,9 @@ export const handleMakeWebhook = async (req: Request, res: Response) => {
 
 async function handleCreateBeneficiary(payload: any) {
   const { data } = payload;
-  await supabase.from('beneficiaries').insert({
+  const database = getDb();
+  await database.insert(ikeBeneficiaries).values({
+    id: randomUUID(),
     first_name: data.first_name,
     last_name: data.last_name,
     email: data.email,
@@ -67,7 +80,9 @@ async function handleCreateBeneficiary(payload: any) {
 
 async function handleCreateDispute(payload: any) {
   const { data } = payload;
-  await supabase.from('credit_disputes').insert({
+  const database = getDb();
+  await database.insert(ikeCreditDisputes).values({
+    id: randomUUID(),
     beneficiary_id: data.beneficiary_id,
     creditor_name: data.creditor_name,
     dispute_reason: data.dispute_reason,
@@ -77,7 +92,9 @@ async function handleCreateDispute(payload: any) {
 
 async function handleCreateEnforcementPacket(payload: any) {
   const { data } = payload;
-  await supabase.from('enforcement_packets').insert({
+  const database = getDb();
+  await database.insert(ikeEnforcementPackets).values({
+    id: randomUUID(),
     beneficiary_id: data.beneficiary_id,
     packet_type: data.packet_type,
     target_agency: data.target_agency,
@@ -87,7 +104,9 @@ async function handleCreateEnforcementPacket(payload: any) {
 
 async function handleBillingAlert(payload: any) {
   const { data } = payload;
-  await supabase.from('billing_events').insert({
+  const database = getDb();
+  await database.insert(ikeBillingEvents).values({
+    id: randomUUID(),
     event_type: 'billing_alert',
     event_source: 'make.com',
     amount: data.amount,

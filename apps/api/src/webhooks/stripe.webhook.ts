@@ -1,6 +1,9 @@
 import { Request, Response } from 'express';
+import { randomUUID } from 'crypto';
 import Stripe from 'stripe';
-import { supabase } from '../config/supabase';
+
+import { getDb } from '../db/mysql';
+import { ikeBillingEvents } from '../db/schema';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '');
 
@@ -59,11 +62,17 @@ export const handleStripeWebhook = async (req: Request, res: Response) => {
   }
 };
 
+function formatAmountFromCents(cents: number | null | undefined): string {
+  return ((cents ?? 0) / 100).toFixed(2);
+}
+
 async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent) {
-  await supabase.from('billing_events').insert({
+  const database = getDb();
+  await database.insert(ikeBillingEvents).values({
+    id: randomUUID(),
     event_type: 'payment_intent.succeeded',
     event_source: 'stripe',
-    amount: paymentIntent.amount / 100,
+    amount: formatAmountFromCents(paymentIntent.amount),
     currency: paymentIntent.currency.toUpperCase(),
     status: 'succeeded',
     stripe_event_id: paymentIntent.id,
@@ -75,10 +84,12 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
 }
 
 async function handlePaymentIntentFailed(paymentIntent: Stripe.PaymentIntent) {
-  await supabase.from('billing_events').insert({
+  const database = getDb();
+  await database.insert(ikeBillingEvents).values({
+    id: randomUUID(),
     event_type: 'payment_intent.failed',
     event_source: 'stripe',
-    amount: paymentIntent.amount / 100,
+    amount: formatAmountFromCents(paymentIntent.amount),
     currency: paymentIntent.currency.toUpperCase(),
     status: 'failed',
     stripe_event_id: paymentIntent.id,
@@ -90,10 +101,12 @@ async function handlePaymentIntentFailed(paymentIntent: Stripe.PaymentIntent) {
 }
 
 async function handleChargeSucceeded(charge: Stripe.Charge) {
-  await supabase.from('billing_events').insert({
+  const database = getDb();
+  await database.insert(ikeBillingEvents).values({
+    id: randomUUID(),
     event_type: 'charge.succeeded',
     event_source: 'stripe',
-    amount: charge.amount / 100,
+    amount: formatAmountFromCents(charge.amount),
     currency: charge.currency.toUpperCase(),
     status: 'succeeded',
     stripe_event_id: charge.id,
@@ -105,10 +118,12 @@ async function handleChargeSucceeded(charge: Stripe.Charge) {
 }
 
 async function handleChargeFailed(charge: Stripe.Charge) {
-  await supabase.from('billing_events').insert({
+  const database = getDb();
+  await database.insert(ikeBillingEvents).values({
+    id: randomUUID(),
     event_type: 'charge.failed',
     event_source: 'stripe',
-    amount: charge.amount / 100,
+    amount: formatAmountFromCents(charge.amount),
     currency: charge.currency.toUpperCase(),
     status: 'failed',
     stripe_event_id: charge.id,
@@ -120,10 +135,12 @@ async function handleChargeFailed(charge: Stripe.Charge) {
 }
 
 async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
-  await supabase.from('billing_events').insert({
+  const database = getDb();
+  await database.insert(ikeBillingEvents).values({
+    id: randomUUID(),
     event_type: 'invoice.payment_succeeded',
     event_source: 'stripe',
-    amount: (invoice.amount_paid || 0) / 100,
+    amount: formatAmountFromCents(invoice.amount_paid),
     currency: invoice.currency?.toUpperCase() || 'USD',
     status: 'succeeded',
     stripe_event_id: invoice.id,
@@ -135,10 +152,12 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
 }
 
 async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
-  await supabase.from('billing_events').insert({
+  const database = getDb();
+  await database.insert(ikeBillingEvents).values({
+    id: randomUUID(),
     event_type: 'invoice.payment_failed',
     event_source: 'stripe',
-    amount: (invoice.amount_due || 0) / 100,
+    amount: formatAmountFromCents(invoice.amount_due),
     currency: invoice.currency?.toUpperCase() || 'USD',
     status: 'failed',
     stripe_event_id: invoice.id,

@@ -1,5 +1,8 @@
 import { Request, Response } from 'express';
-import { supabase } from '../config/supabase';
+import { randomUUID } from 'crypto';
+
+import { getDb } from '../db/mysql';
+import { ikeAgentLogs, ikeBillingEvents } from '../db/schema';
 
 /**
  * Generic billing alert webhook handler
@@ -18,8 +21,12 @@ export const handleBillingAlert = async (req: Request, res: Response) => {
 
     console.log(`Billing alert received from ${alert.source}: ${alert.alert_type}`);
 
+    const database = getDb();
+    const eventId = randomUUID();
+
     // Store the billing event
-    const { data, error } = await supabase.from('billing_events').insert({
+    await database.insert(ikeBillingEvents).values({
+      id: eventId,
       event_type: alert.alert_type,
       event_source: alert.source,
       amount: alert.amount,
@@ -31,15 +38,12 @@ export const handleBillingAlert = async (req: Request, res: Response) => {
         alert_severity: alert.severity,
         alert_message: alert.message,
       },
-    }).select().single();
-
-    if (error) {
-      throw new Error(`Failed to store billing event: ${error.message}`);
-    }
+    });
 
     // Log the alert
-    await supabase.from('agent_logs').insert({
-      trace_id: crypto.randomUUID(),
+    await database.insert(ikeAgentLogs).values({
+      id: randomUUID(),
+      trace_id: randomUUID(),
       level: alert.severity || 'info',
       message: `Billing alert: ${alert.alert_type}`,
       action: 'billing_alert',
@@ -72,7 +76,7 @@ export const handleBillingAlert = async (req: Request, res: Response) => {
     res.json({ 
       success: true, 
       message: 'Billing alert processed',
-      event_id: data.id 
+      event_id: eventId,
     });
   } catch (error: any) {
     console.error('Error processing billing alert:', error);
