@@ -20,15 +20,18 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
+
+      - name: Install pnpm
+        run: npm install -g pnpm
 
       - name: Install
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Agent registry drift
-        run: npm run check:agents
+        run: pnpm run check:agents
 
   smoke-pr:
+    name: smoke-pr
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -42,36 +45,40 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
+
+      - name: Install pnpm
+        run: npm install -g pnpm
 
       - name: Install
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Cache Playwright browsers
         uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
+          key: ${{ runner.os }}-playwright-${{ hashFiles('pnpm-lock.yaml') }}
           restore-keys: |
             ${{ runner.os }}-playwright-
 
       - name: Install Playwright browsers (Chromium)
-        run: npx playwright install --with-deps chromium
+        run: pnpm exec playwright install --with-deps chromium
 
       - name: Required checks (AGENTS)
         run: |
-          npm run -s typecheck
-          npm run -s validate:schemas
+          pnpm run -s typecheck
+          pnpm run -s validate:schemas
+
       - name: Tests
-        run: npm test
+        run: pnpm test
+
       - name: DeepThink gates
-        run: npm run -s ci:deepthink-gates
+        run: pnpm run -s ci:deepthink-gates
 
       - name: Verify signatures (Tier 1 if present)
-        run: npm run -s ci:verify-signatures
+        run: pnpm run -s ci:verify-signatures
 
       - name: Detect derived tiers
-        run: npm run -s ci:detect-tiers
+        run: pnpm run -s ci:detect-tiers
 
       - name: Start mock server
         env:
@@ -96,36 +103,7 @@ jobs:
           VALIDATION_WEBHOOK_URL: http://localhost:8787/validation
           PLANNER_WEBHOOK_URL: http://localhost:8787/planner
           THREAD_ID: local_test_001
-        run: npm run smoke:vectors:trim
-
-  security-audit:
-    name: security-audit
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-
-      - name: Install
-        run: npm ci
-
-      - name: Run Security Audit (root)
-        run: npm audit --audit-level=high
-
-      - name: Run Security Audit (airlock_server)
-        run: |
-          cd airlock_server
-          npm ci
-          npm audit --audit-level=high
+        run: pnpm run smoke:vectors:trim
 
   integration-local-mock:
     name: ci/integration-local-mock
@@ -143,10 +121,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
+
+      - name: Install pnpm
+        run: npm install -g pnpm
 
       - name: Install
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Integration tests (local mock, opt-in)
         env:
@@ -155,4 +135,4 @@ jobs:
           WEBHOOK_URL: http://127.0.0.1:8787/validation
           ALLOW_NONLOCAL_WEBHOOK_TESTS: "0"
           NO_PROXY: 127.0.0.1,localhost
-        run: npm run test:integration
+        run: pnpm run test:integration

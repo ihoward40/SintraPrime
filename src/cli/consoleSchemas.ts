@@ -37,7 +37,7 @@ export const RunDetailsSchema = z.object({
   plan_hash: z.string().nullable(),
   mode: z.enum(["BATCH_APPROVAL", "APPROVAL_GATED"]).nullable(),
   pending_step_ids: z.array(z.string()),
-  agent_versions: z.record(z.string()).optional(),
+  agent_versions: z.record(z.string(), z.string()).optional(),
   prestate: z.array(RunPrestateItemSchema),
   artifacts: z.array(z.string()),
 });
