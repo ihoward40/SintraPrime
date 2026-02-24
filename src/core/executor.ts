@@ -71,6 +71,21 @@ export class Executor {
     }
   }
 
+  /**
+   * Convenience helper for executing tools directly.
+   * This keeps backward-compatibility with callsites that invoke tools without
+   * constructing a full PlanStep.
+   */
+  async executeTool(tool: string, args: any): Promise<any> {
+    const step: PlanStep = {
+      id: `tool_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+      tool,
+      args,
+    } as any;
+
+    return this.executeStep(step);
+  }
+
   // Helper methods
   private generateReceiptId(): string {
     return `receipt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;

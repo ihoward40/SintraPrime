@@ -33,7 +33,7 @@ export const ExecutionStepSchema = z.object({
   prestate_fingerprint: z.string().optional(),
   properties: z.any().optional(),
   guards: z.array(StepGuardSchema).optional(),
-  headers: z.record(z.string()).optional(),
+  headers: z.record(z.string(), z.string()).optional(),
   payload: z.any().optional(),
   expects: z.object({
     http_status: HttpStatusExpectedSchema,
@@ -98,7 +98,7 @@ export const ValidatedCommandSchema = z.object({
   threadId: z.string().optional(),
   intent: z.string().optional(),
   command: z.string().optional(),
-  args: z.record(z.any()).optional(),
+  args: z.record(z.string(), z.any()).optional(),
   denial_reason: z.string().optional(),
   required_inputs: z.array(z.string()).optional(),
   // Optional: validator may override the forwarded command
