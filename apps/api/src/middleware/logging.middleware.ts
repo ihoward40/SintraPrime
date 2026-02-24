@@ -1,7 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { logger } from '../config/logger';
-import { supabase } from '../config/supabase';
+
+import { getDb } from '../db/mysql';
+import { ikeAgentLogs } from '../db/schema';
 
 // Extend Express Request type to include custom properties
 declare global {
@@ -85,12 +87,14 @@ export const responseLogger = (req: Request, res: Response, next: NextFunction) 
 };
 
 /**
- * Save request/response to agent_logs table in Supabase
+ * Save request/response to ike_agent_logs table in MySQL
  */
 async function saveToAgentLogs(req: Request, res: Response, duration: number) {
   const level = res.statusCode >= 500 ? 'error' : res.statusCode >= 400 ? 'warn' : 'info';
 
-  await supabase.from('agent_logs').insert({
+  const database = getDb();
+  await database.insert(ikeAgentLogs).values({
+    id: uuidv4(),
     trace_id: req.traceId || uuidv4(),
     correlation_id: req.correlationId,
     level,
@@ -135,7 +139,9 @@ export const errorLogger = (err: Error, req: Request, res: Response, next: NextF
 };
 
 async function saveErrorToAgentLogs(req: Request, err: Error) {
-  await supabase.from('agent_logs').insert({
+  const database = getDb();
+  await database.insert(ikeAgentLogs).values({
+    id: uuidv4(),
     trace_id: req.traceId || uuidv4(),
     correlation_id: req.correlationId,
     level: 'error',

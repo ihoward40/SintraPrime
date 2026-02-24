@@ -1,5 +1,8 @@
 import { Request, Response } from 'express';
-import { supabase } from '../config/supabase';
+import { randomUUID } from 'crypto';
+
+import { getDb } from '../db/mysql';
+import { ikeAgentLogs } from '../db/schema';
 
 /**
  * Handle webhooks from email providers (SendGrid, Postmark)
@@ -29,8 +32,10 @@ export const handleSendGridWebhook = async (req: Request, res: Response) => {
 
 async function processSendGridEvent(event: any) {
   // Log the event
-  await supabase.from('agent_logs').insert({
-    trace_id: crypto.randomUUID(),
+  const database = getDb();
+  await database.insert(ikeAgentLogs).values({
+    id: randomUUID(),
+    trace_id: randomUUID(),
     level: 'info',
     message: `SendGrid event: ${event.event}`,
     action: 'email_event',
@@ -78,8 +83,10 @@ export const handlePostmarkWebhook = async (req: Request, res: Response) => {
 
 async function processPostmarkEvent(event: any) {
   // Log the event
-  await supabase.from('agent_logs').insert({
-    trace_id: crypto.randomUUID(),
+  const database = getDb();
+  await database.insert(ikeAgentLogs).values({
+    id: randomUUID(),
+    trace_id: randomUUID(),
     level: 'info',
     message: `Postmark event: ${event.RecordType}`,
     action: 'email_event',
@@ -116,8 +123,10 @@ export const handleInboundEmail = async (req: Request, res: Response) => {
     console.log('Inbound email received from:', email.from || email.From);
 
     // Log the inbound email
-    await supabase.from('agent_logs').insert({
-      trace_id: crypto.randomUUID(),
+    const database = getDb();
+    await database.insert(ikeAgentLogs).values({
+      id: randomUUID(),
+      trace_id: randomUUID(),
       level: 'info',
       message: 'Inbound email received',
       action: 'inbound_email',
