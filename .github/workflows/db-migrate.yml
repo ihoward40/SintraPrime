@@ -34,10 +34,13 @@ jobs:
         with:
           node-version: 20
           cache: pnpm
-      - name: Install deps
+          cache-dependency-path: webapp/pnpm-lock.yaml
+      - name: Install deps (webapp)
+        working-directory: webapp
         run: pnpm install --frozen-lockfile --prod=false
       - name: Apply Drizzle migrations (staging)
-        run: pnpm -C webapp exec drizzle-kit migrate
+        working-directory: webapp
+        run: pnpm exec drizzle-kit migrate
 
   migrate-prod:
     if: ${{ inputs.target == 'prod' }}
@@ -54,7 +57,10 @@ jobs:
         with:
           node-version: 20
           cache: pnpm
-      - name: Install deps
+          cache-dependency-path: webapp/pnpm-lock.yaml
+      - name: Install deps (webapp)
+        working-directory: webapp
         run: pnpm install --frozen-lockfile --prod=false
       - name: Apply Drizzle migrations (prod)
-        run: pnpm -C webapp exec drizzle-kit migrate
+        working-directory: webapp
+        run: pnpm exec drizzle-kit migrate
