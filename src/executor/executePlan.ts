@@ -12,6 +12,7 @@ import { getIdempotencyRecord, writeIdempotencyRecord } from "../idempotency/ide
 import { runBrowserOperatorStep } from "../browserOperator/runBrowserOperator.js";
 import { browserL0DomExtract, browserL0Navigate, browserL0Screenshot } from "../browserOperator/l0.js";
 import { evidenceRollupSha256 } from "../receipts/evidenceRollup.js";
+import { evaluateGuards, pinnedInputSha256 } from "../guards/index.js";
 
 type RunStatus =
   | "running"
@@ -36,6 +37,7 @@ export type StepRunLog = {
   status: StepStatus;
   http_status: number | null;
   response: unknown;
+  guard?: ReturnType<typeof evaluateGuards>;
   expectations: {
     http_status_expected: number[];
     http_status_ok: boolean;
@@ -54,6 +56,38 @@ export type StepRunLog = {
     }>;
   };
 };
+
+function maybeEvaluateStepGuards(step: ExecutionStep, stepOut: unknown) {
+  const payload = (step as any).payload;
+  if (!payload || typeof payload !== "object") return null;
+
+  const guard = (payload as any).guard ?? null;
+  const src = guard && typeof guard === "object" ? guard : payload;
+
+  const mode = (src as any).guard_mode;
+  if (mode !== "CODE_IS_SOURCE" && mode !== "GROUNDED_OUTPUT") return null;
+
+  const renderedPrompt = (src as any).rendered_prompt;
+  const pinnedInputText = (src as any).pinned_input_text;
+  const strict = (src as any).strict === true;
+
+  if (typeof renderedPrompt !== "string" || typeof pinnedInputText !== "string") return null;
+
+  const pinnedCode = typeof (src as any).pinned_code === "string" ? (src as any).pinned_code : undefined;
+  const inputTextForGrounding =
+    typeof (src as any).input_text_for_grounding === "string" ? (src as any).input_text_for_grounding : undefined;
+
+  return evaluateGuards({
+    mode,
+    strict,
+    renderedPrompt,
+    pinnedInputText,
+    pinnedInputSha: pinnedInputSha256(pinnedInputText),
+    stepOut,
+    pinnedCode,
+    inputTextForGrounding,
+  });
+}
 
 export type ExecutePlanOptions = {
   onStepFinished?: (args: {
@@ -601,7 +635,19 @@ export async function executePlan(rawPlan: unknown, opts: ExecutePlanOptions = {
             stepLog.expectations.json_paths_ok = jsonPathsOk;
           }
 
-          const ok = out.ok && statusOk && (step.expects.json_paths_present ? jsonPathsOk : true);
+          let ok = out.ok && statusOk && (step.expects.json_paths_present ? jsonPathsOk : true);
+
+          const guardEval = maybeEvaluateStepGuards(step, stepLog.response);
+          if (guardEval) {
+            stepLog.guard = guardEval;
+            if (guardEval.run_status !== "COMPLETED") {
+              ok = false;
+              const why = `Guard blocked (${guardEval.run_status})`;
+              const detail = guardEval.errors.length ? `: ${guardEval.errors.join(";")}` : "";
+              stepLog.error = stepLog.error ? `${stepLog.error}. ${why}${detail}` : `${why}${detail}`;
+            }
+          }
+
           stepLog.status = ok ? "success" : "failed";
 
           if (!ok) {
