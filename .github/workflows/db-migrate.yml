@@ -37,10 +37,10 @@ jobs:
           cache-dependency-path: webapp/pnpm-lock.yaml
       - name: Install deps (webapp)
         working-directory: webapp
-        run: pnpm install --frozen-lockfile --prod=false
+        run: pnpm install --frozen-lockfile --prod=false --ignore-workspace
       - name: Apply Drizzle migrations (staging)
         working-directory: webapp
-        run: pnpm exec drizzle-kit migrate
+        run: pnpm --ignore-workspace exec drizzle-kit migrate
 
   migrate-prod:
     if: ${{ inputs.target == 'prod' }}
@@ -60,7 +60,7 @@ jobs:
           cache-dependency-path: webapp/pnpm-lock.yaml
       - name: Install deps (webapp)
         working-directory: webapp
-        run: pnpm install --frozen-lockfile --prod=false
+        run: pnpm install --frozen-lockfile --prod=false --ignore-workspace
       - name: Apply Drizzle migrations (prod)
         working-directory: webapp
-        run: pnpm exec drizzle-kit migrate
+        run: pnpm --ignore-workspace exec drizzle-kit migrate
