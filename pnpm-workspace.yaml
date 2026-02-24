@@ -1,5 +1,3 @@
 packages:
   - 'packages/*'
-workspaces:
-  - 'packages/**'
-  - 'apps/**'
+  - 'apps/*'

@@ -7,6 +7,28 @@
 import { v4 as uuidv4 } from 'uuid';
 import { openai, calculateCost, logAIOperation, withOpenAIErrorHandling } from '../client';
 
+function extractResponseText(response: any): string {
+  if (typeof response?.output_text === 'string') {
+    return response.output_text;
+  }
+
+  const content = response?.output?.[0]?.content;
+  if (typeof content === 'string') {
+    return content;
+  }
+
+  if (Array.isArray(content)) {
+    const parts = content
+      .map((part: any) => (typeof part?.text === 'string' ? part.text : ''))
+      .filter(Boolean);
+    if (parts.length > 0) {
+      return parts.join('');
+    }
+  }
+
+  return '';
+}
+
 export interface TextGenerationOptions {
   model?: string;
   maxTokens?: number;
@@ -38,16 +60,16 @@ export async function generateText(
   const operationId = uuidv4();
 
   const result = await withOpenAIErrorHandling(async () => {
-    const response = await openai.responses.create({
+    const response: any = await openai.responses.create({
       model,
       input: prompt,
       instructions,
-      max_tokens: maxTokens,
+      max_output_tokens: maxTokens,
       temperature,
-    });
+    } as any);
 
-    const text = response.output?.[0]?.content || '';
-    const tokensUsed = response.usage?.total_tokens || 0;
+    const text = extractResponseText(response);
+    const tokensUsed = response?.usage?.total_tokens ?? 0;
     const costUsd = calculateCost(tokensUsed, model);
 
     // Log operation
@@ -86,18 +108,21 @@ export async function* generateTextStreaming(
     instructions,
   } = options;
 
-  const stream = await openai.responses.create({
+  const stream: any = await openai.responses.create({
     model,
     input: prompt,
     instructions,
-    max_tokens: maxTokens,
+    max_output_tokens: maxTokens,
     temperature,
     stream: true,
-  });
+  } as any);
 
   for await (const chunk of stream) {
-    const delta = chunk.output?.[0]?.content_delta;
-    if (delta) {
+    const delta =
+      chunk?.delta?.text ??
+      chunk?.output_text?.delta ??
+      chunk?.output?.[0]?.content_delta;
+    if (typeof delta === 'string' && delta.length > 0) {
       yield delta;
     }
   }
@@ -119,7 +144,7 @@ export async function generateStructured<T>(
   const operationId = uuidv4();
 
   const result = await withOpenAIErrorHandling(async () => {
-    const response = await openai.responses.create({
+    const response: any = await openai.responses.create({
       model,
       input: prompt,
       instructions,
@@ -131,11 +156,11 @@ export async function generateStructured<T>(
           schema: schema,
         },
       },
-    });
+    } as any);
 
-    const output = response.output?.[0]?.content || '{}';
+    const output = extractResponseText(response) || '{}';
     const parsed = JSON.parse(output);
-    const tokensUsed = response.usage?.total_tokens || 0;
+    const tokensUsed = response?.usage?.total_tokens ?? 0;
     const costUsd = calculateCost(tokensUsed, model);
 
     // Log operation
@@ -181,15 +206,15 @@ export async function chat(
   const prompt = context ? `${context}\n\n${lastMessage.content}` : lastMessage.content;
 
   const result = await withOpenAIErrorHandling(async () => {
-    const response = await openai.responses.create({
+    const response: any = await openai.responses.create({
       model,
       input: prompt,
-      max_tokens: maxTokens,
+      max_output_tokens: maxTokens,
       temperature,
-    });
+    } as any);
 
-    const text = response.output?.[0]?.content || '';
-    const tokensUsed = response.usage?.total_tokens || 0;
+    const text = extractResponseText(response);
+    const tokensUsed = response?.usage?.total_tokens ?? 0;
     const costUsd = calculateCost(tokensUsed, model);
 
     // Log operation

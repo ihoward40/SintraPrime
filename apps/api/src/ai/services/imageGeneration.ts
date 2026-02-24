@@ -53,8 +53,8 @@ export async function generateImage(
       n: 1,
     });
 
-    const imageUrl = response.data[0]?.url;
-    const revisedPrompt = response.data[0]?.revised_prompt;
+    const imageUrl = response.data?.[0]?.url;
+    const revisedPrompt = response.data?.[0]?.revised_prompt;
     const costUsd = calculateCost(1, model); // Per image cost
 
     let localPath: string | undefined;
@@ -112,19 +112,32 @@ export async function generateImageWithGPT(
   const operationId = uuidv4();
 
   const result = await withOpenAIErrorHandling(async () => {
-    const response = await openai.responses.create({
+    const response: any = await openai.responses.create({
       model: 'gpt-5', // GPT-5 with image generation tool
       input: `Generate an image: ${prompt}`,
       tools: [{ type: 'image_generation' }],
-    });
+    } as any);
 
     // Extract base64 image data from response
-    const output = response.output?.[0];
+    const output: any = response?.output?.[0];
     let imageData: Buffer | undefined;
     let localPath: string | undefined;
 
-    if (output?.type === 'image' && output.image_data) {
-      imageData = Buffer.from(output.image_data, 'base64');
+    const candidates: Array<any> = [output, ...(Array.isArray(response?.output) ? response.output : [])];
+    for (const item of candidates) {
+      const b64 =
+        item?.image_data ??
+        item?.b64_json ??
+        item?.result?.b64_json ??
+        item?.result?.image_data;
+
+      if (typeof b64 === 'string' && b64.length > 0) {
+        imageData = Buffer.from(b64, 'base64');
+        break;
+      }
+    }
+
+    if (imageData) {
 
       // Save to file if output path specified
       if (outputPath) {
@@ -134,7 +147,7 @@ export async function generateImageWithGPT(
       }
     }
 
-    const tokensUsed = response.usage?.total_tokens || 0;
+    const tokensUsed = response?.usage?.total_tokens ?? 0;
     const costUsd = calculateCost(tokensUsed, 'gpt-5');
 
     // Log operation
