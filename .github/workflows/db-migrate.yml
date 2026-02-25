@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: staging
     env:
-      DATABASE_URL: ${{ secrets.DATABASE_URL || secrets.STAGING_DATABASE_URL }}
+      DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -47,7 +47,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     env:
-      DATABASE_URL: ${{ secrets.DATABASE_URL || secrets.PROD_DATABASE_URL }}
+      DATABASE_URL: ${{ secrets.PROD_DATABASE_URL }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
