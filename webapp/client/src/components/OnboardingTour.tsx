@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import Joyride, { Step, CallBackProps, STATUS } from "react-joyride";
+import Joyride, { Step, CallBackProps, STATUS, ACTIONS } from "react-joyride";
 
 interface OnboardingTourProps {
   page: "notebooklm" | "mission-control" | "dashboard";
@@ -90,10 +90,11 @@ export function OnboardingTour({ page }: OnboardingTourProps) {
   }, [page]);
 
   const handleJoyrideCallback = (data: CallBackProps) => {
-    const { status } = data;
+    const { status, action } = data;
     const finishedStatuses: string[] = [STATUS.FINISHED, STATUS.SKIPPED];
 
-    if (finishedStatuses.includes(status)) {
+    // Mark tour as completed when finished, skipped, or closed via X button
+    if (finishedStatuses.includes(status) || action === ACTIONS.CLOSE) {
       setRun(false);
       // Mark tour as completed
       localStorage.setItem(`tour-completed-${page}`, "true");
