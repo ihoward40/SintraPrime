@@ -1,24 +1,37 @@
 services:
-  # SintraPrime Service
   - type: web
-    name: sintraprime
-    env: node
-    region: oregon
-    plan: free
-    buildCommand: pnpm install && pnpm run build
-    startCommand: pnpm start
+    name: sintraprime-webapp
+    runtime: docker
+    dockerfilePath: ./Dockerfile.webapp
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
-        value: 10000
-      - key: OPENAI_API_KEY
-        sync: false
-      - key: OPENAI_API_BASE
-        value: https://api.openai.com/v1
-      - key: SPEECH_TIERS
-        value: S3,S5
-      - key: AIRLOCK_HMAC_SECRET
+        value: "3002"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: sintraprime-db
+          property: connectionString
+      - key: JWT_SECRET
         generateValue: true
-      - key: AIRLOCK_PORT
-        value: 3001
+      - key: REDIS_URL
+        fromService:
+          name: sintraprime-redis
+          type: redis
+          property: connectionString
+      - key: SINTRA_AIRLOCK_URL
+        value: http://sintraprime-airlock:3000
+      - key: SINTRA_BRAIN_URL
+        value: http://sintraprime-brain:8011
+      - key: SINTRA_API_URL
+        value: http://sintraprime-fastapi:8000
+
+  - type: redis
+    name: sintraprime-redis
+    plan: free
+    maxmemoryPolicy: allkeys-lru
+
+databases:
+  - name: sintraprime-db
+    databaseName: sintraprime
+    plan: free
