@@ -1,0 +1,116 @@
+{
+  "version": "2.0.0",
+  "integration_date": "2026-02-26",
+  "description": "SintraPrime Services Integration Map — maps API services to agent capabilities",
+  "services": {
+    "ai_providers": {
+      "minimax_m2": {
+        "name": "MiniMax-M2",
+        "env_key": "MINIMAX_API_KEY",
+        "base_url": "https://api.minimax.chat/v1",
+        "capabilities": ["text-generation", "multimodal", "video-generation", "audio-generation"],
+        "agents": ["SintraPrime-Core", "ContentAgent", "MediaAgent"],
+        "use_cases": ["content creation", "multimedia generation", "presentation slides"],
+        "documentation": "https://www.minimax.io/docs"
+      },
+      "moonshot_kimi": {
+        "name": "Moonshot AI (Kimi)",
+        "env_key": "KIMI_API_KEY",
+        "base_url": "https://api.moonshot.cn/v1",
+        "model": "moonshot-v1-128k",
+        "context_window": 128000,
+        "capabilities": ["long-context-reasoning", "document-analysis", "code-generation"],
+        "agents": ["ContractAnalysisAgent", "FCRADisputeAgent", "LegalComplianceAgent", "SintraPrime-Core"],
+        "use_cases": ["contract analysis", "FCRA dispute letters", "long document review", "legal research"],
+        "documentation": "https://platform.moonshot.cn/docs"
+      },
+      "venice_ai": {
+        "name": "Venice.AI",
+        "env_key": "VENICE_API_KEY",
+        "base_url": "https://api.venice.ai/api/v1",
+        "capabilities": ["privacy-preserving-inference", "uncensored-models", "local-inference"],
+        "agents": ["SintraPrime-Core", "LegalComplianceAgent", "FinancialAnalysisAgent"],
+        "use_cases": ["sensitive legal analysis", "private financial data processing", "confidential document review"],
+        "documentation": "https://docs.venice.ai"
+      }
+    },
+    "google_services": {
+      "gmail_ikeos": {
+        "name": "Google Gmail (IkeOS)",
+        "env_key": "GOOGLE_APP_PASSWORD",
+        "email": "ikeos@gmail.com",
+        "capabilities": ["email-send", "email-receive", "email-search"],
+        "agents": ["ARAutomationAgent", "LeadGenerationAgent", "WorkflowOrchestrationAgent"],
+        "use_cases": ["AR invoice reminders", "lead nurture emails", "client communications", "dispute letter delivery"]
+      }
+    },
+    "automation": {
+      "make_com": {
+        "name": "Make.com MCP",
+        "env_key": "MAKE_MCP_KEY",
+        "base_url": "https://api.make.com",
+        "capabilities": ["scenario-execution", "webhook-management", "workflow-automation"],
+        "agents": ["WorkflowOrchestrationAgent", "SintraPrime-Core", "ARAutomationAgent"],
+        "use_cases": ["multi-step workflow automation", "webhook orchestration", "cross-platform integrations"],
+        "documentation": "https://www.make.com/en/api-documentation"
+      }
+    },
+    "communication": {
+      "slack": {
+        "name": "Slack",
+        "app_id": "A0AHE7LSNAG",
+        "env_keys": {
+          "client_id": "SLACK_CLIENT_ID",
+          "client_secret": "SLACK_CLIENT_SECRET",
+          "signing_secret": "SLACK_SIGNING_SECRET"
+        },
+        "capabilities": ["messaging", "notifications", "bot-interactions", "channel-management"],
+        "agents": ["SintraPrime-Core", "WorkflowOrchestrationAgent", "ARAutomationAgent"],
+        "use_cases": ["agent status notifications", "alert routing", "team collaboration", "workflow triggers"]
+      }
+    },
+    "knowledge_base": {
+      "notion": {
+        "name": "Notion",
+        "env_keys": {
+          "oauth_client_id": "NOTION_OAUTH_CLIENT_ID",
+          "oauth_secret": "NOTION_OAUTH_SECRET"
+        },
+        "capabilities": ["page-creation", "database-management", "knowledge-retrieval", "audit-logging"],
+        "agents": ["ALL"],
+        "use_cases": ["agent knowledge base", "task logging", "skill documentation", "audit trails"]
+      }
+    },
+    "storage": {
+      "cloudflare_r2": {
+        "name": "Cloudflare R2",
+        "env_keys": {
+          "token": "CLOUDFLARE_R2_TOKEN",
+          "access_key": "S3_ACCESS_KEY",
+          "secret_key": "S3_SECRET_KEY"
+        },
+        "endpoint": "https://95519f0179d85938031ebe3df9f7876c.r2.cloudflarestorage.com",
+        "bucket": "sintraprime-uploads",
+        "region": "auto",
+        "capabilities": ["file-storage", "document-storage", "media-storage", "backup"],
+        "agents": ["ALL"],
+        "use_cases": ["dispute letter storage", "contract document storage", "evidence preservation", "audit artifacts"]
+      }
+    }
+  },
+  "agent_service_map": {
+    "SintraPrime-Core": ["minimax_m2", "moonshot_kimi", "venice_ai", "make_com", "slack", "notion", "cloudflare_r2"],
+    "FCRADisputeAgent": ["moonshot_kimi", "venice_ai", "notion", "cloudflare_r2", "gmail_ikeos"],
+    "DebtValidationAgent": ["moonshot_kimi", "venice_ai", "notion", "cloudflare_r2"],
+    "TCPAFDCPAAgent": ["moonshot_kimi", "venice_ai", "notion", "cloudflare_r2"],
+    "ContractAnalysisAgent": ["moonshot_kimi", "venice_ai", "notion", "cloudflare_r2"],
+    "ARAutomationAgent": ["make_com", "gmail_ikeos", "slack", "notion", "cloudflare_r2"],
+    "LeadGenerationAgent": ["minimax_m2", "make_com", "gmail_ikeos", "slack", "notion"],
+    "WorkflowOrchestrationAgent": ["make_com", "slack", "notion", "cloudflare_r2"],
+    "FinancialAnalysisAgent": ["moonshot_kimi", "venice_ai", "notion", "cloudflare_r2"],
+    "WealthManagementAgent": ["moonshot_kimi", "venice_ai", "notion", "cloudflare_r2"],
+    "InvestmentBankingAgent": ["moonshot_kimi", "venice_ai", "notion", "cloudflare_r2"],
+    "PrivateEquityAgent": ["moonshot_kimi", "venice_ai", "notion", "cloudflare_r2"],
+    "PresentationAgent": ["minimax_m2", "notion", "cloudflare_r2"]
+  }
+}

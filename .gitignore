@@ -116,3 +116,6 @@ clawdbot-integration/workspace/
 
 # Generated Python bytecode cache (local runtime output)
 clawdbot-integration/skills/claude-code-clawdbot/scripts/__pycache__/
+
+# API Keys (never commit real keys)
+config/api-keys.env

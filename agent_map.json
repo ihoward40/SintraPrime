@@ -1,4 +1,6 @@
 {
+  "version": "2.0.0",
+  "last_updated": "2026-02-26",
   "code_agents": [
     "CreditGuardian",
     "EcommerceAutomationAgent",
@@ -34,6 +36,19 @@
     "Penn",
     "Milli",
     "Cassie"
+  ],
+  "high_roi_skills_agents": [
+    "FCRA_Dispute_Automation_Agent",
+    "Debt_Validation_Agent",
+    "TCPA_FDCPA_Violation_Tracker_Agent",
+    "Contract_Analysis_Agent",
+    "Accounts_Receivable_Agent",
+    "Lead_Generation_Qualification_Agent",
+    "Financial_Analysis_Agent",
+    "Wealth_Management_Agent",
+    "Investment_Banking_Agent",
+    "Private_Equity_Agent",
+    "Frontend_Slides_Agent"
   ],
   "legacy_archive": [
     "Core Engineer",
