@@ -25,7 +25,12 @@ export function registerStripeWebhook(app: Express) {
       try {
         if (webhookSecret && sig) {
           event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
+        } else if (process.env.NODE_ENV === "production") {
+          console.error("[Stripe Webhook] Missing webhook secret or signature in production");
+          return res.status(400).json({ error: "Webhook signature verification required in production" });
         } else {
+          // Only allow unverified webhooks in development
+          console.warn("[Stripe Webhook] WARNING: Processing unverified webhook in development mode");
           event = JSON.parse(req.body.toString());
         }
       } catch (err: any) {

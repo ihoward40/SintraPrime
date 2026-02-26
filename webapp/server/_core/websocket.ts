@@ -11,7 +11,9 @@ export function getSocketIO(): SocketIOServer | null {
 export function setupWebSocket(httpServer: HttpServer) {
   const io = new SocketIOServer(httpServer, {
     cors: {
-      origin: "*", // In production, specify allowed origins
+      origin: process.env.NODE_ENV === "production"
+        ? (process.env.ALLOWED_ORIGINS || "https://sintraprime.manus.space").split(",")
+        : "*",
       methods: ["GET", "POST"],
     },
   });

@@ -40,7 +40,7 @@ class IntelligenceWebSocketService {
   initialize(httpServer: HTTPServer): void {
     this.io = new SocketIOServer(httpServer, {
       cors: {
-        origin: "*", // Configure based on your needs
+        origin: process.env.NODE_ENV === "production" ? (process.env.ALLOWED_ORIGINS || "https://sintraprime.manus.space").split(",") : "*",
         methods: ["GET", "POST"],
       },
       path: "/intelligence-ws",
