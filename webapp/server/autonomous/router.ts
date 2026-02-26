@@ -1,121 +1,105 @@
-import { z } from "zod";
-import { protectedProcedure, router } from "../_core/trpc";
-import * as db from "../db";
+import { Router } from "express";
+import { 
+  createAutonomousTask,
+  getAutonomousTaskById,
+  getAutonomousTasksByUserId,
+  updateAutonomousTask,
+  deleteAutonomousTask
+} from "../db/autonomous-helpers";
 
-export const autonomousRouter = router({
-  // Create a new autonomous task
-  createTask: protectedProcedure
-    .input(
-      z.object({
-        title: z.string().min(1).max(500),
-        description: z.string().optional(),
-        objective: z.string().optional(),
-        priority: z.enum(["low", "medium", "high", "critical"]).optional(),
-        context: z.string().optional(),
-        assignedAgentId: z.string().optional(),
-        executionPlan: z.any().optional(),
-        tags: z.array(z.string()).optional(),
-      })
-    )
-    .mutation(async ({ input, ctx }) => {
-      return await db.createAutonomousTask({
-        userId: ctx.user.id,
-        title: input.title,
-        description: input.description,
-        objective: input.objective,
-        priority: input.priority || "medium",
-        status: "queued",
-        context: input.context,
-        assignedAgentId: input.assignedAgentId,
-        executionPlan: input.executionPlan,
-        tags: input.tags,
+const router = Router();
+
+// POST /autonomous/tasks - Create a new autonomous task
+router.post("/tasks", async (req, res) => {
+  try {
+    const { userId, title, description, objective, priority, tags } = req.body;
+    
+    // Validate required fields
+    if (!userId || !title || !objective) {
+      return res.status(400).json({
+        error: "Missing required fields: userId, title, objective"
       });
-    }),
+    }
 
-  // Get task by ID
-  getTask: protectedProcedure
-    .input(z.object({ id: z.number() }))
-    .query(async ({ input }) => {
-      return await db.getAutonomousTaskById(input.id);
-    }),
+    const task = await createAutonomousTask({
+      userId,
+      title,
+      description: description || null,
+      objective,
+      priority: priority || "medium",
+      tags: tags || []
+    });
 
-  // Get all tasks for current user
-  getUserTasks: protectedProcedure
-    .input(
-      z.object({
-        status: z.enum(["pending", "running", "completed", "failed", "queued"]).optional(),
-      })
-    )
-    .query(async ({ input, ctx }) => {
-      const tasks = await db.getAutonomousTasksByUserId(ctx.user.id);
-      
-      if (input.status) {
-        return tasks.filter(t => t.status === input.status);
-      }
-      return tasks;
-    }),
-
-  // Update task
-  updateTask: protectedProcedure
-    .input(
-      z.object({
-        id: z.number(),
-        title: z.string().optional(),
-        description: z.string().optional(),
-        objective: z.string().optional(),
-        priority: z.enum(["low", "medium", "high", "critical"]).optional(),
-        status: z.enum(["pending", "running", "completed", "failed", "queued"]).optional(),
-        context: z.string().optional(),
-        assignedAgentId: z.string().optional(),
-        executionPlan: z.any().optional(),
-        result: z.any().optional(),
-        aiTokensUsed: z.number().optional(),
-        executionTimeMs: z.number().optional(),
-        startedAt: z.date().optional(),
-        completedAt: z.date().optional(),
-        tags: z.array(z.string()).optional(),
-      })
-    )
-    .mutation(async ({ input }) => {
-      return await db.updateAutonomousTask(input.id, {
-        title: input.title,
-        description: input.description,
-        objective: input.objective,
-        priority: input.priority,
-        status: input.status,
-        context: input.context,
-        assignedAgentId: input.assignedAgentId,
-        executionPlan: input.executionPlan,
-        result: input.result,
-        aiTokensUsed: input.aiTokensUsed,
-        executionTimeMs: input.executionTimeMs,
-        startedAt: input.startedAt,
-        completedAt: input.completedAt,
-        tags: input.tags,
-      });
-    }),
-
-  // Delete task
-  deleteTask: protectedProcedure
-    .input(z.object({ id: z.number() }))
-    .mutation(async ({ input }) => {
-      return await db.deleteAutonomousTask(input.id);
-    }),
-
-  // Get task stats
-  getStats: protectedProcedure
-    .query(async ({ ctx }) => {
-      const tasks = await db.getAutonomousTasksByUserId(ctx.user.id);
-      
-      const stats = {
-        total: tasks.length,
-        queued: tasks.filter(t => t.status === "queued").length,
-        running: tasks.filter(t => t.status === "running").length,
-        completed: tasks.filter(t => t.status === "completed").length,
-        failed: tasks.filter(t => t.status === "failed").length,
-        pending: tasks.filter(t => t.status === "pending").length,
-      };
-      
-      return stats;
-    }),
+    res.status(201).json(task);
+  } catch (error) {
+    console.error("Error creating autonomous task:", error);
+    res.status(500).json({ error: "Failed to create autonomous task" });
+  }
 });
+
+// GET /autonomous/tasks/:id - Get a specific task
+router.get("/tasks/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const task = await getAutonomousTaskById(parseInt(id));
+    
+    if (!task) {
+      return res.status(404).json({ error: "Task not found" });
+    }
+    
+    res.json(task);
+  } catch (error) {
+    console.error("Error fetching task:", error);
+    res.status(500).json({ error: "Failed to fetch task" });
+  }
+});
+
+// GET /autonomous/tasks/user/:userId - Get tasks for a user
+router.get("/user/:userId", async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const tasks = await getAutonomousTasksByUserId(userId);
+    res.json(tasks);
+  } catch (error) {
+    console.error("Error fetching user tasks:", error);
+    res.status(500).json({ error: "Failed to fetch user tasks" });
+  }
+});
+
+// PUT /autonomous/tasks/:id - Update a task
+router.put("/tasks/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+    
+    const updated = await updateAutonomousTask(parseInt(id), updates);
+    
+    if (!updated) {
+      return res.status(404).json({ error: "Task not found" });
+    }
+    
+    res.json(updated);
+  } catch (error) {
+    console.error("Error updating task:", error);
+    res.status(500).json({ error: "Failed to update task" });
+  }
+});
+
+// DELETE /autonomous/tasks/:id - Delete a task
+router.delete("/tasks/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const success = await deleteAutonomousTask(parseInt(id));
+    
+    if (!success) {
+      return res.status(404).json({ error: "Task not found" });
+    }
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Error deleting task:", error);
+    res.status(500).json({ error: "Failed to delete task" });
+  }
+});
+
+export default router;
