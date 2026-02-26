@@ -44,6 +44,18 @@ async function startServer() {
   const app = express();
   const server = createServer(app);
   
+  // Run database migrations on startup
+  try {
+    const { migrate } = await import("drizzle-orm/mysql2/migrator");
+    const db = (await import("../db.ts")).default;
+    console.log("Running database migrations...");
+    await migrate(db, { migrationsFolder: "./webapp/drizzle" });
+    console.log("Database migrations completed successfully");
+  } catch (error) {
+    console.warn("Database migration warning (non-blocking):", error);
+    // Don't block server startup if migrations fail
+  }
+  
   // Initialize WebSocket servers
   setupWebSocket(server);
   intelligenceWebSocket.initialize(server);
