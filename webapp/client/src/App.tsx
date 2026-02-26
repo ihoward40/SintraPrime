@@ -159,9 +159,11 @@ function Router() {
       <Route path={"/integrations/make"} component={MakeIntegration} />
       <Route path={"/trigger-analytics"} component={TriggerAnalytics} />
       <Route path={"/trigger-test"} component={TriggerTester} />
-      <Route path={"/trigger-alert-settings"} component={TriggerAlertSettings} />      <Route path={" /trigger-history"} component={TriggerExecutionHistory} />
-      <Route path={" /trigger-dashboard"} component={TriggerDashboard} />
-      <Route path={" /trigger-optimizer"} component={TriggerOptimizer} />      <Route path="/governance/approvals" component={ApprovalWorkflow} />
+      <Route path={"/trigger-alert-settings"} component={TriggerAlertSettings} />
+      <Route path={"/trigger-history"} component={TriggerExecutionHistory} />
+      <Route path={"/trigger-dashboard"} component={TriggerDashboard} />
+      <Route path={"/trigger-optimizer"} component={TriggerOptimizer} />
+      <Route path="/governance/approvals" component={ApprovalWorkflow} />
       <Route path="/admin" component={AdminDashboard} />
       <Route path="/governance/settings" component={GovernanceSettings} />
       <Route path="/governance/audit-log" component={GovernanceAuditLog} />

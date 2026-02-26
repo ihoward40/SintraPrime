@@ -4,13 +4,15 @@ import { adminProcedure, publicProcedure, router } from "./trpc";
 
 export const systemRouter = router({
   health: publicProcedure
-    .input(
-      z.object({
-        timestamp: z.number().min(0, "timestamp cannot be negative"),
-      })
-    )
     .query(() => ({
       ok: true,
+      timestamp: Date.now(),
+    })),
+
+  version: publicProcedure
+    .query(() => ({
+      version: "3.0.0",
+      name: "SintraPrime",
     })),
 
   notifyOwner: adminProcedure
