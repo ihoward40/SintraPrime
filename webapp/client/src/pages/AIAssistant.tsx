@@ -248,9 +248,9 @@ export default function AIAssistant() {
 
   return (
     <DashboardLayout>
-      <div className="h-[calc(100vh-4rem)] flex gap-4">
+      <div className="h-[calc(100vh-4rem)] flex gap-4 overflow-hidden">
         {/* Sidebar - Conversation History */}
-        <Card className="w-80 flex flex-col">
+        <Card className="w-80 shrink-0 flex flex-col">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg flex items-center gap-2">
@@ -325,7 +325,7 @@ export default function AIAssistant() {
         </Card>
 
         {/* Main Content */}
-        <Card className="flex-1 flex flex-col">
+        <Card className="flex-1 min-w-0 flex flex-col">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
