@@ -63,12 +63,17 @@ function BarChartSimple({ data, labelKey, valueKey, colorFn }: {
   valueKey: string;
   colorFn?: (item: any) => string;
 }) {
-  if (!data.length) return <p className="text-sm text-muted-foreground text-center py-4">No data available</p>;
-  const maxValue = Math.max(...data.map(d => d[valueKey]));
+  // FIXED: Added explicit array guard before accessing data.length
+  const safeData = Array.isArray(data) ? data : [];
+  if (!safeData.length) return <p className="text-sm text-muted-foreground text-center py-4">No data available</p>;
+  
+  // FIXED: Added array guard before Math.max with .map() call (Line 67)
+  const maxValue = Math.max(...safeData.map(d => d[valueKey]));
 
   return (
     <div className="space-y-3">
-      {data.map((item, i) => {
+      {/* FIXED: Using safeData instead of data to prevent "undefined.map is not a function" error (Line 71) */}
+      {safeData.map((item, i) => {
         const pct = maxValue > 0 ? (item[valueKey] / maxValue) * 100 : 0;
         const color = colorFn ? colorFn(item) : "bg-primary";
         return (
@@ -96,7 +101,9 @@ function DonutChart({ data, labelKey, valueKey, colorFn }: {
   valueKey: string;
   colorFn?: (item: any) => string;
 }) {
-  const total = data.reduce((sum, d) => sum + d[valueKey], 0);
+  // FIXED: Added explicit array guard to prevent undefined.reduce error
+  const safeData = Array.isArray(data) ? data : [];
+  const total = safeData.reduce((sum, d) => sum + d[valueKey], 0);
   if (total === 0) return <p className="text-sm text-muted-foreground text-center py-8">No data available</p>;
 
   const colors = [
@@ -105,7 +112,8 @@ function DonutChart({ data, labelKey, valueKey, colorFn }: {
   ];
 
   let cumulativePercent = 0;
-  const segments = data.map((item, i) => {
+  // FIXED: Using safeData instead of data to prevent "undefined.map is not a function" error (Line 108)
+  const segments = safeData.map((item, i) => {
     const percent = (item[valueKey] / total) * 100;
     const startAngle = (cumulativePercent / 100) * 360;
     const endAngle = ((cumulativePercent + percent) / 100) * 360;
@@ -116,7 +124,8 @@ function DonutChart({ data, labelKey, valueKey, colorFn }: {
   return (
     <div className="flex items-center gap-6">
       <svg viewBox="0 0 100 100" className="w-32 h-32 shrink-0 -rotate-90">
-        {segments.map((seg, i) => {
+        {/* FIXED: Added array guard for segments.map() (Line 143) */}
+        {Array.isArray(segments) && segments.map((seg, i) => {
           const radius = 40;
           const circumference = 2 * Math.PI * radius;
           const strokeDasharray = `${(seg.percent / 100) * circumference} ${circumference}`;
@@ -140,7 +149,8 @@ function DonutChart({ data, labelKey, valueKey, colorFn }: {
         </text>
       </svg>
       <div className="space-y-2 flex-1 min-w-0">
-        {segments.map((seg, i) => (
+        {/* FIXED: Double-checking segments is array before rendering map (Line 149) */}
+        {Array.isArray(segments) && segments.map((seg, i) => (
           <div key={i} className="flex items-center gap-2 text-sm">
             <div className={`h-3 w-3 rounded-full ${seg.color.replace("stroke-", "bg-")}`} />
             <span className="capitalize truncate">{seg[labelKey]}</span>
