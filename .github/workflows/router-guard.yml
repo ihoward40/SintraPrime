@@ -1,0 +1,48 @@
+name: Router Length Guard
+
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+    branches:
+      - '**'
+
+jobs:
+  check-routers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check router file lengths and sanity
+        run: |
+          set -euo pipefail
+          min=20
+          bad=0
+          shopt -s globstar
+          for f in webapp/server/routers/**/*.ts; do
+            [ -f "$f" ] || continue
+            lines=$(wc -l < "$f")
+            if [ "$lines" -lt "$min" ]; then
+              echo "⚠️ $f has only $lines lines (<$min)"
+              bad=1
+            fi
+            # file must end with newline (common truncation symptom)
+            if [ -n "$(tail -c1 "$f")" ]; then
+              echo "⚠️ $f does not end with newline"
+              bad=1
+            fi
+            # ensure there's an export/router signature
+            if ! grep -Eq "export\\s+(const|default)\\s+|createTRPC|createRouter|router\\." "$f"; then
+              echo "⚠️ $f missing expected router export signature"
+              bad=1
+            fi
+            # existing EOF marker check
+            if tail -n1 "$f" | grep -q 'EOF'; then
+              echo "⚠️ $f ends with abrupt EOF marker"
+              bad=1
+            fi
+          done
+          if [ "$bad" -ne 0 ]; then
+            echo "::error::Router guard failed"
+            exit 1
+          fi

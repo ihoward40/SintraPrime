@@ -14,6 +14,12 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    include: ["server/**/*.test.ts", "server/**/*.spec.ts"],
+    include: [
+      "server/**/*.test.ts",
+      "server/**/*.spec.ts",
+      // smoke tests live in the client codebase, run them separately via script
+      "client/src/__tests__/smoke/**/*.test.ts",
+      "client/src/__tests__/smoke/**/*.test.tsx",
+    ],
   },
 });
