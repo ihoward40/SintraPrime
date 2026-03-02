@@ -105,6 +105,11 @@ const RECEIPTS_DIR =
   process.env.SINTRA_RECEIPTS_DIR ||
   path.join(process.cwd(), "runs", "receipts");
 
+// the JSONL file that /api/receipts tails (the UI uses this path directly)
+const RECEIPTS_JSONL =
+  process.env.SINTRA_RECEIPTS_JSONL ||
+  path.join(process.cwd(), "runs", "receipts.jsonl");
+
 function stableStringify(obj: unknown): string {
   const seen = new WeakSet<object>();
   const sorter = (value: any): any => {
@@ -193,6 +198,16 @@ async function writeConfigChangeAppliedReceipt(
   const fileName = `${receipt.ts.replace(/[:.]/g, "-")}_CONFIG_CHANGE_APPLIED_${sha256.slice(0, 12)}.json`;
   const outPath = path.join(RECEIPTS_DIR, fileName);
   await fsPromises.writeFile(outPath, stableStringify(receipt) + "\n", "utf8");
+
+  // also append to the canonical receipts.jsonl for the UI tail query
+  try {
+    await ensureDir(path.dirname(RECEIPTS_JSONL));
+    await fsPromises.appendFile(RECEIPTS_JSONL, stableStringify(receipt) + "\n", "utf8");
+  } catch {
+    // if appending fails, don't block the API
+    console.warn("failed to append heartbeat receipt to jsonl");
+  }
+
   return { sha256, path: outPath, receipt };
 }
 
