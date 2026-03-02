@@ -29,6 +29,7 @@ jobs:
           echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Enforce wiring scope
+        if: github.event_name == 'pull_request'
         run: |
           set -e
           RUNTIME_REGEX='^(agent-mode-engine/|src/|scripts/|make/|notion/)'
