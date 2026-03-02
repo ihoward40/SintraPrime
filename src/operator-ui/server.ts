@@ -1,6 +1,8 @@
 import http from "node:http";
 import path from "node:path";
 import fs from "node:fs";
+import fsPromises from "node:fs/promises";
+import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 
@@ -73,6 +75,125 @@ function readBody(req: http.IncomingMessage): Promise<string> {
     req.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
     req.on("error", reject);
   });
+}
+
+type HeartbeatConfig = {
+  enabled: boolean;
+  intervalMinutes: number;
+};
+
+type ConfigChangeAppliedReceipt = {
+  kind: "CONFIG_CHANGE_APPLIED";
+  ts: string;
+  change: {
+    key: "heartbeat";
+    before: HeartbeatConfig | null;
+    after: HeartbeatConfig;
+    actor: { type: "api"; id: string };
+    reason?: string;
+  };
+  integrity: {
+    sha256: string;
+  };
+};
+
+const HEARTBEAT_STATE_PATH =
+  process.env.SINTRA_HEARTBEAT_STATE_PATH ||
+  path.join(process.cwd(), "state", "heartbeat.json");
+
+const RECEIPTS_DIR =
+  process.env.SINTRA_RECEIPTS_DIR ||
+  path.join(process.cwd(), "runs", "receipts");
+
+function stableStringify(obj: unknown): string {
+  const seen = new WeakSet<object>();
+  const sorter = (value: any): any => {
+    if (value && typeof value === "object") {
+      if (seen.has(value)) return "[Circular]";
+      seen.add(value);
+      if (Array.isArray(value)) return value.map(sorter);
+      const keys = Object.keys(value).sort();
+      const out: Record<string, any> = {};
+      for (const k of keys) out[k] = sorter(value[k]);
+      return out;
+    }
+    return value;
+  };
+  return JSON.stringify(sorter(obj));
+}
+
+function validateHeartbeatPayload(body: any): HeartbeatConfig {
+  if (!body || typeof body !== "object") throw new Error("INVALID_BODY");
+  const enabled = body.enabled;
+  const intervalMinutes = body.intervalMinutes;
+  if (typeof enabled !== "boolean") throw new Error("INVALID_ENABLED");
+  const interval =
+    typeof intervalMinutes === "number" && Number.isFinite(intervalMinutes)
+      ? Math.floor(intervalMinutes)
+      : 10;
+  if (interval < 1 || interval > 1440) throw new Error("INVALID_INTERVAL");
+  if (enabled && (typeof intervalMinutes !== "number" || !Number.isFinite(intervalMinutes))) {
+    throw new Error("MISSING_INTERVAL");
+  }
+  return { enabled, intervalMinutes: interval };
+}
+
+async function ensureDir(p: string) {
+  await fsPromises.mkdir(p, { recursive: true });
+}
+
+async function atomicWriteJson(filePath: string, obj: unknown) {
+  await ensureDir(path.dirname(filePath));
+  const tmp = `${filePath}.tmp.${Date.now()}`;
+  const raw = stableStringify(obj) + "\n";
+  await fsPromises.writeFile(tmp, raw, "utf8");
+  await fsPromises.rename(tmp, filePath);
+}
+
+async function readHeartbeatState(): Promise<HeartbeatConfig | null> {
+  try {
+    const raw = await fsPromises.readFile(HEARTBEAT_STATE_PATH, "utf8");
+    const parsed = JSON.parse(raw);
+    if (
+      parsed &&
+      typeof parsed.enabled === "boolean" &&
+      typeof parsed.intervalMinutes === "number"
+    ) {
+      return { enabled: parsed.enabled, intervalMinutes: parsed.intervalMinutes };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+async function writeConfigChangeAppliedReceipt(
+  before: HeartbeatConfig | null,
+  after: HeartbeatConfig,
+  reason?: string
+) {
+  await ensureDir(RECEIPTS_DIR);
+  const receiptBase: Omit<ConfigChangeAppliedReceipt, "integrity"> = {
+    kind: "CONFIG_CHANGE_APPLIED",
+    ts: new Date().toISOString(),
+    change: {
+      key: "heartbeat",
+      before,
+      after,
+      actor: { type: "api", id: "operator-ui" },
+      ...(reason ? { reason } : {}),
+    },
+  };
+  const canonical = stableStringify(receiptBase);
+  const sha256 = crypto.createHash("sha256").update(canonical).digest("hex");
+  const receipt: ConfigChangeAppliedReceipt = {
+    ...receiptBase,
+    integrity: { sha256 },
+  };
+  const fileName = `${receipt.ts.replace(/[:.]/g, "-")}_CONFIG_CHANGE_APPLIED_${sha256.slice(0, 12)}.json`;
+  const outPath = path.join(RECEIPTS_DIR, fileName);
+  await fsPromises.writeFile(outPath, stableStringify(receipt) + "\n", "utf8");
+  return { sha256, path: outPath, receipt };
 }
 
 function isSafeRunsPath(p: string): boolean {
@@ -269,6 +390,51 @@ export async function startOperatorUiServer(opts?: { port?: number }): Promise<O
         }
         rows.sort((a, b) => new Date(b?.started_at || 0).getTime() - new Date(a?.started_at || 0).getTime());
         sendJson(res, 200, { kind: "SchedulerHistory", job_id: jobId || null, count: rows.length, rows });
+        return;
+      }
+
+      if (method === "GET" && u.pathname === "/api/heartbeat") {
+        const cfg = await readHeartbeatState();
+        sendJson(res, 200, { kind: "HeartbeatState", config: cfg });
+        return;
+      }
+
+      if (method === "POST" && u.pathname === "/api/heartbeat") {
+        try {
+          const raw = await readBody(req);
+          let body: any;
+          try {
+            body = JSON.parse(raw || "{}");
+          } catch {
+            sendJson(res, 400, { kind: "HeartbeatUpdateError", ok: false, error: "INVALID_JSON" });
+            return;
+          }
+          const next = validateHeartbeatPayload(body);
+          const prev = await readHeartbeatState();
+          await atomicWriteJson(HEARTBEAT_STATE_PATH, {
+            ...next,
+            updatedAt: new Date().toISOString(),
+          });
+          const { sha256, path: receiptPath } = await writeConfigChangeAppliedReceipt(
+            prev,
+            next,
+            typeof body?.reason === "string" ? body.reason : undefined
+          );
+          sendJson(res, 200, {
+            kind: "HeartbeatUpdated",
+            ok: true,
+            config: next,
+            receipt: { kind: "CONFIG_CHANGE_APPLIED", sha256, path: receiptPath },
+          });
+        } catch (e: any) {
+          const msg = String(e?.message || e);
+          const code = msg === "INVALID_JSON" ? 400 : msg === "BODY_TOO_LARGE" ? 413 : 400;
+          sendJson(res, code, {
+            kind: "HeartbeatUpdateError",
+            ok: false,
+            error: msg,
+          });
+        }
         return;
       }
 
