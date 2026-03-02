@@ -70,6 +70,27 @@ const ControlCenter: React.FC = () => {
     }
   }, [activeTab, mode]);
 
+  // Load heartbeat state on mount and mode change
+  useEffect(() => {
+    if (mode === "offline") return;
+
+    const loadHeartbeatState = async () => {
+      try {
+        const resp = await fetch("/api/heartbeat");
+        if (resp.ok) {
+          const data = await resp.json();
+          if (data.config) {
+            setHeartbeatConfig(data.config);
+          }
+        }
+      } catch (e) {
+        console.warn("failed to load heartbeat state", e);
+      }
+    };
+
+    loadHeartbeatState();
+  }, [mode]);
+
   const applyHeartbeatChange = async () => {
     if (mode === "offline") {
       console.log("CONFIG_CHANGE_APPLIED", heartbeatConfig);
@@ -80,16 +101,22 @@ const ControlCenter: React.FC = () => {
       const resp = await fetch("/api/heartbeat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(heartbeatConfig),
+        body: JSON.stringify({
+          ...heartbeatConfig,
+          reason: "operator-ui configuration change",
+        }),
       });
       if (resp.ok) {
         const result = await resp.json();
         console.log("CONFIG_CHANGE_APPLIED", result);
       } else {
-        console.error("heartbeat update failed", resp.status);
+        const error = await resp.json();
+        console.error("heartbeat update failed", resp.status, error);
       }
     } catch (e) {
       console.error(e);
+      // fallback to offline display
+      console.log("CONFIG_CHANGE_APPLIED (offline fallback)", heartbeatConfig);
     }
   };
 
