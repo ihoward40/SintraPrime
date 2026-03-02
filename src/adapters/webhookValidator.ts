@@ -5,7 +5,7 @@
 
 import * as crypto from "crypto";
 
-export type WebhookPlatform = "telegram" | "discord" | "whatsapp" | "stripe" | "github" | "gohighlevel";
+export type WebhookPlatform = "telegram" | "discord" | "whatsapp" | "stripe" | "github";
 
 export interface WebhookValidationRequest {
   headers: Record<string, string | undefined>;
@@ -55,8 +55,6 @@ export class WebhookValidator {
         return this.validateStripe(request);
       case "github":
         return this.validateGitHub(request);
-      case "gohighlevel":
-        return this.validateGoHighLevel(request);
       default:
         return { valid: false, platform, reason: `Unknown platform: ${platform}` };
     }
@@ -238,51 +236,6 @@ export class WebhookValidator {
       };
     } catch {
       return { valid: false, platform: "github", reason: "Signature length mismatch." };
-    }
-  }
-
-  /**
-   * GoHighLevel: Validates using a shared secret passed in the JSON body.
-   *
-   * GHL's free outbound webhook action does not support custom HTTP headers.
-   * Instead, the shared secret is included as a body field (x_ghl_secret)
-   * configured in the GHL workflow's Custom Data section.
-   *
-   * Uses timing-safe comparison to prevent timing attacks.
-   */
-  private validateGoHighLevel(request: WebhookValidationRequest): WebhookValidationResult {
-    const webhookSecret = this.secrets.get("ghl_webhook_secret");
-
-    if (!webhookSecret) {
-      return { valid: false, platform: "gohighlevel", reason: "GHL webhook secret not configured." };
-    }
-
-    // Parse the body to extract x_ghl_secret
-    let bodyObj: Record<string, any>;
-    try {
-      const bodyStr = typeof request.body === "string" ? request.body : request.body.toString("utf-8");
-      bodyObj = JSON.parse(bodyStr);
-    } catch {
-      return { valid: false, platform: "gohighlevel", reason: "Invalid JSON body." };
-    }
-
-    const providedSecret = bodyObj.x_ghl_secret;
-    if (!providedSecret || typeof providedSecret !== "string") {
-      return { valid: false, platform: "gohighlevel", reason: "Missing x_ghl_secret in request body." };
-    }
-
-    try {
-      const valid = crypto.timingSafeEqual(
-        Buffer.from(providedSecret),
-        Buffer.from(webhookSecret)
-      );
-      return {
-        valid,
-        platform: "gohighlevel",
-        reason: valid ? undefined : "GHL webhook secret mismatch.",
-      };
-    } catch {
-      return { valid: false, platform: "gohighlevel", reason: "Secret length mismatch." };
     }
   }
 }

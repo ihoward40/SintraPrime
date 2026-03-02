@@ -1,5 +1,5 @@
 {
-  "version": "2.1.0",
+  "version": "2.0.0",
   "integration_date": "2026-02-26",
   "description": "SintraPrime Services Integration Map — maps API services to agent capabilities",
   "services": {
@@ -53,50 +53,6 @@
         "agents": ["WorkflowOrchestrationAgent", "SintraPrime-Core", "ARAutomationAgent"],
         "use_cases": ["multi-step workflow automation", "webhook orchestration", "cross-platform integrations"],
         "documentation": "https://www.make.com/en/api-documentation"
-      },
-      "gohighlevel": {
-        "name": "GoHighLevel (GHL)",
-        "env_keys": {
-          "private_integration_token": "GHL_PRIVATE_INTEGRATION_TOKEN",
-          "webhook_secret": "GHL_WEBHOOK_SECRET",
-          "location_id": "GHL_LOCATION_ID"
-        },
-        "base_url": "https://services.leadconnectorhq.com",
-        "location_id": "69323e851c84d97148a27daa",
-        "location_name": "Ike Solutions",
-        "agent_count": 23,
-        "capabilities": [
-          "conversation-ai",
-          "voice-ai",
-          "workflow-automation",
-          "contact-management",
-          "messaging",
-          "webhook-ingest"
-        ],
-        "agent_types": ["Conversation AI", "Voice AI", "Agent Studio"],
-        "agents": ["SintraPrime-Core", "WorkflowOrchestrationAgent", "LeadGenerationAgent", "ARAutomationAgent"],
-        "use_cases": [
-          "AI agent event ingestion",
-          "bidirectional contact sync",
-          "conversation monitoring",
-          "workflow triggering",
-          "voice AI call processing",
-          "lead management"
-        ],
-        "webhook_endpoint": "/webhooks/ghl",
-        "api_rate_limits": {
-          "burst": "100 requests / 10 seconds",
-          "daily": "200,000 requests / day"
-        },
-        "api_scopes": [
-          "conversation-ai.readonly",
-          "conversation-ai.write",
-          "conversations.readonly",
-          "conversations.write",
-          "contacts.readonly",
-          "contacts.write"
-        ],
-        "documentation": "https://help.gohighlevel.com/support/solutions/articles/155000006639-conversation-ai-public-api"
       }
     },
     "communication": {
@@ -143,14 +99,14 @@
     }
   },
   "agent_service_map": {
-    "SintraPrime-Core": ["minimax_m2", "moonshot_kimi", "venice_ai", "make_com", "gohighlevel", "slack", "notion", "cloudflare_r2"],
+    "SintraPrime-Core": ["minimax_m2", "moonshot_kimi", "venice_ai", "make_com", "slack", "notion", "cloudflare_r2"],
     "FCRADisputeAgent": ["moonshot_kimi", "venice_ai", "notion", "cloudflare_r2", "gmail_ikeos"],
     "DebtValidationAgent": ["moonshot_kimi", "venice_ai", "notion", "cloudflare_r2"],
     "TCPAFDCPAAgent": ["moonshot_kimi", "venice_ai", "notion", "cloudflare_r2"],
     "ContractAnalysisAgent": ["moonshot_kimi", "venice_ai", "notion", "cloudflare_r2"],
-    "ARAutomationAgent": ["make_com", "gohighlevel", "gmail_ikeos", "slack", "notion", "cloudflare_r2"],
-    "LeadGenerationAgent": ["minimax_m2", "make_com", "gohighlevel", "gmail_ikeos", "slack", "notion"],
-    "WorkflowOrchestrationAgent": ["make_com", "gohighlevel", "slack", "notion", "cloudflare_r2"],
+    "ARAutomationAgent": ["make_com", "gmail_ikeos", "slack", "notion", "cloudflare_r2"],
+    "LeadGenerationAgent": ["minimax_m2", "make_com", "gmail_ikeos", "slack", "notion"],
+    "WorkflowOrchestrationAgent": ["make_com", "slack", "notion", "cloudflare_r2"],
     "FinancialAnalysisAgent": ["moonshot_kimi", "venice_ai", "notion", "cloudflare_r2"],
     "WealthManagementAgent": ["moonshot_kimi", "venice_ai", "notion", "cloudflare_r2"],
     "InvestmentBankingAgent": ["moonshot_kimi", "venice_ai", "notion", "cloudflare_r2"],

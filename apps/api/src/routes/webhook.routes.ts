@@ -8,7 +8,6 @@ import {
   handleInboundEmail 
 } from '../webhooks/email.webhook';
 import { handleBillingAlert } from '../webhooks/billing.webhook';
-import { handleGhlWebhook } from '../webhooks/ghl.webhook';
 import express from 'express';
 
 const router = Router();
@@ -22,9 +21,6 @@ router.post(
 
 // Make.com webhook
 router.post('/make', asyncHandler(handleMakeWebhook));
-
-// GoHighLevel AI Agent webhook
-router.post('/ghl', asyncHandler(handleGhlWebhook));
 
 // Email provider webhooks
 router.post('/sendgrid', asyncHandler(handleSendGridWebhook));
