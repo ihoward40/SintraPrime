@@ -26,6 +26,7 @@ import CalendarExport from "./pages/CalendarExport";
 import Settings from "./pages/Settings";
 import BulkCaseImport from "./pages/BulkCaseImport";
 import CommandCenter from "./pages/CommandCenter";
+import ControlCenter from "./pages/ControlCenter";
 import WorkspaceManagement from "./pages/WorkspaceManagement";
 import LegalAgents from "./pages/LegalAgents";
 import AutonomousAgent from "./pages/AutonomousAgent";
@@ -123,6 +124,7 @@ function Router() {
       <Route path={"/settings/keyboard-shortcuts"} component={KeyboardShortcuts} />
       <Route path={"/bulk-import"} component={BulkCaseImport} />
       <Route path={"/command-center"} component={CommandCenter} />
+      <Route path={"/control-center"} component={ControlCenter} />
       <Route path={"/workspaces"} component={WorkspaceManagement} />
       <Route path={"/legal-agents"} component={LegalAgents} />
       <Route path={"/autonomous-agent"} component={AutonomousAgent} />
