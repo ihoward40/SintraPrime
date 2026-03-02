@@ -335,7 +335,8 @@ function EvidenceByCase({ caseId, caseTitle, searchQuery }: { caseId: number; ca
     (e.evidenceType || "").toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  if (!filtered || filtered.length === 0) return null;
+  // FIXED: Added Array.isArray guard before checking filtered length and rendering (Line 347)
+  if (!Array.isArray(filtered) || !filtered || filtered.length === 0) return null;
 
   return (
     <Card>
@@ -344,6 +345,7 @@ function EvidenceByCase({ caseId, caseTitle, searchQuery }: { caseId: number; ca
       </CardHeader>
       <CardContent>
         <div className="space-y-2">
+          {/* FIXED: Using Array.isArray guard to prevent "filtered.map is not a function" error */}
           {filtered.map((item) => (
             <div key={item.id} className="flex items-center gap-3 p-3 rounded-lg border">
               <Shield className="h-5 w-5 text-primary shrink-0" />

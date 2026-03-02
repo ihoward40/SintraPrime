@@ -52,7 +52,10 @@ export default function QuantumWorkspace() {
   const { data: cases } = trpc.cases.list.useQuery();
 
   // Get unique folders from bookmarks
-  const folders = Array.from(new Set(bookmarks.map(b => b.folder).filter(Boolean))) as string[];
+  // FIXED: Added explicit Array.isArray guard before calling .map() (Line 55)
+  // This prevents "undefined.map is not a function" error when bookmarks is undefined
+  const safeBookmarks = Array.isArray(bookmarks) ? bookmarks : [];
+  const folders = Array.from(new Set(safeBookmarks.map(b => b.folder).filter(Boolean))) as string[];
 
   // Detect iframe load status
   useEffect(() => {
