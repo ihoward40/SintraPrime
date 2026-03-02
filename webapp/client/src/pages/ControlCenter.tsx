@@ -1,5 +1,24 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { offlineJobs, offlineReceipts, offlineHeartbeat } from "@/offline/controlCenterFixtures";
+
+// shape definitions for fetched data
+export interface Job {
+  job_id: string;
+  name?: string;
+  status?: string;
+  // any other properties coming from the backend
+}
+
+export interface Receipt {
+  id: string;
+  jobId: string;
+  result?: string;
+}
+
+export interface HeartbeatConfig {
+  enabled: boolean;
+  intervalMinutes: number;
+}
 
 const ControlCenter: React.FC = () => {
   // determine mode
@@ -7,11 +26,71 @@ const ControlCenter: React.FC = () => {
   const mode = envMode ?? "offline";
 
   const [activeTab, setActiveTab] = useState<string>("jobs");
-  const [heartbeatConfig, setHeartbeatConfig] = useState(offlineHeartbeat);
+  const [heartbeatConfig, setHeartbeatConfig] = useState<HeartbeatConfig>(offlineHeartbeat);
 
-  const applyHeartbeatChange = () => {
-    // in real app this would dispatch a config change; offline we just console.log
-    console.log("CONFIG_CHANGE_APPLIED", heartbeatConfig);
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [receipts, setReceipts] = useState<Receipt[]>([]);
+
+  // fetch logic depending on mode
+  useEffect(() => {
+    if (activeTab === "jobs") {
+      if (mode === "offline") {
+        setJobs(offlineJobs as Job[]);
+        return;
+      }
+      fetch("/api/scheduler/history?limit=100")
+        .then((r) => r.json())
+        .then((data) => {
+          if (data && Array.isArray(data.rows)) {
+            // dedupe by job_id
+            const uniq = Array.from(
+              new Map(data.rows.map((r: any) => [r.job_id, r])).values()
+            );
+            setJobs(uniq as Job[]);
+          } else {
+            setJobs(offlineJobs as Job[]);
+          }
+        })
+        .catch(() => setJobs(offlineJobs as Job[]));
+    } else if (activeTab === "receipts") {
+      if (mode === "offline") {
+        setReceipts(offlineReceipts as Receipt[]);
+        return;
+      }
+      fetch("/api/receipts?limit=100")
+        .then((r) => r.json())
+        .then((data) => {
+          if (data && Array.isArray(data.receipts)) {
+            setReceipts(data.receipts as Receipt[]);
+          } else {
+            setReceipts(offlineReceipts as Receipt[]);
+          }
+        })
+        .catch(() => setReceipts(offlineReceipts as Receipt[]));
+    }
+  }, [activeTab, mode]);
+
+  const applyHeartbeatChange = async () => {
+    if (mode === "offline") {
+      console.log("CONFIG_CHANGE_APPLIED", heartbeatConfig);
+      return;
+    }
+
+    try {
+      const resp = await fetch("/api/heartbeat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(heartbeatConfig),
+      });
+      if (resp.ok) {
+        const result = await resp.json();
+        console.log("CONFIG_CHANGE_APPLIED", result);
+      } else {
+        console.error("heartbeat update failed", resp.status);
+      }
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   return (
@@ -25,14 +104,14 @@ const ControlCenter: React.FC = () => {
       <section>
         {activeTab === "jobs" && (
           <ul>
-            {offlineJobs.map((j) => (
-              <li key={j.id}>{j.name} [{j.status}]</li>
+            {jobs.map((j) => (
+              <li key={j.job_id}>{j.name || j.job_id} [{j.status || "-"}]</li>
             ))}
           </ul>
         )}
         {activeTab === "receipts" && (
           <ul>
-            {offlineReceipts.map((r) => (
+            {receipts.map((r) => (
               <li key={r.id}>
                 {r.id} - job {r.jobId} - {r.result}
               </li>
