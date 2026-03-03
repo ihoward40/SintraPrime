@@ -8,9 +8,14 @@ on:
       - 'scripts/skills-*.mjs'
   push:
     branches: [main, master]
+    paths:
+      - 'skills.lock.json'
+      - 'artifacts/skills/**'
+      - 'scripts/skills-*.mjs'
 
 jobs:
   gate:
+    if: github.event_name == 'pull_request' || github.event_name == 'pull_request_target'
     name: Verify Skills Governance
     runs-on: ubuntu-latest
     permissions:
