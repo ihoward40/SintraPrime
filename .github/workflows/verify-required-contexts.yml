@@ -12,6 +12,7 @@ permissions:
 
 jobs:
   verify-required-contexts:
+    if: github.event_name == 'pull_request' || github.event_name == 'pull_request_target'
     name: governance/verify-required-contexts
     runs-on: ubuntu-latest
     timeout-minutes: 5

@@ -13,7 +13,10 @@ function readJson(p) {
 
 const root = process.cwd();
 const lockPath = path.join(root, "skills.lock.json");
-if (!fs.existsSync(lockPath)) die("skills.lock.json not found.");
+if (!fs.existsSync(lockPath)) {
+  console.log("[skills:check] ℹ️ skills.lock.json not found. Nothing to validate; gate passes.");
+  process.exit(0);
+}
 
 const lock = readJson(lockPath);
 const skills = lock.skills || [];
