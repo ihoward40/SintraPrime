@@ -1,6 +1,34 @@
+# Contributing to SintraPrime
+
+Thank you for your interest in contributing to SintraPrime, the institution-grade governance OS for AI agents. Whether you are fixing a bug, improving documentation, or proposing a new feature, your contributions are valued and appreciated.
+
+This guide outlines the process for contributing to the project and the standards we expect all contributions to meet. Following these guidelines helps maintain the quality and integrity of the codebase and ensures a smooth experience for everyone involved.
+
+## Table of Contents
+
+- [AI-Assisted Pull Requests (Strict Review)](#ai-assisted-pull-requests-strict-review)
+- [Code of Conduct](#code-of-conduct)
+- [Getting Started](#getting-started)
+- [How to Contribute](#how-to-contribute)
+- [Branch Naming Conventions](#branch-naming-conventions)
+- [Commit Message Format](#commit-message-format)
+- [Pull Request Process](#pull-request-process)
+- [Code Style & Standards](#code-style--standards)
+- [Governance Compliance](#governance-compliance)
+- [License](#license)
+
 ## AI-Assisted Pull Requests (Strict Review)
 
 This repository uses a strict review workflow. Automation, including AI agents, may assist with pull requests, but humans are responsible for final approval and merges.
+
+### Branch Protection Expectations
+
+Contributors should expect the following branch protection rules when proposing changes to `master`:
+
+- pull requests are required for merges to `master`
+- required CI checks must pass before merge
+- at least one human approval is required, per branch protection settings
+- changes under `.github/workflows/` require CODEOWNERS review
 
 ### What AI agents may do
 
@@ -25,23 +53,7 @@ A pull request may be merged only when:
 
 ### Notes on Review Packs
 
-The Review Pack is intended to reduce review overhead and highlight risk areas. It is advisory and does not replace human review.# Contributing to SintraPrime
-
-Thank you for your interest in contributing to SintraPrime, the institution-grade governance OS for AI agents. Whether you are fixing a bug, improving documentation, or proposing a new feature, your contributions are valued and appreciated.
-
-This guide outlines the process for contributing to the project and the standards we expect all contributions to meet. Following these guidelines helps maintain the quality and integrity of the codebase and ensures a smooth experience for everyone involved.
-
-## Table of Contents
-
-- [Code of Conduct](#code-of-conduct)
-- [Getting Started](#getting-started)
-- [How to Contribute](#how-to-contribute)
-- [Branch Naming Conventions](#branch-naming-conventions)
-- [Commit Message Format](#commit-message-format)
-- [Pull Request Process](#pull-request-process)
-- [Code Style & Standards](#code-style--standards)
-- [Governance Compliance](#governance-compliance)
-- [License](#license)
+The Review Pack is intended to reduce review overhead and highlight risk areas. It is advisory and does not replace human review.
 
 ## Code of Conduct
 
