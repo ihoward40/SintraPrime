@@ -1,4 +1,31 @@
-# Contributing to SintraPrime
+## AI-Assisted Pull Requests (Strict Review)
+
+This repository uses a strict review workflow. Automation, including AI agents, may assist with pull requests, but humans are responsible for final approval and merges.
+
+### What AI agents may do
+
+AI agents and automation may:
+- open or update pull requests, including dependency updates
+- generate Review Packs, including change summaries, risk notes, and suggested tests
+- monitor CI results and summarize failures
+
+### What AI agents may not do
+
+AI agents and automation must not:
+- self-approve pull requests
+- merge pull requests without human oversight
+- bypass required checks or branch protection rules
+
+### Merge requirements
+
+A pull request may be merged only when:
+- required CI checks are passing
+- required conversations are resolved when applicable
+- at least the required number of human approvals is present, per branch protection settings
+
+### Notes on Review Packs
+
+The Review Pack is intended to reduce review overhead and highlight risk areas. It is advisory and does not replace human review.# Contributing to SintraPrime
 
 Thank you for your interest in contributing to SintraPrime, the institution-grade governance OS for AI agents. Whether you are fixing a bug, improving documentation, or proposing a new feature, your contributions are valued and appreciated.
 
