@@ -89,6 +89,20 @@ jobs:
               return;
             }
 
+            const author = pr.user?.login || '';
+            const isBotAuthor =
+              author === 'dependabot[bot]' ||
+              author.endsWith('[bot]');
+
+            function failOrNotice(message) {
+              if (isBotAuthor) {
+                core.notice(`${message} (non-blocking for bot-authored PRs: ${author})`);
+                return;
+              }
+
+              core.setFailed(message);
+            }
+
             const body = (pr.body || '').trim();
             const requiredHeadings = [
               '## Summary',
@@ -100,7 +114,7 @@ jobs:
 
             const missing = requiredHeadings.filter(h => !body.includes(h));
             if (missing.length) {
-              core.setFailed(`PR description is missing required section(s): ${missing.join(', ')}`);
+              failOrNotice(`PR description is missing required section(s): ${missing.join(', ')}`);
               return;
             }
 
@@ -117,12 +131,12 @@ jobs:
             const risk = extractSection('## Risk');
 
             if (!testing || testing.toLowerCase() === 'n/a') {
-              core.setFailed('Testing section must be filled in (or use "N/A" with an explanation).');
+              failOrNotice('Testing section must be filled in (or use "N/A" with an explanation).');
               return;
             }
 
             if (!risk || risk.toLowerCase() === 'n/a') {
-              core.setFailed('Risk section must be filled in (or use "N/A" with an explanation).');
+              failOrNotice('Risk section must be filled in (or use "N/A" with an explanation).');
               return;
             }
 
