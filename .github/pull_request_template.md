@@ -1,39 +1,31 @@
-## Governance Wiring Review Checklist
+## Summary
 
-> This checklist is mandatory for any PR that wires specifications into runtime behavior.
+<!-- What does this PR do? Keep it short and concrete. -->
 
-### Scope & Intent
-- [ ] Wiring scope document included (`docs/governance/wiring-scope.md`)
-- [ ] Scope document accurately reflects this PR
-- [ ] No undocumented execution paths affected
+## Changes
 
-### Authority & Semantics
-- [ ] No silent authority expansion
-- [ ] Any authority expansion explicitly declared and justified
-- [ ] Refusal logic unchanged or strengthened
+<!-- Bullet list of key changes. -->
+- 
 
-### Execution Safety
-- [ ] Demo / Observe protections preserved
-- [ ] No live-account access introduced without explicit approval
-- [ ] No credentials added or referenced
+## Testing
 
-### Separation of Concerns
-- [ ] Specs-only files not modified unless required
-- [ ] Wiring changes isolated to this branch
-- [ ] No opportunistic refactors included
+<!--
+Describe what you ran and what you observed.
+If not applicable, write "N/A" and explain why.
+-->
 
-### Validation
-- [ ] Tests updated or added
-- [ ] Manual verification steps documented
-- [ ] No CI rules silently activated
+## Risk
 
-### Approvals
-- [ ] Human review completed
-- [ ] No auto-merge enabled
-- [ ] Squash merge does not obscure intent
+<!--
+Call out risk level and blast radius.
+Examples: "low (docs only)", "medium (touches auth flow)", "high (schema migration)".
+If there is rollback, describe it.
+-->
 
----
+## Checklist
 
-**Reviewer Notes**
-- Confirm wiring matches declared scope.
-- Reject PR if scope document is missing or incomplete.
+- [ ] Title is descriptive and scoped
+- [ ] Scope is limited to the intended change
+- [ ] Tests added/updated or Testing section explains why not
+- [ ] Docs/README updated if behavior changed
+- [ ] Risk section includes blast radius / rollback notes
