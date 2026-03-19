@@ -1,268 +1,299 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { TRPCError } from "@trpc/server";
 
 // ============================================================
-// VLM Router — Unit Tests
+// Mock invokeLLM so tests don't require actual LLM credentials
 // ============================================================
+vi.mock("./_core/llm", () => ({
+  invokeLLM: vi.fn(),
+}));
 
-// --- Data Validation Helpers ---
-function isValidUrl(url: string): boolean {
-  try {
-    new URL(url);
-    return true;
-  } catch {
-    return false;
-  }
+// Mock SSRF guard: allow example.com, reject private/localhost URLs
+vi.mock("./lib/iframePreflight", () => ({
+  passesSsrfGuard: vi.fn().mockImplementation(async (url: URL) => {
+    const host = url.hostname;
+    return (
+      url.protocol === "https:" &&
+      host !== "localhost" &&
+      host !== "127.0.0.1" &&
+      !host.startsWith("192.168.") &&
+      !host.startsWith("10.")
+    );
+  }),
+}));
+
+import { invokeLLM } from "./_core/llm";
+import { vlmRouter } from "./vlm-router";
+import type { TrpcContext } from "./_core/context";
+
+// ============================================================
+// Mock tRPC context (only user field needed for protectedProcedure)
+// ============================================================
+const mockCtx = {
+  user: {
+    id: 1,
+    openId: "test-openid",
+    name: "Test User",
+    email: "test@example.com",
+    role: "user",
+    createdAt: new Date(),
+    subscriptionTier: "pro",
+  },
+} as unknown as TrpcContext;
+
+const caller = vlmRouter.createCaller(mockCtx);
+
+const mockLlm = vi.mocked(invokeLLM);
+
+function makeLlmResponse(content: string) {
+  return {
+    id: "test-id",
+    created: Date.now(),
+    model: "test-model",
+    choices: [{ index: 0, message: { role: "assistant" as const, content }, finish_reason: "stop" }],
+  };
 }
 
-function buildMultimodalContent(text: string, imageUrls: string[]) {
-  const parts: any[] = [{ type: "text", text }];
-  for (const url of imageUrls) {
-    parts.push({ type: "image_url", image_url: { url, detail: "high" } });
-  }
-  return parts;
-}
-
-function buildTextOnlyContent(text: string) {
-  return text;
-}
-
-// --- Analysis Type Validation ---
-const VALID_ANALYSIS_TYPES = ["general", "ocr", "evidence", "document"] as const;
-type AnalysisType = typeof VALID_ANALYSIS_TYPES[number];
-
-function isValidAnalysisType(type: string): type is AnalysisType {
-  return VALID_ANALYSIS_TYPES.includes(type as AnalysisType);
-}
-
-function getSystemPromptForType(type: AnalysisType): string {
-  const base = "You are an expert AI Vision Assistant for SintraPrime, specializing in analyzing images, documents, and visual evidence.";
-  if (type === "ocr") return base + " Your primary task is to extract all text from the image exactly as it appears, preserving formatting and layout where possible.";
-  if (type === "evidence") return base + " Your primary task is to analyze this image as potential legal evidence. Identify key objects, people, timestamps, locations, and any anomalies or details that might be relevant to a case.";
-  if (type === "document") return base + " Your primary task is to analyze this scanned document. Extract the main clauses, identify the document type, parties involved, dates, and summarize the core purpose.";
-  return base;
-}
-
-// --- Structured Data Validation ---
-function isValidStructuredData(data: any): boolean {
-  if (!data || typeof data !== "object") return false;
-  if (!Array.isArray(data.entities)) return false;
-  if (typeof data.summary !== "string") return false;
-  if (typeof data.confidence !== "number") return false;
-  if (data.confidence < 0 || data.confidence > 1) return false;
-  return true;
-}
+beforeEach(() => {
+  vi.clearAllMocks();
+});
 
 // ============================================================
 // Test Suites
 // ============================================================
 
-describe("VLM Router — Input Validation", () => {
-  it("should accept a valid HTTPS image URL", () => {
-    const url = "https://example.com/image.jpg";
-    expect(isValidUrl(url)).toBe(true);
+describe("vlmRouter.analyzeImage — input validation", () => {
+  it("rejects a non-URL imageUrl (Zod validation)", async () => {
+    await expect(
+      caller.analyzeImage({ imageUrl: "not-a-url", analysisType: "general" })
+    ).rejects.toThrow();
   });
 
-  it("should reject a non-URL string as imageUrl", () => {
-    const url = "not-a-url";
-    expect(isValidUrl(url)).toBe(false);
+  it("rejects a localhost URL (SSRF guard)", async () => {
+    await expect(
+      caller.analyzeImage({ imageUrl: "http://localhost/image.jpg", analysisType: "general" })
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
   });
 
-  it("should accept all four valid analysis types", () => {
-    for (const type of VALID_ANALYSIS_TYPES) {
-      expect(isValidAnalysisType(type)).toBe(true);
+  it("rejects a private IP URL (SSRF guard)", async () => {
+    await expect(
+      caller.analyzeImage({ imageUrl: "http://192.168.1.1/image.jpg", analysisType: "general" })
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+  });
+
+  it("accepts a valid HTTPS URL and calls invokeLLM", async () => {
+    mockLlm.mockResolvedValue(makeLlmResponse("A photo of a document."));
+
+    const result = await caller.analyzeImage({
+      imageUrl: "https://example.com/image.jpg",
+      analysisType: "general",
+    });
+
+    expect(mockLlm).toHaveBeenCalledOnce();
+    expect(result.success).toBe(true);
+    expect(result.analysis).toBe("A photo of a document.");
+    expect(result.structuredData).toBeNull();
+  });
+
+  it("accepts all four valid analysis types", async () => {
+    for (const analysisType of ["general", "ocr", "evidence", "document"] as const) {
+      mockLlm.mockResolvedValue(makeLlmResponse("Some analysis."));
+      const result = await caller.analyzeImage({
+        imageUrl: "https://example.com/image.jpg",
+        analysisType,
+      });
+      expect(result.success).toBe(true);
     }
   });
+});
 
-  it("should reject an invalid analysis type", () => {
-    expect(isValidAnalysisType("screenshot")).toBe(false);
-    expect(isValidAnalysisType("")).toBe(false);
-    expect(isValidAnalysisType("video")).toBe(false);
+describe("vlmRouter.analyzeImage — system prompt selection", () => {
+  it("uses OCR-specific system prompt for ocr type", async () => {
+    mockLlm.mockResolvedValue(makeLlmResponse("Extracted text."));
+
+    await caller.analyzeImage({
+      imageUrl: "https://example.com/image.jpg",
+      analysisType: "ocr",
+    });
+
+    const callArgs = mockLlm.mock.calls[0][0];
+    const systemMsg = callArgs.messages.find((m: any) => m.role === "system");
+    expect(systemMsg?.content).toContain("extract all text");
   });
 
-  it("should default to 'general' if no analysis type is provided", () => {
-    const defaultType = "general";
-    expect(isValidAnalysisType(defaultType)).toBe(true);
+  it("uses evidence-specific system prompt for evidence type", async () => {
+    // evidence calls invokeLLM twice (once for analysis, once for extraction)
+    mockLlm.mockResolvedValueOnce(makeLlmResponse("Evidence analysis."))
+            .mockResolvedValueOnce(makeLlmResponse('{"entities":[],"summary":"test","confidence":0.9}'));
+
+    await caller.analyzeImage({
+      imageUrl: "https://example.com/image.jpg",
+      analysisType: "evidence",
+    });
+
+    const callArgs = mockLlm.mock.calls[0][0];
+    const systemMsg = callArgs.messages.find((m: any) => m.role === "system");
+    expect(systemMsg?.content).toContain("legal evidence");
+  });
+
+  it("uses document-specific system prompt for document type", async () => {
+    mockLlm.mockResolvedValueOnce(makeLlmResponse("Document analysis."))
+            .mockResolvedValueOnce(makeLlmResponse('{"entities":[],"summary":"doc","confidence":0.8}'));
+
+    await caller.analyzeImage({
+      imageUrl: "https://example.com/image.jpg",
+      analysisType: "document",
+    });
+
+    const callArgs = mockLlm.mock.calls[0][0];
+    const systemMsg = callArgs.messages.find((m: any) => m.role === "system");
+    expect(systemMsg?.content).toContain("scanned document");
   });
 });
 
-describe("VLM Router — System Prompt Generation", () => {
-  it("should include the base prompt for all types", () => {
-    for (const type of VALID_ANALYSIS_TYPES) {
-      const prompt = getSystemPromptForType(type);
-      expect(prompt).toContain("SintraPrime");
-      expect(prompt).toContain("Vision Assistant");
-    }
+describe("vlmRouter.analyzeImage — multimodal message building", () => {
+  it("sends an image_url content part with detail:high", async () => {
+    mockLlm.mockResolvedValue(makeLlmResponse("An image analysis."));
+
+    await caller.analyzeImage({
+      imageUrl: "https://example.com/photo.png",
+      analysisType: "general",
+    });
+
+    const callArgs = mockLlm.mock.calls[0][0];
+    const userMsg = callArgs.messages.find((m: any) => m.role === "user");
+    expect(Array.isArray(userMsg?.content)).toBe(true);
+    const imagePart = userMsg.content.find((p: any) => p.type === "image_url");
+    expect(imagePart).toBeDefined();
+    expect(imagePart.image_url.url).toBe("https://example.com/photo.png");
+    expect(imagePart.image_url.detail).toBe("high");
   });
 
-  it("should include OCR-specific instructions for 'ocr' type", () => {
-    const prompt = getSystemPromptForType("ocr");
-    expect(prompt).toContain("extract all text");
-    expect(prompt).toContain("formatting and layout");
-  });
+  it("sends the prompt as a text content part", async () => {
+    mockLlm.mockResolvedValue(makeLlmResponse("Result."));
 
-  it("should include evidence-specific instructions for 'evidence' type", () => {
-    const prompt = getSystemPromptForType("evidence");
-    expect(prompt).toContain("legal evidence");
-    expect(prompt).toContain("timestamps");
-  });
+    await caller.analyzeImage({
+      imageUrl: "https://example.com/photo.png",
+      prompt: "What does this say?",
+      analysisType: "general",
+    });
 
-  it("should include document-specific instructions for 'document' type", () => {
-    const prompt = getSystemPromptForType("document");
-    expect(prompt).toContain("scanned document");
-    expect(prompt).toContain("parties involved");
-  });
-
-  it("should return a plain base prompt for 'general' type", () => {
-    const prompt = getSystemPromptForType("general");
-    expect(prompt).not.toContain("extract all text");
-    expect(prompt).not.toContain("legal evidence");
-    expect(prompt).not.toContain("scanned document");
-  });
-});
-
-describe("VLM Router — Multimodal Message Building", () => {
-  it("should build a multimodal content array with text and one image", () => {
-    const content = buildMultimodalContent("Analyze this image.", ["https://example.com/img.jpg"]);
-    expect(Array.isArray(content)).toBe(true);
-    expect(content).toHaveLength(2);
-    expect(content[0].type).toBe("text");
-    expect(content[0].text).toBe("Analyze this image.");
-    expect(content[1].type).toBe("image_url");
-    expect(content[1].image_url.url).toBe("https://example.com/img.jpg");
-    expect(content[1].image_url.detail).toBe("high");
-  });
-
-  it("should build a multimodal content array with text and multiple images", () => {
-    const urls = [
-      "https://example.com/img1.jpg",
-      "https://example.com/img2.png",
-      "https://example.com/img3.webp",
-    ];
-    const content = buildMultimodalContent("Compare these images.", urls);
-    expect(content).toHaveLength(4); // 1 text + 3 images
-    expect(content[0].type).toBe("text");
-    for (let i = 1; i <= 3; i++) {
-      expect(content[i].type).toBe("image_url");
-      expect(content[i].image_url.url).toBe(urls[i - 1]);
-    }
-  });
-
-  it("should return a plain string when no images are provided", () => {
-    const content = buildTextOnlyContent("Hello, what can you help me with?");
-    expect(typeof content).toBe("string");
-    expect(content).toBe("Hello, what can you help me with?");
-  });
-
-  it("should use 'high' detail level for all image parts", () => {
-    const content = buildMultimodalContent("Analyze.", ["https://example.com/doc.png"]);
-    const imagePart = content.find((p: any) => p.type === "image_url");
-    expect(imagePart?.image_url?.detail).toBe("high");
+    const callArgs = mockLlm.mock.calls[0][0];
+    const userMsg = callArgs.messages.find((m: any) => m.role === "user");
+    const textPart = userMsg.content.find((p: any) => p.type === "text");
+    expect(textPart?.text).toBe("What does this say?");
   });
 });
 
-describe("VLM Router — Structured Data Validation", () => {
-  it("should validate a correct structured data object", () => {
-    const data = {
-      entities: ["John Doe", "Jane Smith", "Contract dated 2024-01-15"],
-      summary: "A contract between two parties for software services.",
-      confidence: 0.92,
-    };
-    expect(isValidStructuredData(data)).toBe(true);
+describe("vlmRouter.analyzeImage — response content normalization", () => {
+  it("returns string content unchanged", async () => {
+    mockLlm.mockResolvedValue(makeLlmResponse("Plain text response."));
+
+    const result = await caller.analyzeImage({
+      imageUrl: "https://example.com/image.jpg",
+      analysisType: "general",
+    });
+
+    expect(typeof result.analysis).toBe("string");
+    expect(result.analysis).toBe("Plain text response.");
   });
 
-  it("should reject structured data missing entities", () => {
-    const data = { summary: "A contract.", confidence: 0.9 };
-    expect(isValidStructuredData(data)).toBe(false);
+  it("joins array content parts into a single string", async () => {
+    const arrayContent = [
+      { type: "text", text: "Part one." },
+      { type: "text", text: "Part two." },
+    ] as any;
+    mockLlm.mockResolvedValue({
+      ...makeLlmResponse(""),
+      choices: [{ index: 0, message: { role: "assistant", content: arrayContent }, finish_reason: "stop" }],
+    });
+
+    const result = await caller.analyzeImage({
+      imageUrl: "https://example.com/image.jpg",
+      analysisType: "general",
+    });
+
+    expect(typeof result.analysis).toBe("string");
+    expect(result.analysis).toContain("Part one.");
+    expect(result.analysis).toContain("Part two.");
   });
 
-  it("should reject structured data missing summary", () => {
-    const data = { entities: ["John"], confidence: 0.9 };
-    expect(isValidStructuredData(data)).toBe(false);
-  });
+  it("throws INTERNAL_SERVER_ERROR when no analysis is returned", async () => {
+    mockLlm.mockResolvedValue({
+      ...makeLlmResponse(""),
+      choices: [{ index: 0, message: { role: "assistant", content: "" }, finish_reason: "stop" }],
+    });
 
-  it("should reject structured data with confidence out of range", () => {
-    const data = { entities: [], summary: "test", confidence: 1.5 };
-    expect(isValidStructuredData(data)).toBe(false);
-  });
-
-  it("should reject null structured data", () => {
-    expect(isValidStructuredData(null)).toBe(false);
-  });
-
-  it("should accept confidence of exactly 0 or 1", () => {
-    expect(isValidStructuredData({ entities: [], summary: "test", confidence: 0 })).toBe(true);
-    expect(isValidStructuredData({ entities: [], summary: "test", confidence: 1 })).toBe(true);
-  });
-});
-
-describe("VLM Chat Integration — imageUrls in sendMessage", () => {
-  it("should build multimodal content when imageUrls are provided", () => {
-    const message = "What does this document say?";
-    const imageUrls = ["https://s3.example.com/uploads/doc.png"];
-
-    const content = imageUrls.length > 0
-      ? buildMultimodalContent(message, imageUrls)
-      : buildTextOnlyContent(message);
-
-    expect(Array.isArray(content)).toBe(true);
-    expect((content as any[])[0].type).toBe("text");
-    expect((content as any[])[1].type).toBe("image_url");
-  });
-
-  it("should build text-only content when no imageUrls are provided", () => {
-    const message = "What is the status of my case?";
-    const imageUrls: string[] = [];
-
-    const content = imageUrls.length > 0
-      ? buildMultimodalContent(message, imageUrls)
-      : buildTextOnlyContent(message);
-
-    expect(typeof content).toBe("string");
-    expect(content).toBe(message);
-  });
-
-  it("should handle multiple images in a single chat message", () => {
-    const message = "Compare these two exhibits.";
-    const imageUrls = [
-      "https://s3.example.com/exhibit-a.jpg",
-      "https://s3.example.com/exhibit-b.jpg",
-    ];
-
-    const content = buildMultimodalContent(message, imageUrls);
-    expect(content).toHaveLength(3);
+    await expect(
+      caller.analyzeImage({ imageUrl: "https://example.com/image.jpg", analysisType: "general" })
+    ).rejects.toMatchObject({ code: "INTERNAL_SERVER_ERROR" });
   });
 });
 
-describe("VLM Router — Edge Cases", () => {
-  it("should handle an empty custom prompt by falling back to default", () => {
-    const customPrompt = "   ";
-    const defaultPrompt = "Analyze this image in detail.";
-    const effectivePrompt = customPrompt.trim() ? customPrompt.trim() : defaultPrompt;
-    expect(effectivePrompt).toBe(defaultPrompt);
+describe("vlmRouter.analyzeImage — structured data extraction", () => {
+  it("returns structuredData for document type", async () => {
+    const structuredPayload = { entities: ["John Doe"], summary: "A contract.", confidence: 0.9 };
+    mockLlm
+      .mockResolvedValueOnce(makeLlmResponse("Document analysis text."))
+      .mockResolvedValueOnce(makeLlmResponse(JSON.stringify(structuredPayload)));
+
+    const result = await caller.analyzeImage({
+      imageUrl: "https://example.com/image.jpg",
+      analysisType: "document",
+    });
+
+    expect(result.structuredData).toMatchObject(structuredPayload);
+    expect(mockLlm).toHaveBeenCalledTimes(2);
   });
 
-  it("should use custom prompt when provided and non-empty", () => {
-    const customPrompt = "Focus only on the signatures in this document.";
-    const defaultPrompt = "Analyze this image in detail.";
-    const effectivePrompt = customPrompt.trim() ? customPrompt.trim() : defaultPrompt;
-    expect(effectivePrompt).toBe(customPrompt);
+  it("returns structuredData for evidence type", async () => {
+    const structuredPayload = { entities: ["Exhibit A"], summary: "Evidence photo.", confidence: 0.85 };
+    mockLlm
+      .mockResolvedValueOnce(makeLlmResponse("Evidence analysis text."))
+      .mockResolvedValueOnce(makeLlmResponse(JSON.stringify(structuredPayload)));
+
+    const result = await caller.analyzeImage({
+      imageUrl: "https://example.com/image.jpg",
+      analysisType: "evidence",
+    });
+
+    expect(result.structuredData).toMatchObject(structuredPayload);
   });
 
-  it("should handle image URLs with query parameters", () => {
-    const url = "https://s3.amazonaws.com/bucket/image.jpg?X-Amz-Signature=abc123&X-Amz-Expires=3600";
-    expect(isValidUrl(url)).toBe(true);
+  it("returns null structuredData for general type (no extraction call)", async () => {
+    mockLlm.mockResolvedValue(makeLlmResponse("General analysis."));
+
+    const result = await caller.analyzeImage({
+      imageUrl: "https://example.com/image.jpg",
+      analysisType: "general",
+    });
+
+    expect(result.structuredData).toBeNull();
+    expect(mockLlm).toHaveBeenCalledTimes(1);
   });
 
-  it("should handle PNG, JPEG, WebP, and GIF image URLs", () => {
-    const urls = [
-      "https://example.com/image.png",
-      "https://example.com/image.jpg",
-      "https://example.com/image.jpeg",
-      "https://example.com/image.webp",
-      "https://example.com/image.gif",
-    ];
-    for (const url of urls) {
-      expect(isValidUrl(url)).toBe(true);
-    }
+  it("returns null structuredData when extraction JSON parsing fails (non-fatal)", async () => {
+    mockLlm
+      .mockResolvedValueOnce(makeLlmResponse("Document analysis text."))
+      .mockResolvedValueOnce(makeLlmResponse("not valid json"));
+
+    const result = await caller.analyzeImage({
+      imageUrl: "https://example.com/image.jpg",
+      analysisType: "document",
+    });
+
+    // Non-fatal: analysis still succeeds, structuredData is null
+    expect(result.success).toBe(true);
+    expect(result.structuredData).toBeNull();
+  });
+});
+
+describe("vlmRouter.analyzeImage — LLM error handling", () => {
+  it("throws INTERNAL_SERVER_ERROR when invokeLLM rejects", async () => {
+    mockLlm.mockRejectedValue(new Error("LLM service unavailable"));
+
+    await expect(
+      caller.analyzeImage({ imageUrl: "https://example.com/image.jpg", analysisType: "general" })
+    ).rejects.toMatchObject({ code: "INTERNAL_SERVER_ERROR" });
   });
 });

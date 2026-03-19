@@ -1,6 +1,7 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
+import DashboardLayout from "@/components/DashboardLayout";
 import {
   Eye,
   Upload,
@@ -89,11 +90,22 @@ export default function VisionStudio() {
   const [results, setResults] = useState<AnalysisResult[]>([]);
   const [selectedResult, setSelectedResult] = useState<AnalysisResult | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Track the current object URL so we can revoke it to prevent memory leaks
+  const previewObjectUrlRef = useRef<string | null>(null);
 
   const uploadMutation = trpc.upload.file.useMutation();
   const analyzeMutation = trpc.vlm.analyzeImage.useMutation();
 
   const isLoading = uploadMutation.isPending || analyzeMutation.isPending;
+
+  // Revoke the object URL on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      if (previewObjectUrlRef.current) {
+        URL.revokeObjectURL(previewObjectUrlRef.current);
+      }
+    };
+  }, []);
 
   const handleFile = useCallback(
     async (file: File) => {
@@ -106,21 +118,31 @@ export default function VisionStudio() {
         return;
       }
 
-      // Show preview
+      // Revoke previous object URL before creating a new one
+      if (previewObjectUrlRef.current) {
+        URL.revokeObjectURL(previewObjectUrlRef.current);
+      }
       const objectUrl = URL.createObjectURL(file);
+      previewObjectUrlRef.current = objectUrl;
       setPreviewUrl(objectUrl);
       setPreviewName(file.name);
 
-      try {
-        // Upload the image
-        toast.info("Uploading image...");
-        const reader = new FileReader();
-        reader.onload = async (e) => {
+      // Upload the image
+      toast.info("Uploading image...");
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
           const base64 = (e.target?.result as string).split(",")[1];
+          // upload.file requires a context of "evidence" or "document".
+          // Evidence analysis maps directly; all other modes (general, ocr, document)
+          // use "document" since they process documentary/informational images.
+          const uploadContext: "document" | "evidence" =
+            selectedMode === "evidence" ? "evidence" : "document";
           const uploadResult = await uploadMutation.mutateAsync({
             fileName: file.name,
-            fileType: file.type,
-            fileData: base64,
+            mimeType: file.type,
+            base64Data: base64,
+            context: uploadContext,
           });
 
           const imageUrl = uploadResult.url;
@@ -149,11 +171,17 @@ export default function VisionStudio() {
           setResults((prev) => [newResult, ...prev]);
           setSelectedResult(newResult);
           toast.success("Vision analysis complete!");
-        };
-        reader.readAsDataURL(file);
-      } catch (error) {
-        toast.error(`Analysis failed: ${error instanceof Error ? error.message : "Unknown error"}`);
-      }
+        } catch (error) {
+          toast.error(`Analysis failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+          setPreviewUrl(null);
+          setPreviewName("");
+          if (previewObjectUrlRef.current) {
+            URL.revokeObjectURL(previewObjectUrlRef.current);
+            previewObjectUrlRef.current = null;
+          }
+        }
+      };
+      reader.readAsDataURL(file);
     },
     [selectedMode, customPrompt, useCustomPrompt, uploadMutation, analyzeMutation]
   );
@@ -186,6 +214,10 @@ export default function VisionStudio() {
   };
 
   const clearAll = () => {
+    if (previewObjectUrlRef.current) {
+      URL.revokeObjectURL(previewObjectUrlRef.current);
+      previewObjectUrlRef.current = null;
+    }
     setPreviewUrl(null);
     setPreviewName("");
     setSelectedResult(null);
@@ -194,6 +226,7 @@ export default function VisionStudio() {
   const activeMode = ANALYSIS_MODES.find((m) => m.id === selectedMode)!;
 
   return (
+    <DashboardLayout>
     <div className="min-h-screen bg-gray-950 text-white p-6">
       {/* Header */}
       <div className="mb-8">
@@ -297,7 +330,7 @@ export default function VisionStudio() {
                       }`}
                     >
                       <div className="w-8 h-8 rounded-lg overflow-hidden flex-shrink-0 bg-gray-700">
-                        <img src={r.imageUrl} alt="" className="w-full h-full object-cover" />
+                        <img src={r.imageUrl} alt={r.imageName} className="w-full h-full object-cover" />
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="text-xs font-medium text-gray-300 truncate">{r.imageName}</p>
@@ -318,10 +351,19 @@ export default function VisionStudio() {
         <div className="xl:col-span-2 space-y-5">
           {/* Upload Zone */}
           <div
+            role="button"
+            tabIndex={isLoading ? -1 : 0}
+            aria-label="Upload image — click or drag and drop"
             onDrop={handleDrop}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onClick={() => !isLoading && fileInputRef.current?.click()}
+            onKeyDown={(e) => {
+              if (!isLoading && (e.key === "Enter" || e.key === " ")) {
+                e.preventDefault();
+                fileInputRef.current?.click();
+              }
+            }}
             className={`relative rounded-2xl border-2 border-dashed transition-all cursor-pointer overflow-hidden ${
               isDragging
                 ? "border-violet-500 bg-violet-500/10"
@@ -531,5 +573,6 @@ export default function VisionStudio() {
         </div>
       </div>
     </div>
+    </DashboardLayout>
   );
 }

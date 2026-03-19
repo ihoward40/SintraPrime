@@ -2,6 +2,25 @@ import { z } from "zod";
 import { router, protectedProcedure } from "./_core/trpc";
 import { invokeLLM } from "./_core/llm";
 import { TRPCError } from "@trpc/server";
+import { passesSsrfGuard } from "./lib/iframePreflight";
+
+/**
+ * Normalize an LLM message content value to a plain string.
+ * The InvokeResult type allows content to be either a string or an array of
+ * content parts (text, image, file). We join text parts and skip non-text parts
+ * so the result is always safe to render as a string.
+ */
+function normalizeContentToString(
+  content: string | Array<{ type: string; text?: string }> | null | undefined
+): string | null {
+  if (!content) return null;
+  if (typeof content === "string") return content;
+  const text = content
+    .filter((part) => part.type === "text" && part.text)
+    .map((part) => part.text as string)
+    .join("\n");
+  return text || null;
+}
 
 export const vlmRouter = router({
   // Analyze an image using the Vision Language Model
@@ -14,6 +33,17 @@ export const vlmRouter = router({
       })
     )
     .mutation(async ({ input }) => {
+      // SSRF guard: reject localhost, private IPs, and non-http(s) schemes
+      let parsedUrl: URL;
+      try {
+        parsedUrl = new URL(input.imageUrl);
+      } catch {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid image URL." });
+      }
+      if (!(await passesSsrfGuard(parsedUrl))) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Image URL is not allowed." });
+      }
+
       try {
         let systemPrompt = "You are an expert AI Vision Assistant for SintraPrime, specializing in analyzing images, documents, and visual evidence.";
         
@@ -50,7 +80,8 @@ export const vlmRouter = router({
           ],
         });
 
-        const analysis = response.choices[0]?.message?.content;
+        const rawAnalysis = response.choices[0]?.message?.content;
+        const analysis = normalizeContentToString(rawAnalysis as any);
 
         if (!analysis) {
           throw new Error("No analysis returned from the vision model.");
@@ -74,7 +105,8 @@ export const vlmRouter = router({
               responseFormat: { type: "json_object" }
             });
             
-            const jsonStr = extractionResponse.choices[0]?.message?.content;
+            const rawJson = extractionResponse.choices[0]?.message?.content;
+            const jsonStr = normalizeContentToString(rawJson as any);
             if (jsonStr) {
               structuredData = JSON.parse(jsonStr);
             }
