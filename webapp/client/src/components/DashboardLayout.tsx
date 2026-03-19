@@ -85,11 +85,11 @@ import {
   Layers,
   Download,
   Settings,
+  Package,
   Clock,
   Cpu,
   Globe,
   Puzzle,
-  Package,
   ShieldCheck,
   BookOpen,
   Eye,
@@ -139,9 +139,9 @@ const additionalAIItems = [
   { icon: Brain, label: "AI Companion", path: "/ai", description: "AI-powered legal assistant", aliases: ["companion", "legal ai", "assistant"] },
   { icon: Brain, label: "Legal AI Agents", path: "/legal-agents", description: "Specialized legal AI agents", aliases: ["agents", "legal", "specialists"] },
   { icon: Calculator, label: "IKE Tax Agent", path: "/tax-agent", badge: "New", description: "Trust & estate tax preparation", aliases: ["tax", "1041", "trust", "estate", "dni", "fiduciary"] },
-  { icon: Bot, label: "Autonomous Agent", path: "/autonomous-agent", description: "Self-directed task automation", aliases: ["auto", "bot", "automation"] },
   { icon: BookOpen, label: "Document Intelligence", path: "/document-intelligence", badge: "New", description: "AI clause extraction & risk analysis", aliases: ["document", "ocr", "clause", "extract", "intelligence"] },
   { icon: Mail, label: "Daily Digest", path: "/daily-digest", badge: "New", description: "Daily AI briefing & voice commands", aliases: ["digest", "daily", "briefing", "email", "voice"] },
+  { icon: Bot, label: "Autonomous Agent", path: "/autonomous-agent", description: "Self-directed task automation", aliases: ["auto", "bot", "automation"] },
 ];
 
 // Power Tools (collapsible)
@@ -153,9 +153,11 @@ const powerToolsItems = [
   { icon: FolderKanban, label: "Quantum Workspace", path: "/workspace", description: "Advanced collaboration space", aliases: ["workspace", "quantum", "collab", "space"] },
   { icon: Wrench, label: "Command Center", path: "/command-center", description: "Centralized control panel", aliases: ["command", "center", "control", "panel"] },
   { icon: Bot, label: "Workflow Templates", path: "/workflow-templates", description: "Pre-built automation workflows", aliases: ["workflow", "templates", "automation", "prebuilt"] },
+  { icon: Package, label: "Open Source Tools", path: "/open-source-tools", badge: "New", description: "10 top open-source tools replacing paid software", aliases: ["open source", "tools", "free", "self-host", "coolify", "rag", "agents", "tts", "voice", "dolt", "deerflow", "promptfoo"] },
   { icon: Clock, label: "Time Tracker & Billing", path: "/time-tracker", badge: "New", description: "Track billable hours and generate invoices", aliases: ["time", "billing", "hours", "invoice", "tracker"] },
-  { icon: Puzzle, label: "Plugin Marketplace", path: "/plugins", badge: "New", description: "Extend SintraPrime with plugins", aliases: ["plugin", "marketplace", "extension", "addon", "install"] },
-  { icon: Globe, label: "Jurisdiction Database", path: "/jurisdictions", badge: "New", description: "Multi-jurisdiction filing rules & deadlines", aliases: ["jurisdiction", "court", "state", "federal", "rules"] },
+  { icon: Globe, label: "Jurisdiction Database", path: "/jurisdictions", badge: "New", description: "Multi-jurisdictional legal reference database", aliases: ["jurisdiction", "state", "law", "database", "rules"] },
+  { icon: Puzzle, label: "Plugin Marketplace", path: "/plugins", badge: "New", description: "Extend SintraPrime with community plugins", aliases: ["plugins", "extensions", "marketplace", "addons"] },
+  { icon: ShieldCheck, label: "Two-Factor Auth", path: "/security/2fa", badge: "Security", description: "Enhanced account security with 2FA", aliases: ["2fa", "security", "auth", "mfa", "otp"] },
 ];
 
 // Case Management (collapsible)
@@ -193,7 +195,6 @@ const settingsItems = [
   { icon: Bell, label: "Notification Settings", path: "/settings/notifications", badge: "New", description: "Configure governance alerts", aliases: ["notifications", "alerts", "slack", "email"] },
   { icon: Mic, label: "Wake-Word Settings", path: "/settings/wake-word", description: "Voice activation settings", aliases: ["wake", "voice", "activation", "mic"] },
   { icon: Keyboard, label: "Keyboard Shortcuts", path: "/settings/keyboard-shortcuts", description: "Customize shortcuts", aliases: ["keyboard", "shortcuts", "hotkeys", "keys"] },
-  { icon: ShieldCheck, label: "Two-Factor Auth", path: "/security/2fa", badge: "New", description: "Secure your account with 2FA", aliases: ["2fa", "mfa", "totp", "security", "authenticator"] },
 ];
 
 // Governance (collapsible)
