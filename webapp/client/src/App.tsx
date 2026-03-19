@@ -87,6 +87,8 @@ import TriggerAlertSettings from "./pages/TriggerAlertSettings";
 import TriggerExecutionHistory from "./pages/TriggerExecutionHistory";
 import TriggerDashboard from "./pages/TriggerDashboard";
 import TriggerOptimizer from "./pages/TriggerOptimizer";
+import OpenSourceToolsHub from "./pages/OpenSourceToolsHub";
+import VisionStudio from "./pages/VisionStudio";
 import AIMemoryManager from "./pages/AIMemoryManager";
 import TwoFactorAuth from "./pages/TwoFactorAuth";
 import DocumentIntelligence from "./pages/DocumentIntelligence";
@@ -95,7 +97,6 @@ import LLMRouter from "./pages/LLMRouter";
 import PluginMarketplace from "./pages/PluginMarketplace";
 import JurisdictionDatabase from "./pages/JurisdictionDatabase";
 import DailyDigest from "./pages/DailyDigest";
-import VisionStudio from "./pages/VisionStudio";
 
 function Router() {
   return (
@@ -185,6 +186,7 @@ function Router() {
       <Route path="/cases/:caseId/timeline" component={TimelineBuilder} />
       <Route path="/beneficiary-portal" component={BeneficiaryPortal} />
       <Route path="/beneficiaries" component={BeneficiaryManagement} />
+      <Route path="/open-source-tools" component={OpenSourceToolsHub} />
       <Route path="/ai-memory" component={AIMemoryManager} />
       <Route path="/security/2fa" component={TwoFactorAuth} />
       <Route path="/document-intelligence" component={DocumentIntelligence} />
