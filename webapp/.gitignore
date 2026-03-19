@@ -113,3 +113,4 @@ temp/
 .kilocode/
 .manus-logs/
 **/__manus__/
+webapp/package-lock.json
