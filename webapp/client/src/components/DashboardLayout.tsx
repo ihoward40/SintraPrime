@@ -85,6 +85,7 @@ import {
   Layers,
   Download,
   Settings,
+  Eye,
 } from "lucide-react";
 import React, { CSSProperties, useCallback, useEffect, useRef, useState } from "react";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
@@ -121,6 +122,7 @@ const mainMenuItems = [
 const featuredAIItems = [
   { icon: Sparkles, label: "AI Assistant", path: "/ai-assistant", badge: "New", description: "Multi-modal AI chat", aliases: ["chat", "ai", "assistant", "help"] },
   { icon: Zap, label: "Agent Zero", path: "/agent-zero", badge: "God-Tier", description: "Autonomous task execution", aliases: ["agent", "auto", "autonomous", "task"] },
+  { icon: Eye, label: "Vision Studio", path: "/vision-studio", badge: "VLM", description: "AI image & document vision analysis", aliases: ["vision", "image", "ocr", "vlm", "see", "analyze"] },
 ];
 
 // Additional AI Tools (collapsible)

@@ -48,6 +48,7 @@ import { webMonitoringRouter } from "./routers/webMonitoring";
 import { workflowTriggersRouter } from "./routers/workflowTriggers";
 import { triggerAlertsRouter } from "./routers/triggerAlerts";
 import { sintraInfraRouter } from "./routers/sintraInfra";
+import { vlmRouter } from "./vlm-router";
 
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import * as db from "./db";
@@ -132,6 +133,7 @@ export const appRouter = router({
   workflowTriggers: workflowTriggersRouter,
   triggerAlerts: triggerAlertsRouter,
   sintraInfra: sintraInfraRouter,
+  vlm: vlmRouter,
   
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
