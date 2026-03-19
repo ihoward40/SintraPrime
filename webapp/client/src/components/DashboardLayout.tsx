@@ -85,6 +85,7 @@ import {
   Layers,
   Download,
   Settings,
+  Package,
   Eye,
 } from "lucide-react";
 import React, { CSSProperties, useCallback, useEffect, useRef, useState } from "react";
@@ -142,6 +143,7 @@ const powerToolsItems = [
   { icon: FolderKanban, label: "Quantum Workspace", path: "/workspace", description: "Advanced collaboration space", aliases: ["workspace", "quantum", "collab", "space"] },
   { icon: Wrench, label: "Command Center", path: "/command-center", description: "Centralized control panel", aliases: ["command", "center", "control", "panel"] },
   { icon: Bot, label: "Workflow Templates", path: "/workflow-templates", description: "Pre-built automation workflows", aliases: ["workflow", "templates", "automation", "prebuilt"] },
+  { icon: Package, label: "Open Source Tools", path: "/open-source-tools", badge: "New", description: "10 top open-source tools replacing paid software", aliases: ["open source", "tools", "free", "self-host", "coolify", "rag", "agents", "tts", "voice", "dolt", "deerflow", "promptfoo"] },
 ];
 
 // Case Management (collapsible)

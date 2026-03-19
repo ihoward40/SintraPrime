@@ -87,6 +87,7 @@ import TriggerAlertSettings from "./pages/TriggerAlertSettings";
 import TriggerExecutionHistory from "./pages/TriggerExecutionHistory";
 import TriggerDashboard from "./pages/TriggerDashboard";
 import TriggerOptimizer from "./pages/TriggerOptimizer";
+import OpenSourceToolsHub from "./pages/OpenSourceToolsHub";
 import VisionStudio from "./pages/VisionStudio";
 
 function Router() {
@@ -177,6 +178,7 @@ function Router() {
       <Route path="/cases/:caseId/timeline" component={TimelineBuilder} />
       <Route path="/beneficiary-portal" component={BeneficiaryPortal} />
       <Route path="/beneficiaries" component={BeneficiaryManagement} />
+      <Route path="/open-source-tools" component={OpenSourceToolsHub} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>

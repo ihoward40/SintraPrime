@@ -135,8 +135,6 @@ export const aiChatRouter = router({
             extractedText: z.string(),
           })
         ).optional(),
-        // VLM: inline image URLs for multimodal vision analysis in chat
-        imageUrls: z.array(z.string().url()).optional(),
         conversationHistory: z.array(
           z.object({
             role: z.enum(["user", "assistant"]),
@@ -209,19 +207,11 @@ Description: ${c.description || "N/A"}`;
           messages.push(...recentHistory);
         }
 
-        // Add current user message — support multimodal (text + images) for VLM
-        if (input.imageUrls && input.imageUrls.length > 0) {
-          const contentParts: any[] = [
-            { type: "text", text: input.message },
-            ...input.imageUrls.map((url) => ({
-              type: "image_url",
-              image_url: { url, detail: "high" },
-            })),
-          ];
-          messages.push({ role: "user", content: contentParts });
-        } else {
-          messages.push({ role: "user", content: input.message });
-        }
+        // Add current user message
+        messages.push({
+          role: "user",
+          content: input.message,
+        });
 
         // Save user message to database if conversationId provided
         if (input.conversationId) {
