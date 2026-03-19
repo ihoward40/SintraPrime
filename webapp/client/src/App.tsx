@@ -95,6 +95,7 @@ import LLMRouter from "./pages/LLMRouter";
 import PluginMarketplace from "./pages/PluginMarketplace";
 import JurisdictionDatabase from "./pages/JurisdictionDatabase";
 import DailyDigest from "./pages/DailyDigest";
+import VisionStudio from "./pages/VisionStudio";
 
 function Router() {
   return (
@@ -173,6 +174,7 @@ function Router() {
       <Route path={"/trigger-history"} component={TriggerExecutionHistory} />
       <Route path={"/trigger-dashboard"} component={TriggerDashboard} />
       <Route path={"/trigger-optimizer"} component={TriggerOptimizer} />
+      <Route path={"/vision-studio"} component={VisionStudio} />
       <Route path="/governance/approvals" component={ApprovalWorkflow} />
       <Route path="/admin" component={AdminDashboard} />
       <Route path="/governance/settings" component={GovernanceSettings} />
