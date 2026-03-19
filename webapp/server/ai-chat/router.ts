@@ -5,6 +5,7 @@ import { storagePut } from "../storage";
 import * as chatConvHelpers from "../db/chat-conversation-helpers";
 import { transcribeAudio } from "../_core/voiceTranscription";
 import { TRPCError } from "@trpc/server";
+import { passesSsrfGuard } from "../lib/iframePreflight";
 
 export const aiChatRouter = router({
   // Upload file to S3
@@ -211,6 +212,18 @@ Description: ${c.description || "N/A"}`;
 
         // Add current user message — support multimodal (text + images) for VLM
         if (input.imageUrls && input.imageUrls.length > 0) {
+          // SSRF guard: reject any image URL targeting localhost/private IPs or non-http(s) schemes
+          for (const rawUrl of input.imageUrls) {
+            let parsed: URL;
+            try {
+              parsed = new URL(rawUrl);
+            } catch {
+              throw new TRPCError({ code: "BAD_REQUEST", message: `Invalid image URL: ${rawUrl}` });
+            }
+            if (!(await passesSsrfGuard(parsed))) {
+              throw new TRPCError({ code: "BAD_REQUEST", message: `Image URL is not allowed: ${rawUrl}` });
+            }
+          }
           const contentParts: any[] = [
             { type: "text", text: input.message },
             ...input.imageUrls.map((url) => ({
@@ -225,11 +238,16 @@ Description: ${c.description || "N/A"}`;
 
         // Save user message to database if conversationId provided
         if (input.conversationId) {
+          // Build attachments JSON: merge file context and image URLs so history can be reconstructed
+          const attachmentPayload = {
+            ...(input.fileContext && input.fileContext.length > 0 ? { fileContext: input.fileContext } : {}),
+            ...(input.imageUrls && input.imageUrls.length > 0 ? { imageUrls: input.imageUrls } : {}),
+          };
           await chatConvHelpers.addMessage({
             conversationId: input.conversationId,
             role: "user",
             content: input.message,
-            attachments: input.fileContext ? JSON.stringify(input.fileContext) : null,
+            attachments: Object.keys(attachmentPayload).length > 0 ? JSON.stringify(attachmentPayload) : null,
           });
         }
 
