@@ -117,6 +117,13 @@ import { trpc } from "@/lib/trpc";
 const mainMenuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard", description: "Overview of cases and metrics", aliases: ["home", "overview", "main"] },
   { icon: BarChart3, label: "Analytics", path: "/analytics", description: "Data insights and reports", aliases: ["stats", "metrics", "data", "reports"] },
+  { icon: Cpu, label: "LLM Router", path: "/llm-router", badge: "New", description: "Configure AI model routing per task", aliases: ["llm", "model", "router", "gpt", "claude"] },
+  { icon: BookOpen, label: "Document Intelligence", path: "/document-intelligence", badge: "New", description: "AI clause extraction & risk analysis", aliases: ["document", "ocr", "clause", "extract", "intelligence"] },
+  { icon: Mail, label: "Daily Digest", path: "/daily-digest", badge: "New", description: "Daily AI briefing & voice commands", aliases: ["digest", "daily", "briefing", "email", "voice"] },
+  { icon: Clock, label: "Time Tracker & Billing", path: "/time-tracker", badge: "New", description: "Track billable hours and generate invoices", aliases: ["time", "billing", "hours", "invoice", "tracker"] },
+  { icon: Puzzle, label: "Plugin Marketplace", path: "/plugins", badge: "New", description: "Extend SintraPrime with plugins", aliases: ["plugin", "marketplace", "extension", "addon", "install"] },
+  { icon: Globe, label: "Jurisdiction Database", path: "/jurisdictions", badge: "New", description: "Multi-jurisdiction filing rules & deadlines", aliases: ["jurisdiction", "court", "state", "federal", "rules"] },
+  { icon: ShieldCheck, label: "Two-Factor Auth", path: "/security/2fa", badge: "New", description: "Secure your account with 2FA", aliases: ["2fa", "mfa", "totp", "security", "authenticator"] },
 ];
 
 // Featured AI Tools (top-tier features)

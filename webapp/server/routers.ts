@@ -59,6 +59,13 @@ import { createCheckoutSession, createPortalSession, getPaymentHistory, getOrCre
 import { SUBSCRIPTION_TIERS, type SubscriptionTier } from "./stripe-products";
 import { getTierLimits, canAccessFeature, type TierKey } from "@shared/tierLimits";
 import { TRPCError } from "@trpc/server";
+import { twoFactorRouter } from "./two-factor-router";
+import { timeTrackerRouter } from "./time-tracker-router";
+import { documentIntelligenceRouter } from "./document-intelligence-router";
+import { llmRouterConfigRouter } from "./llm-router-config-router";
+import { pluginMarketplaceRouter } from "./plugin-marketplace-router";
+import { jurisdictionRouter } from "./jurisdiction-router";
+import { digestVoiceRouter } from "./digest-voice-router";
 
 // Helper functions for PDF generation
 function escapeHtml(text: string): string {
@@ -2633,6 +2640,13 @@ Organize questions by topic. Include rationale for each line of questioning. Add
         return { success: true };
       }),
   }),
+  twoFactor: twoFactorRouter,
+  timeTracker: timeTrackerRouter,
+  documentIntelligence: documentIntelligenceRouter,
+  llmRouterConfig: llmRouterConfigRouter,
+  pluginMarketplace: pluginMarketplaceRouter,
+  jurisdiction: jurisdictionRouter,
+  digestVoice: digestVoiceRouter,
 });
 export type AppRouter = typeof appRouter;
 
