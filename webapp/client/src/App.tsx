@@ -89,6 +89,14 @@ import TriggerDashboard from "./pages/TriggerDashboard";
 import TriggerOptimizer from "./pages/TriggerOptimizer";
 import OpenSourceToolsHub from "./pages/OpenSourceToolsHub";
 import VisionStudio from "./pages/VisionStudio";
+import AIMemoryManager from "./pages/AIMemoryManager";
+import TwoFactorAuth from "./pages/TwoFactorAuth";
+import DocumentIntelligence from "./pages/DocumentIntelligence";
+import TimeTrackerBilling from "./pages/TimeTrackerBilling";
+import LLMRouter from "./pages/LLMRouter";
+import PluginMarketplace from "./pages/PluginMarketplace";
+import JurisdictionDatabase from "./pages/JurisdictionDatabase";
+import DailyDigest from "./pages/DailyDigest";
 
 function Router() {
   return (
@@ -179,6 +187,14 @@ function Router() {
       <Route path="/beneficiary-portal" component={BeneficiaryPortal} />
       <Route path="/beneficiaries" component={BeneficiaryManagement} />
       <Route path="/open-source-tools" component={OpenSourceToolsHub} />
+      <Route path="/ai-memory" component={AIMemoryManager} />
+      <Route path="/security/2fa" component={TwoFactorAuth} />
+      <Route path="/document-intelligence" component={DocumentIntelligence} />
+      <Route path="/time-tracker" component={TimeTrackerBilling} />
+      <Route path="/llm-router" component={LLMRouter} />
+      <Route path="/plugins" component={PluginMarketplace} />
+      <Route path="/jurisdictions" component={JurisdictionDatabase} />
+      <Route path="/daily-digest" component={DailyDigest} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>
