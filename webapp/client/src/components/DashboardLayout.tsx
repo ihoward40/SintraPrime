@@ -85,6 +85,13 @@ import {
   Layers,
   Download,
   Settings,
+  Clock,
+  Cpu,
+  Globe,
+  Puzzle,
+  Package,
+  ShieldCheck,
+  BookOpen,
 } from "lucide-react";
 import React, { CSSProperties, useCallback, useEffect, useRef, useState } from "react";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
@@ -122,6 +129,7 @@ const featuredAIItems = [
   { icon: Sparkles, label: "AI Assistant", path: "/ai-assistant", badge: "New", description: "Multi-modal AI chat", aliases: ["chat", "ai", "assistant", "help"] },
   { icon: Zap, label: "Agent Zero", path: "/agent-zero", badge: "God-Tier", description: "Autonomous task execution", aliases: ["agent", "auto", "autonomous", "task"] },
   { icon: Brain, label: "AI Memory", path: "/ai-memory", badge: "New", description: "Persistent AI memory across sessions", aliases: ["memory", "remember", "context", "preferences", "facts"] },
+  { icon: Cpu, label: "LLM Router", path: "/llm-router", badge: "New", description: "Configure AI model routing per task", aliases: ["llm", "model", "router", "gpt", "claude"] },
 ];
 
 // Additional AI Tools (collapsible)
@@ -130,6 +138,8 @@ const additionalAIItems = [
   { icon: Brain, label: "Legal AI Agents", path: "/legal-agents", description: "Specialized legal AI agents", aliases: ["agents", "legal", "specialists"] },
   { icon: Calculator, label: "IKE Tax Agent", path: "/tax-agent", badge: "New", description: "Trust & estate tax preparation", aliases: ["tax", "1041", "trust", "estate", "dni", "fiduciary"] },
   { icon: Bot, label: "Autonomous Agent", path: "/autonomous-agent", description: "Self-directed task automation", aliases: ["auto", "bot", "automation"] },
+  { icon: BookOpen, label: "Document Intelligence", path: "/document-intelligence", badge: "New", description: "AI clause extraction & risk analysis", aliases: ["document", "ocr", "clause", "extract", "intelligence"] },
+  { icon: Mail, label: "Daily Digest", path: "/daily-digest", badge: "New", description: "Daily AI briefing & voice commands", aliases: ["digest", "daily", "briefing", "email", "voice"] },
 ];
 
 // Power Tools (collapsible)
@@ -141,6 +151,9 @@ const powerToolsItems = [
   { icon: FolderKanban, label: "Quantum Workspace", path: "/workspace", description: "Advanced collaboration space", aliases: ["workspace", "quantum", "collab", "space"] },
   { icon: Wrench, label: "Command Center", path: "/command-center", description: "Centralized control panel", aliases: ["command", "center", "control", "panel"] },
   { icon: Bot, label: "Workflow Templates", path: "/workflow-templates", description: "Pre-built automation workflows", aliases: ["workflow", "templates", "automation", "prebuilt"] },
+  { icon: Clock, label: "Time Tracker & Billing", path: "/time-tracker", badge: "New", description: "Track billable hours and generate invoices", aliases: ["time", "billing", "hours", "invoice", "tracker"] },
+  { icon: Puzzle, label: "Plugin Marketplace", path: "/plugins", badge: "New", description: "Extend SintraPrime with plugins", aliases: ["plugin", "marketplace", "extension", "addon", "install"] },
+  { icon: Globe, label: "Jurisdiction Database", path: "/jurisdictions", badge: "New", description: "Multi-jurisdiction filing rules & deadlines", aliases: ["jurisdiction", "court", "state", "federal", "rules"] },
 ];
 
 // Case Management (collapsible)
@@ -178,6 +191,7 @@ const settingsItems = [
   { icon: Bell, label: "Notification Settings", path: "/settings/notifications", badge: "New", description: "Configure governance alerts", aliases: ["notifications", "alerts", "slack", "email"] },
   { icon: Mic, label: "Wake-Word Settings", path: "/settings/wake-word", description: "Voice activation settings", aliases: ["wake", "voice", "activation", "mic"] },
   { icon: Keyboard, label: "Keyboard Shortcuts", path: "/settings/keyboard-shortcuts", description: "Customize shortcuts", aliases: ["keyboard", "shortcuts", "hotkeys", "keys"] },
+  { icon: ShieldCheck, label: "Two-Factor Auth", path: "/security/2fa", badge: "New", description: "Secure your account with 2FA", aliases: ["2fa", "mfa", "totp", "security", "authenticator"] },
 ];
 
 // Governance (collapsible)
