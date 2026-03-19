@@ -48,6 +48,7 @@ import { webMonitoringRouter } from "./routers/webMonitoring";
 import { workflowTriggersRouter } from "./routers/workflowTriggers";
 import { triggerAlertsRouter } from "./routers/triggerAlerts";
 import { sintraInfraRouter } from "./routers/sintraInfra";
+import { openSourceToolsRouter } from "./open-source-tools-router";
 import { aiMemoryRouter } from "./ai-memory-router";
 import { vlmRouter } from "./vlm-router";
 
@@ -134,6 +135,7 @@ export const appRouter = router({
   workflowTriggers: workflowTriggersRouter,
   triggerAlerts: triggerAlertsRouter,
   sintraInfra: sintraInfraRouter,
+  openSourceTools: openSourceToolsRouter,
   aiMemory: aiMemoryRouter,
   vlm: vlmRouter,
   
