@@ -121,6 +121,7 @@ const mainMenuItems = [
 const featuredAIItems = [
   { icon: Sparkles, label: "AI Assistant", path: "/ai-assistant", badge: "New", description: "Multi-modal AI chat", aliases: ["chat", "ai", "assistant", "help"] },
   { icon: Zap, label: "Agent Zero", path: "/agent-zero", badge: "God-Tier", description: "Autonomous task execution", aliases: ["agent", "auto", "autonomous", "task"] },
+  { icon: Brain, label: "AI Memory", path: "/ai-memory", badge: "New", description: "Persistent AI memory across sessions", aliases: ["memory", "remember", "context", "preferences", "facts"] },
 ];
 
 // Additional AI Tools (collapsible)

@@ -87,6 +87,7 @@ import TriggerAlertSettings from "./pages/TriggerAlertSettings";
 import TriggerExecutionHistory from "./pages/TriggerExecutionHistory";
 import TriggerDashboard from "./pages/TriggerDashboard";
 import TriggerOptimizer from "./pages/TriggerOptimizer";
+import AIMemoryManager from "./pages/AIMemoryManager";
 
 function Router() {
   return (
@@ -175,6 +176,7 @@ function Router() {
       <Route path="/cases/:caseId/timeline" component={TimelineBuilder} />
       <Route path="/beneficiary-portal" component={BeneficiaryPortal} />
       <Route path="/beneficiaries" component={BeneficiaryManagement} />
+      <Route path="/ai-memory" component={AIMemoryManager} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>
