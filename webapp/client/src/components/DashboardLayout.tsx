@@ -92,6 +92,7 @@ import {
   Package,
   ShieldCheck,
   BookOpen,
+  Eye,
 } from "lucide-react";
 import React, { CSSProperties, useCallback, useEffect, useRef, useState } from "react";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
@@ -130,6 +131,7 @@ const featuredAIItems = [
   { icon: Zap, label: "Agent Zero", path: "/agent-zero", badge: "God-Tier", description: "Autonomous task execution", aliases: ["agent", "auto", "autonomous", "task"] },
   { icon: Brain, label: "AI Memory", path: "/ai-memory", badge: "New", description: "Persistent AI memory across sessions", aliases: ["memory", "remember", "context", "preferences", "facts"] },
   { icon: Cpu, label: "LLM Router", path: "/llm-router", badge: "New", description: "Configure AI model routing per task", aliases: ["llm", "model", "router", "gpt", "claude"] },
+  { icon: Eye, label: "Vision Studio", path: "/vision-studio", badge: "VLM", description: "AI image & document vision analysis", aliases: ["vision", "image", "ocr", "vlm", "see", "analyze"] },
 ];
 
 // Additional AI Tools (collapsible)
