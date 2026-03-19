@@ -56,6 +56,7 @@ import { llmRouterConfigRouter } from "./llm-router-config-router";
 import { pluginMarketplaceRouter } from "./plugin-marketplace-router";
 import { jurisdictionRouter } from "./jurisdiction-router";
 import { digestVoiceRouter } from "./digest-voice-router";
+import { vlmRouter } from "./vlm-router";
 
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import * as db from "./db";
@@ -148,6 +149,7 @@ export const appRouter = router({
   pluginMarketplace: pluginMarketplaceRouter,
   jurisdiction: jurisdictionRouter,
   digestVoice: digestVoiceRouter,
+  vlm: vlmRouter,
   
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
