@@ -188,6 +188,8 @@ function Router() {
       <Route path="/beneficiaries" component={BeneficiaryManagement} />
       <Route path="/open-source-tools" component={OpenSourceToolsHub} />
       <Route path="/ai-memory" component={AIMemoryManager} />
+      <Route path={"/404"} component={NotFound} />
+      <Route component={NotFound} />
       <Route path="/security/2fa" component={TwoFactorAuth} />
       <Route path="/document-intelligence" component={DocumentIntelligence} />
       <Route path="/time-tracker" component={TimeTrackerBilling} />
@@ -195,8 +197,6 @@ function Router() {
       <Route path="/plugins" component={PluginMarketplace} />
       <Route path="/jurisdictions" component={JurisdictionDatabase} />
       <Route path="/daily-digest" component={DailyDigest} />
-      <Route path={"/404"} component={NotFound} />
-      <Route component={NotFound} />
     </Switch>
   );
 }
