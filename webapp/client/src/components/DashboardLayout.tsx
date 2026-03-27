@@ -85,6 +85,8 @@ import {
   Layers,
   Download,
   Settings,
+  Package,
+  Eye,
 } from "lucide-react";
 import React, { CSSProperties, useCallback, useEffect, useRef, useState } from "react";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
@@ -115,12 +117,21 @@ import { trpc } from "@/lib/trpc";
 const mainMenuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard", description: "Overview of cases and metrics", aliases: ["home", "overview", "main"] },
   { icon: BarChart3, label: "Analytics", path: "/analytics", description: "Data insights and reports", aliases: ["stats", "metrics", "data", "reports"] },
+  { icon: Cpu, label: "LLM Router", path: "/llm-router", badge: "New", description: "Configure AI model routing per task", aliases: ["llm", "model", "router", "gpt", "claude"] },
+  { icon: BookOpen, label: "Document Intelligence", path: "/document-intelligence", badge: "New", description: "AI clause extraction & risk analysis", aliases: ["document", "ocr", "clause", "extract", "intelligence"] },
+  { icon: Mail, label: "Daily Digest", path: "/daily-digest", badge: "New", description: "Daily AI briefing & voice commands", aliases: ["digest", "daily", "briefing", "email", "voice"] },
+  { icon: Clock, label: "Time Tracker & Billing", path: "/time-tracker", badge: "New", description: "Track billable hours and generate invoices", aliases: ["time", "billing", "hours", "invoice", "tracker"] },
+  { icon: Puzzle, label: "Plugin Marketplace", path: "/plugins", badge: "New", description: "Extend SintraPrime with plugins", aliases: ["plugin", "marketplace", "extension", "addon", "install"] },
+  { icon: Globe, label: "Jurisdiction Database", path: "/jurisdictions", badge: "New", description: "Multi-jurisdiction filing rules & deadlines", aliases: ["jurisdiction", "court", "state", "federal", "rules"] },
+  { icon: ShieldCheck, label: "Two-Factor Auth", path: "/security/2fa", badge: "New", description: "Secure your account with 2FA", aliases: ["2fa", "mfa", "totp", "security", "authenticator"] },
 ];
 
 // Featured AI Tools (top-tier features)
 const featuredAIItems = [
   { icon: Sparkles, label: "AI Assistant", path: "/ai-assistant", badge: "New", description: "Multi-modal AI chat", aliases: ["chat", "ai", "assistant", "help"] },
   { icon: Zap, label: "Agent Zero", path: "/agent-zero", badge: "God-Tier", description: "Autonomous task execution", aliases: ["agent", "auto", "autonomous", "task"] },
+  { icon: Brain, label: "AI Memory", path: "/ai-memory", badge: "New", description: "Persistent AI memory across sessions", aliases: ["memory", "remember", "context", "preferences", "facts"] },
+  { icon: Eye, label: "Vision Studio", path: "/vision-studio", badge: "VLM", description: "AI image & document vision analysis", aliases: ["vision", "image", "ocr", "vlm", "see", "analyze"] },
 ];
 
 // Additional AI Tools (collapsible)
@@ -140,6 +151,7 @@ const powerToolsItems = [
   { icon: FolderKanban, label: "Quantum Workspace", path: "/workspace", description: "Advanced collaboration space", aliases: ["workspace", "quantum", "collab", "space"] },
   { icon: Wrench, label: "Command Center", path: "/command-center", description: "Centralized control panel", aliases: ["command", "center", "control", "panel"] },
   { icon: Bot, label: "Workflow Templates", path: "/workflow-templates", description: "Pre-built automation workflows", aliases: ["workflow", "templates", "automation", "prebuilt"] },
+  { icon: Package, label: "Open Source Tools", path: "/open-source-tools", badge: "New", description: "10 top open-source tools replacing paid software", aliases: ["open source", "tools", "free", "self-host", "coolify", "rag", "agents", "tts", "voice", "dolt", "deerflow", "promptfoo"] },
 ];
 
 // Case Management (collapsible)

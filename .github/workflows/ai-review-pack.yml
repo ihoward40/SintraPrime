@@ -90,9 +90,13 @@ jobs:
             }
 
             const author = pr.user?.login || '';
+            const BOT_LOGINS = new Set([
+              // Add automation accounts here as needed (non-[bot] service accounts).
+            ]);
+
             const isBotAuthor =
-              author === 'dependabot[bot]' ||
-              author.endsWith('[bot]');
+              author.endsWith('[bot]') ||
+              BOT_LOGINS.has(author);
 
             function failOrNotice(message) {
               if (isBotAuthor) {

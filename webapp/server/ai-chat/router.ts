@@ -187,6 +187,61 @@ Description: ${c.description || "N/A"}`;
           }
         }
 
+        // Add AI Memory context
+        try {
+          const { getDb } = await import("../db");
+          const db = await getDb();
+          const { aiMemory } = await import("../../drizzle/schema-ai-memory");
+          const { eq, and, desc } = await import("drizzle-orm");
+          
+          if (db) {
+            // Get general user preferences and context
+            const generalMemories = await db
+              .select()
+              .from(aiMemory)
+              .where(
+                and(
+                  eq(aiMemory.userId, ctx.user.id),
+                  eq(aiMemory.category, "user_preference")
+                )
+              )
+              .orderBy(desc(aiMemory.importance))
+              .limit(10);
+              
+            if (generalMemories.length > 0) {
+              systemPrompt += `\n\nUser Preferences to Remember:\n`;
+              for (const mem of generalMemories) {
+                systemPrompt += `- ${mem.key}: ${mem.value}\n`;
+              }
+            }
+            
+            // Get case-specific memories if applicable
+            if (input.caseId) {
+              const caseMemories = await db
+                .select()
+                .from(aiMemory)
+                .where(
+                  and(
+                    eq(aiMemory.userId, ctx.user.id),
+                    eq(aiMemory.caseId, input.caseId)
+                  )
+                )
+                .orderBy(desc(aiMemory.importance))
+                .limit(15);
+                
+              if (caseMemories.length > 0) {
+                systemPrompt += `\n\nImportant Case Facts & Strategy:\n`;
+                for (const mem of caseMemories) {
+                  systemPrompt += `- [${mem.category}] ${mem.key}: ${mem.value}\n`;
+                }
+              }
+            }
+          }
+        } catch (e) {
+          console.error("Failed to load AI memory:", e);
+          // Continue without memory if it fails
+        }
+
         // Add file context if provided
         if (input.fileContext && input.fileContext.length > 0) {
           systemPrompt += `\n\nAttached Files:\n`;

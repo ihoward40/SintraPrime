@@ -87,6 +87,16 @@ import TriggerAlertSettings from "./pages/TriggerAlertSettings";
 import TriggerExecutionHistory from "./pages/TriggerExecutionHistory";
 import TriggerDashboard from "./pages/TriggerDashboard";
 import TriggerOptimizer from "./pages/TriggerOptimizer";
+import OpenSourceToolsHub from "./pages/OpenSourceToolsHub";
+import VisionStudio from "./pages/VisionStudio";
+import AIMemoryManager from "./pages/AIMemoryManager";
+import TwoFactorAuth from "./pages/TwoFactorAuth";
+import DocumentIntelligence from "./pages/DocumentIntelligence";
+import TimeTrackerBilling from "./pages/TimeTrackerBilling";
+import LLMRouter from "./pages/LLMRouter";
+import PluginMarketplace from "./pages/PluginMarketplace";
+import JurisdictionDatabase from "./pages/JurisdictionDatabase";
+import DailyDigest from "./pages/DailyDigest";
 
 function Router() {
   return (
@@ -165,6 +175,7 @@ function Router() {
       <Route path={"/trigger-history"} component={TriggerExecutionHistory} />
       <Route path={"/trigger-dashboard"} component={TriggerDashboard} />
       <Route path={"/trigger-optimizer"} component={TriggerOptimizer} />
+      <Route path={"/vision-studio"} component={VisionStudio} />
       <Route path="/governance/approvals" component={ApprovalWorkflow} />
       <Route path="/admin" component={AdminDashboard} />
       <Route path="/governance/settings" component={GovernanceSettings} />
@@ -175,8 +186,17 @@ function Router() {
       <Route path="/cases/:caseId/timeline" component={TimelineBuilder} />
       <Route path="/beneficiary-portal" component={BeneficiaryPortal} />
       <Route path="/beneficiaries" component={BeneficiaryManagement} />
+      <Route path="/open-source-tools" component={OpenSourceToolsHub} />
+      <Route path="/ai-memory" component={AIMemoryManager} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
+      <Route path="/security/2fa" component={TwoFactorAuth} />
+      <Route path="/document-intelligence" component={DocumentIntelligence} />
+      <Route path="/time-tracker" component={TimeTrackerBilling} />
+      <Route path="/llm-router" component={LLMRouter} />
+      <Route path="/plugins" component={PluginMarketplace} />
+      <Route path="/jurisdictions" component={JurisdictionDatabase} />
+      <Route path="/daily-digest" component={DailyDigest} />
     </Switch>
   );
 }
