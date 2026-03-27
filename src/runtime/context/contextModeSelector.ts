@@ -1,5 +1,5 @@
-import { ContextMode } from "./types";
-import budgetManager from "./budgetManager";
+import { ContextMode } from "./types.js";
+import budgetManager from "./budgetManager.js";
 
 // Conservative selector that looks at prompt + attachedContext estimates and returns a ContextMode
 export async function selectContextMode(params: { prompt?: string; attachedContext?: string[]; estimatedAttachmentTokens?: number }): Promise<ContextMode> {

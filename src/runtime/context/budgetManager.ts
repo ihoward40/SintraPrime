@@ -1,4 +1,4 @@
-import { ContextMode } from "./types";
+import { ContextMode } from "./types.js";
 
 // Conservative, env-driven budget manager. Exposes thresholds and helpers.
 const DEFAULTS = {
