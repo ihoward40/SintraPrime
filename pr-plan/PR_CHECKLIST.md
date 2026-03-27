@@ -60,4 +60,8 @@ Known PR1 limits
 - Jest suite added but not executed in this environment: unit tests and jest.config.js are present. The smoke runner validates core logic; full Jest runs require installing dev dependencies in CI/local.
 - Tests in src/**/__tests__ are scaffolding only and are NOT currently enforced by repo CI. They are included to aid review and future wiring; do not assume they run in CI until adapted to the repo test infra.
 
+Follow-ups (post-PR1):
+- Implement durable receipt persistence for audit/receipts (replace or harden the current ledger)
+- Add runtime memory estimation telemetry (distinct from memory_policy_threshold_mb)
+
 ---- End of checklist
