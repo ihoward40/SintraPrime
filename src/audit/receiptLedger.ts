@@ -18,13 +18,13 @@ function getOptionalContextMetadata(receipt: ActionReceipt) {
   const r = receipt as ActionReceipt & {
     context_mode?: string;
     context_tokens_estimate?: number;
-    memory_mb_estimate?: number;
+    memory_policy_threshold_mb?: number;
   };
 
   return {
     context_mode: r.context_mode,
     context_tokens_estimate: r.context_tokens_estimate,
-    memory_mb_estimate: r.memory_mb_estimate,
+    memory_policy_threshold_mb: r.memory_policy_threshold_mb,
   };
 }
 

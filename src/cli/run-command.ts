@@ -672,16 +672,23 @@ function computeReceiptHashForLog(runLog: unknown) {
   return crypto.createHash("sha256").update(payload).digest("hex");
 }
 
+function normalizePlannerSteps(plannerOut: any): any[] {
+  const topLevel = Array.isArray(plannerOut?.steps) ? plannerOut.steps : [];
+  const phased = Array.isArray(plannerOut?.phases)
+    ? plannerOut.phases.flatMap((p: any) => (Array.isArray(p?.steps) ? p.steps : []))
+    : [];
+  return [...topLevel, ...phased];
+}
+
 function estimateContextTokensForRun(command: string, plannerOut: any): number {
   const commandTokens = Math.ceil(String(command ?? "").length / 4);
   const goalTokens = Math.ceil(String(plannerOut?.goal ?? "").length / 4);
-  const stepTokens = Array.isArray(plannerOut?.steps)
-    ? plannerOut.steps.reduce((sum: number, s: any) => {
-        const action = Math.ceil(String(s?.action ?? "").length / 4);
-        const url = Math.ceil(String(s?.url ?? "").length / 4);
-        return sum + action + url;
-      }, 0)
-    : 0;
+  const normalizedSteps = normalizePlannerSteps(plannerOut);
+  const stepTokens = normalizedSteps.reduce((sum: number, s: any) => {
+    const action = Math.ceil(String(s?.action ?? "").length / 4);
+    const url = Math.ceil(String(s?.url ?? "").length / 4);
+    return sum + action + url;
+  }, 0);
   return commandTokens + goalTokens + stepTokens;
 }
 
@@ -4534,7 +4541,7 @@ async function run() {
     estimatedTokens: contextTokensEstimate,
   });
   const memoryBudgetMb = Number(process.env.SINTRA_MEMORY_PRESSURE_MB || "");
-  const contextMemoryMbEstimate = Number.isFinite(memoryBudgetMb) ? memoryBudgetMb : undefined;
+  const contextMemoryPolicyThresholdMb = Number.isFinite(memoryBudgetMb) ? memoryBudgetMb : undefined;
 
   if (!contextBudget.allowed) {
     const now = new Date().toISOString();
@@ -4555,7 +4562,7 @@ async function run() {
       },
       context_mode: contextMode,
       context_tokens_estimate: contextTokensEstimate,
-      memory_mb_estimate: contextMemoryMbEstimate,
+      memory_policy_threshold_mb: contextMemoryPolicyThresholdMb,
       steps: [],
     } as any);
 
@@ -4567,7 +4574,7 @@ async function run() {
           reason: contextBudget.reason || "Context budget denied execution",
           context_mode: contextMode,
           context_tokens_estimate: contextTokensEstimate,
-          memory_mb_estimate: contextMemoryMbEstimate,
+          memory_policy_threshold_mb: contextMemoryPolicyThresholdMb,
         },
         null,
         2
@@ -4710,7 +4717,7 @@ async function run() {
       policy_denied: { code: denied.code, reason: denied.reason },
       context_mode: contextMode,
       context_tokens_estimate: contextTokensEstimate,
-      memory_mb_estimate: contextMemoryMbEstimate,
+      memory_policy_threshold_mb: contextMemoryPolicyThresholdMb,
       steps: [],
     });
 
@@ -4730,7 +4737,7 @@ async function run() {
   (runLog as any).delegation_active = Boolean((runLog as any).delegation?.active);
   (runLog as any).context_mode = contextMode;
   (runLog as any).context_tokens_estimate = contextTokensEstimate;
-  (runLog as any).memory_mb_estimate = contextMemoryMbEstimate;
+  (runLog as any).memory_policy_threshold_mb = contextMemoryPolicyThresholdMb;
 
   // Include pinned versions on receipts/run metadata.
   runLog.agent_versions = plannerOut.agent_versions;
