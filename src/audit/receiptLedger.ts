@@ -14,6 +14,20 @@ import * as crypto from 'crypto';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 
+function getOptionalContextMetadata(receipt: ActionReceipt) {
+  const r = receipt as ActionReceipt & {
+    context_mode?: string;
+    context_tokens_estimate?: number;
+    memory_mb_estimate?: number;
+  };
+
+  return {
+    context_mode: r.context_mode,
+    context_tokens_estimate: r.context_tokens_estimate,
+    memory_mb_estimate: r.memory_mb_estimate,
+  };
+}
+
 export interface ReceiptLedgerConfig {
   storageDir: string;
   enableChaining?: boolean; // Link receipts with hash chains
@@ -60,6 +74,7 @@ export class ReceiptLedger {
       action: receipt.action,
       timestamp: receipt.timestamp,
       result: receipt.result,
+      ...getOptionalContextMetadata(receipt),
       previousHash: this.config.enableChaining ? this.lastHash : undefined
     });
 
@@ -162,6 +177,7 @@ export class ReceiptLedger {
         action: receipt.action,
         timestamp: receipt.timestamp,
         result: receipt.result,
+        ...getOptionalContextMetadata(receipt),
         previousHash
       });
 

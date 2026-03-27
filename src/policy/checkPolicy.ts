@@ -56,6 +56,28 @@ export type PolicyMeta = {
   original_command?: string;
 };
 
+export type ContextPolicyDecision = {
+  allowed: boolean;
+  reason?: string;
+  enforceMode?: "allow" | "downgrade" | "deny";
+};
+
+// PR1 hook: lightweight context-budget check that can be called by run orchestration.
+export async function checkContextBudget(
+  params: { contextMode: string; estimatedTokens: number; riskLevel?: string },
+  env: NodeJS.ProcessEnv = process.env
+): Promise<ContextPolicyDecision> {
+  const maxTokens = Number(env.SINTRA_CONTEXT_MAX_TOKENS || 64000);
+  if (Number.isFinite(maxTokens) && params.estimatedTokens > maxTokens) {
+    return {
+      allowed: false,
+      reason: `Estimated tokens ${params.estimatedTokens} exceed configured max ${maxTokens}`,
+      enforceMode: "deny",
+    };
+  }
+  return { allowed: true, enforceMode: "allow" };
+}
+
 function getAutonomyMode(env: NodeJS.ProcessEnv): string {
   return env.AUTONOMY_MODE || "OFF";
 }
