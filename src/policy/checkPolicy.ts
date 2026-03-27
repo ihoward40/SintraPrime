@@ -67,8 +67,20 @@ export async function checkContextBudget(
   params: { contextMode: string; estimatedTokens: number; riskLevel?: string },
   env: NodeJS.ProcessEnv = process.env
 ): Promise<ContextPolicyDecision> {
-  const maxTokens = Number(env.SINTRA_CONTEXT_MAX_TOKENS || 64000);
-  if (Number.isFinite(maxTokens) && params.estimatedTokens > maxTokens) {
+  const raw = env.SINTRA_CONTEXT_MAX_TOKENS;
+  const parsed = raw === undefined ? 64000 : Number(raw);
+
+  if (raw !== undefined && !Number.isFinite(parsed)) {
+    return {
+      allowed: false,
+      reason: `Invalid SINTRA_CONTEXT_MAX_TOKENS: ${raw}`,
+      enforceMode: "deny",
+    };
+  }
+
+  const maxTokens = parsed;
+
+  if (params.estimatedTokens > maxTokens) {
     return {
       allowed: false,
       reason: `Estimated tokens ${params.estimatedTokens} exceed configured max ${maxTokens}`,
