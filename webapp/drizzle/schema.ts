@@ -136,7 +136,7 @@ export * from './schema-workflow-triggers';
 export * from './schema-trigger-alerts';
 export * from './schema-adapters';
 export * from './schema-autonomous-tasks';
-export * from './schema-automation-results';
+export * from './automation-results-schema';
 
 // ============================================================================
 // IKE BOT (Phase 3-2)
