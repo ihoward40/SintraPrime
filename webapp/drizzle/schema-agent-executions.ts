@@ -1,16 +1,19 @@
-import { sqliteTable, text, integer, real } from "drizzle-orm/sqlite-core";
-import { sql } from "drizzle-orm";
+import { mysqlTable, varchar, text, timestamp, int, decimal } from "drizzle-orm/mysql-core";
 
-export const agentExecutions = sqliteTable("agent_executions", {
-  userId: text("user_id").notNull(),
-  sessionId: text("session_id").notNull(),
-  taskType: text("task_type").notNull(),
+export const agentExecutions = mysqlTable("agent_executions", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: varchar("userId", { length: 64 }).notNull(),
+  sessionId: varchar("sessionId", { length: 64 }).notNull(),
+  taskType: varchar("taskType", { length: 100 }).notNull(),
   approach: text("approach"),
-  status: text("status").notNull().default("pending"),
-  duration: integer("duration"),
-  cost: real("cost"),
+  status: varchar("status", { length: 50 }).notNull().default("pending"),
+  duration: int("duration"),
+  cost: decimal("cost", { precision: 10, scale: 6 }),
   output: text("output"),
   error: text("error"),
-  createdAt: integer("created_at", { mode: "timestamp" }).default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: integer("updated_at", { mode: "timestamp" }).default(sql`CURRENT_TIMESTAMP`),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
+
+export type AgentExecution = typeof agentExecutions.$inferSelect;
+export type InsertAgentExecution = typeof agentExecutions.$inferInsert;
