@@ -52,7 +52,7 @@ import { openSourceToolsRouter } from "./open-source-tools-router";
 import { aiMemoryRouter } from "./ai-memory-router";
 import { vlmRouter } from "./vlm-router";
 
-import { trkFactorRouter } from "./two-factor-router";
+import { twoFactorRouter } from "./two-factor-router";
 import { timeTrackerRouter } from "./time-tracker-router";
 import { documentIntelligenceRouter } from "./document-intelligence-router";
 import { llmRouterConfigRouter } from "./llm-router-config-router";
@@ -142,7 +142,7 @@ export const appRouter = router({
   openSourceTools: openSourceToolsRouter,
   aiMemory: aiMemoryRouter,
   vlm: vlmRouter,
-  troFactor: troFactorRouter,
+  twoFactor: twoFactorRouter,
   timeTracker: timeTrackerRouter,
   documentIntelligence: documentIntelligenceRouter,
   llmRouterConfig: llmRouterConfigRouter,
