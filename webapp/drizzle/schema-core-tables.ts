@@ -1043,3 +1043,120 @@ export const disputeEvidence = mysqlTable("dispute_evidence", {
 
 export type DisputeEvidence = typeof disputeEvidence.$inferSelect;
 export type InsertDisputeEvidence = typeof disputeEvidence.$inferInsert;
+
+// ============================================================================
+// SUBSCRIPTIONS
+// ============================================================================
+
+export const subscriptions = mysqlTable("subscriptions", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  stripeSubscriptionId: varchar("stripeSubscriptionId", { length: 255 }).notNull().unique(),
+  plan: varchar("plan", { length: 100 }).notNull(),
+  status: mysqlEnum("status", ["active", "past_due", "canceled", "unpaid"]).notNull().default("active"),
+  currentPeriodStart: timestamp("currentPeriodStart"),
+  currentPeriodEnd: timestamp("currentPeriodEnd"),
+  canceledAt: timestamp("canceledAt"),
+  metadata: json("metadata"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Subscription = typeof subscriptions.$inferSelect;
+export type InsertSubscription = typeof subscriptions.$inferInsert;
+
+// ============================================================================
+// SUBSCRIPTION INVOICES
+// ============================================================================
+
+export const subscriptionInvoices = mysqlTable("subscription_invoices", {
+  id: int("id").autoincrement().primaryKey(),
+  subscriptionId: int("subscriptionId").notNull(),
+  stripeInvoiceId: varchar("stripeInvoiceId", { length: 255 }).notNull().unique(),
+  amount: int("amount").notNull(),
+  status: mysqlEnum("status", ["draft", "open", "paid", "uncollectible", "void"]).notNull(),
+  dueDate: timestamp("dueDate"),
+  paidAt: timestamp("paidAt"),
+  metadata: json("metadata"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type SubscriptionInvoice = typeof subscriptionInvoices.$inferSelect;
+export type InsertSubscriptionInvoice = typeof subscriptionInvoices.$inferInsert;
+
+// ============================================================================
+// RECEIPT LEDGER
+// ============================================================================
+
+export const receiptLedger = mysqlTable("receipt_ledger", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  receiptNumber: varchar("receiptNumber", { length: 100 }).notNull().unique(),
+  amount: int("amount").notNull(),
+  description: text("description"),
+  receiptDate: timestamp("receiptDate").notNull(),
+  metadata: json("metadata"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type ReceiptLedger = typeof receiptLedger.$inferSelect;
+export type InsertReceiptLedger = typeof receiptLedger.$inferInsert;
+
+// ============================================================================
+// BENEFICIARIES
+// ============================================================================
+
+export const beneficiaries = mysqlTable("beneficiaries", {
+  id: int("id").autoincrement().primaryKey(),
+  trustAccountId: int("trustAccountId").notNull(),
+  name: varchar("name", { length: 300 }).notNull(),
+  ssn: varchar("ssn", { length: 20 }),
+  relationship: varchar("relationship", { length: 100 }),
+  sharePercentage: int("sharePercentage"),
+  status: mysqlEnum("status", ["active", "inactive", "deceased"]).notNull().default("active"),
+  metadata: json("metadata"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Beneficiary = typeof beneficiaries.$inferSelect;
+export type InsertBeneficiary = typeof beneficiaries.$inferInsert;
+
+// ============================================================================
+// DISTRIBUTIONS
+// ============================================================================
+
+export const distributions = mysqlTable("distributions", {
+  id: int("id").autoincrement().primaryKey(),
+  trustAccountId: int("trustAccountId").notNull(),
+  beneficiaryId: int("beneficiaryId").notNull(),
+  amount: int("amount").notNull(),
+  distributionDate: timestamp("distributionDate").notNull(),
+  description: text("description"),
+  status: mysqlEnum("status", ["pending", "completed", "failed"]).notNull().default("pending"),
+  metadata: json("metadata"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Distribution = typeof distributions.$inferSelect;
+export type InsertDistribution = typeof distributions.$inferInsert;
+
+// ============================================================================
+// TRUSTS
+// ============================================================================
+
+export const trusts = mysqlTable("trusts", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  trustName: varchar("trustName", { length: 500 }).notNull(),
+  trusteeId: int("trusteeId").notNull(),
+  settlementDate: timestamp("settlementDate"),
+  status: mysqlEnum("status", ["active", "terminated", "archived"]).notNull().default("active"),
+  metadata: json("metadata"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Trust = typeof trusts.$inferSelect;
+export type InsertTrust = typeof trusts.$inferInsert;
