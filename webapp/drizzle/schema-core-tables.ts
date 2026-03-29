@@ -1160,3 +1160,58 @@ export const trusts = mysqlTable("trusts", {
 
 export type Trust = typeof trusts.$inferSelect;
 export type InsertTrust = typeof trusts.$inferInsert;
+
+// ============================================================================
+// NOTIFICATION SETTINGS
+// ============================================================================
+
+export const notificationSettings = mysqlTable("notification_settings", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  emailNotifications: boolean("emailNotifications").notNull().default(true),
+  pushNotifications: boolean("pushNotifications").notNull().default(true),
+  smsNotifications: boolean("smsNotifications").notNull().default(false),
+  notificationFrequency: mysqlEnum("notificationFrequency", ["instant", "daily", "weekly", "never"]).notNull().default("instant"),
+  metadata: json("metadata"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type NotificationSettings = typeof notificationSettings.$inferSelect;
+export type InsertNotificationSettings = typeof notificationSettings.$inferInsert;
+
+// ============================================================================
+// APPROVAL REQUESTS
+// ============================================================================
+
+export const approvalRequests = mysqlTable("approval_requests", {
+  id: int("id").autoincrement().primaryKey(),
+  createdBy: int("createdBy").notNull(),
+  approverIds: json("approverIds").$type<number[]>(),
+  status: mysqlEnum("status", ["pending", "approved", "rejected"]).notNull().default("pending"),
+  requestType: varchar("requestType", { length: 100 }).notNull(),
+  description: text("description"),
+  metadata: json("metadata"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type ApprovalRequest = typeof approvalRequests.$inferSelect;
+export type InsertApprovalRequest = typeof approvalRequests.$inferInsert;
+
+// ============================================================================
+// GOVERNANCE SETTINGS
+// ============================================================================
+
+export const governanceSettings = mysqlTable("governance_settings", {
+  id: int("id").autoincrement().primaryKey(),
+  settingKey: varchar("settingKey", { length: 255 }).notNull().unique(),
+  settingValue: text("settingValue").notNull(),
+  description: text("description"),
+  metadata: json("metadata"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type GovernanceSettings = typeof governanceSettings.$inferSelect;
+export type InsertGovernanceSettings = typeof governanceSettings.$inferInsert;
