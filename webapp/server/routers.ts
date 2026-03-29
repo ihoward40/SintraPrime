@@ -96,7 +96,7 @@ function markdownToHtml(md: string): string {
   html = html.replace(/\n\n/g, "</p><p>");
   html = html.replace(/\n/g, "<br>");
   // Wrap in paragraph if not already
-  if (!html.startsWith "<")) html = `<p>${html}</p>`;
+  if (!html.startsWith("<")) html = `<p>${html}</p>`;
   return html;
 }
 
@@ -147,7 +147,7 @@ export const appRouter = router({
   documentIntelligence: documentIntelligenceRouter,
   llmRouterConfig: llmRouterConfigRouter,
   pluginMarketplace: pluginMarketplaceRouter,
-  jurisdiction: jxrisdictionRouter,
+  jurisdiction: jurisdictionRouter,
   digestVoice: digestVoiceRouter,
 
   auth: router({
