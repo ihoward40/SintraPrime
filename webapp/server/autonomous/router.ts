@@ -102,4 +102,5 @@ router.delete("/tasks/:id", async (req, res) => {
   }
 });
 
+export const autonomousRouter = router;
 export default router;

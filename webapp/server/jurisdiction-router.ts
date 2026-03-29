@@ -114,7 +114,7 @@ const JURISDICTIONS = [
   {
     code: "SEC", name: "Securities and Exchange Commission", country: "US", type: "regulatory" as const,
     courtSystem: "Federal regulatory agency. Enforces securities laws, oversees EDGAR filings.",
-    filingDeadlines: { 10k: "60-90 days after fiscal year end", 10q: "40-45 days after quarter end" },
+    filingDeadlines: { "10k": "60-90 days after fiscal year end", "10q": "40-45 days after quarter end" },
     localRules: { electronicFiling: "EDGAR system required" },
     resources: [
       { label: "SEC EDGAR", url: "https://www.sec.gov/edgar" },
