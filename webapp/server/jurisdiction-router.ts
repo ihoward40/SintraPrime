@@ -181,7 +181,7 @@ export const jurisdictionRouter = router({
       const jurisdiction = JURISDICTIONS.find(j => j.code === input.jurisdictionCode);
       if (!jurisdiction) return null;
 
-      const deadlineInfo = (jurisdiction.filingDeadlines as Record<string, string>)[input.deadlineType];
+      const deadlineInfo = jurisdiction.filingDeadlines[input.deadlineType as keyof typeof jurisdiction.filingDeadlines];
       return {
         jurisdiction: jurisdiction.name,
         deadlineType: input.deadlineType,
