@@ -1,11 +1,14 @@
-import { sqliteTable, text, integer, real } from "drizzle-orm/sqlite-core";
-import { sql } from "drizzle-orm";
+import { mysqlTable, varchar, text, timestamp, int } from "drizzle-orm/mysql-core";
 
-export const agentMemory = sqliteTable("agent_memory", {
-  userId: text("user_id").notNull(),
-  sessionId: text("session_id").notNull(),
-  key: text("key").primaryKey(),
+export const agentMemory = mysqlTable("agent_memory", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: varchar("userId", { length: 64 }).notNull(),
+  sessionId: varchar("sessionId", { length: 64 }).notNull(),
+  key: varchar("key", { length: 255 }).notNull(),
   value: text("value"),
-  createdAt: integer("created_at", { mode: "timestamp" }).default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: integer("updated_at", { mode: "timestamp" }).default(sql`CURRENT_TIMESTAMP`),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
+
+export type AgentMemory = typeof agentMemory.$inferSelect;
+export type InsertAgentMemory = typeof agentMemory.$inferInsert;

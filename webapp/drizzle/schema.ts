@@ -126,12 +126,6 @@ export type InsertDocument = typeof documents.$inferInsert;
 // ============================================================================
 
 export * from './schema-alerts';
-
-
-// ============================================================================
-// REPORT SCHEDULES & HISTORY
-// ============================================================================
-
 export * from './schema-report-schedules';
 export * from './schema-email';
 export * from './schema-web-monitoring';
@@ -155,13 +149,17 @@ export * from './schema-ike-bot';
 export * from './schema-ai-memory';
 
 // ============================================================================
-// AGENT MEMORY & EXECUTIONS (Agent Zero 2.0)
-// ============================================================================
-export { agentMemory, agentExecutions } from './schema-agent-memory';
-export type { AgentMemory, InsertAgentMemory } from './schema-agent-memory';
-export type { AgentExecution, InsertAgentExecution } from './schema-agent-executions';
-
-// ============================================================================
 // COMPREHENSIVE FEATURES (2FA, Time Tracking, Doc Intelligence, etc.)
 // ============================================================================
 export * from './schema-comprehensive-features';
+
+// ============================================================================
+// CORE TABLES (evidence, events, chats, coalitions, etc.)
+// ============================================================================
+export * from './schema-core-tables';
+
+// ============================================================================
+// AGENT MEMORY & EXECUTIONS
+// ============================================================================
+export * from './schema-agent-memory';
+export * from './schema-agent-executions';
