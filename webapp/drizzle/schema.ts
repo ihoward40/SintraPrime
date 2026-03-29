@@ -160,6 +160,11 @@ export * from './schema-comprehensive-features';
 export * from './schema-core-tables';
 
 // ============================================================================
+// PAYMENTS, CREDENTIALS & AUDIT TRAIL
+// ============================================================================
+export * from './schema-payments-credentials';
+
+// ============================================================================
 // AGENT MEMORY & EXECUTIONS
 // ============================================================================
 export * from './schema-agent-memory';
