@@ -898,10 +898,10 @@ export default function DashboardLayout({
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
       <SidebarGroup className="py-2">
         <SidebarGroupLabel asChild>
-          <CollapsibleTrigger className="flex items-center justify-between w-full group/collapsible px-2 py-2 hover:bg-accent rounded-md transition-colors">
+          <CollapsibleTrigger className="flex items-center justify-between w-full group/collapsible px-2 py-2 hover:bg-sidebar-accent rounded-xl transition-colors duration-150">
             <div className="flex items-center gap-2 flex-1 min-w-0">
-              {React.createElement(icon, { className: "h-4 w-4 flex-shrink-0" })}
-              <span className="truncate text-sm font-medium">{title}</span>
+              {React.createElement(icon, { className: "h-4 w-4 flex-shrink-0 text-muted-foreground" })}
+              <span className="truncate text-xs font-semibold uppercase tracking-wider text-muted-foreground">{title}</span>
             </div>
             <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
               {shortcut && !isCollapsed && (
@@ -1020,17 +1020,17 @@ export default function DashboardLayout({
                 "--sidebar-width": `${sidebarWidth}px`,
               } as CSSProperties
             }
-            className="border-r"
+            className="border-r border-sidebar-border dark:border-white/[0.06]"
           >
-            <SidebarHeader className="border-b px-4 py-3">
+            <SidebarHeader className="border-b border-sidebar-border dark:border-white/[0.06] px-4 py-3">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
                     <Scale className="h-4 w-4" />
                   </div>
                   {!isCollapsed && (
                     <div className="flex flex-col">
-                      <span className="text-sm font-semibold">SintraPrime</span>
+                      <span className="text-sm font-semibold tracking-tight">SintraPrime</span>
                       <span className="text-[10px] text-muted-foreground">Legal AI Platform</span>
                     </div>
                   )}
@@ -1157,13 +1157,13 @@ export default function DashboardLayout({
               {!isCollapsed && (
                 <div className="px-2 mb-4">
                   <div className="relative">
-                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
                     <input
                       type="text"
                       placeholder="Search menu..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full pl-8 pr-3 py-2 text-sm border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+                      className="w-full pl-9 pr-3 py-2 text-sm border rounded-full bg-background/60 dark:bg-muted/40 focus:outline-none focus:ring-2 focus:ring-primary/50 dark:border-white/[0.06] transition-all duration-200"
                     />
                   </div>
                 </div>
@@ -1173,7 +1173,7 @@ export default function DashboardLayout({
               {!searchQuery && pinnedItems.length > 0 && (
                 <>
                   <SidebarGroup>
-                    <SidebarGroupLabel className="text-xs font-semibold text-primary">
+                    <SidebarGroupLabel className="text-xs font-semibold uppercase tracking-wider text-primary">
                       Pinned
                     </SidebarGroupLabel>
                     <SidebarMenu className="gap-2 mt-2">
@@ -1213,7 +1213,7 @@ export default function DashboardLayout({
                 <>
                   <SidebarGroup>
                     <div className="flex items-center justify-between px-2 mb-2">
-                      <SidebarGroupLabel className="text-xs font-semibold text-muted-foreground mb-0">
+                      <SidebarGroupLabel className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-0">
                         Recent
                       </SidebarGroupLabel>
                       <Button
@@ -1255,7 +1255,7 @@ export default function DashboardLayout({
                 <>
                   <SidebarGroup>
                     <div className="flex items-center justify-between px-2 mb-2">
-                      <SidebarGroupLabel className="text-xs font-semibold text-muted-foreground">
+                      <SidebarGroupLabel className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                         Favorites
                       </SidebarGroupLabel>
                       {!isCollapsed && (
@@ -1360,7 +1360,7 @@ export default function DashboardLayout({
               {!searchQuery && (
                 <>
                   <SidebarGroup>
-                    <SidebarGroupLabel className="text-xs font-semibold text-primary">
+                    <SidebarGroupLabel className="text-xs font-semibold uppercase tracking-wider text-primary">
                       Featured AI
                     </SidebarGroupLabel>
                     <SidebarMenu className="gap-4 mt-2">
@@ -1374,7 +1374,7 @@ export default function DashboardLayout({
               {/* Collapsible Sections or Search Results */}
               {searchQuery ? (
                 <SidebarGroup>
-                  <SidebarGroupLabel className="text-xs font-semibold">
+                  <SidebarGroupLabel className="text-xs font-semibold uppercase tracking-wider">
                     Search Results
                   </SidebarGroupLabel>
                   <SidebarMenu className="gap-2 mt-2">
@@ -1442,15 +1442,15 @@ export default function DashboardLayout({
               )}
             </SidebarContent>
 
-            <SidebarFooter className="border-t p-3">
+            <SidebarFooter className="border-t border-sidebar-border dark:border-white/[0.06] p-3">
               {!isCollapsed && (
                 <>
-                  <div className="px-2 py-2 mb-2 rounded-lg bg-muted/50 text-[10px] text-muted-foreground leading-tight">
+                  <div className="px-2 py-2 mb-2 rounded-xl bg-muted/40 dark:bg-muted/20 text-[10px] text-muted-foreground leading-tight">
                     SintraPrime is a tool, not a lawyer. It does not provide legal advice or representation.
                   </div>
                   <Link
                     href="/circular-230"
-                    className="px-2 py-1.5 mb-2 rounded-lg bg-amber-50 dark:bg-amber-950/30 text-[10px] text-amber-800 dark:text-amber-200 leading-tight hover:bg-amber-100 dark:hover:bg-amber-950/50 transition-colors flex items-start gap-1.5"
+                    className="px-2 py-1.5 mb-2 rounded-xl bg-amber-50 dark:bg-amber-950/20 text-[10px] text-amber-800 dark:text-amber-300/80 leading-tight hover:bg-amber-100 dark:hover:bg-amber-950/40 transition-colors flex items-start gap-1.5"
                   >
                     <Shield className="h-3 w-3 mt-0.5 flex-shrink-0" />
                     <span>
@@ -1503,28 +1503,28 @@ export default function DashboardLayout({
 
             {!isCollapsed && (
               <div
-                className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-primary/20 transition-colors group"
+                className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-primary/30 transition-colors group"
                 onMouseDown={handleResizeMouseDown}
               >
-                <div className="absolute inset-0 group-hover:bg-primary/30 transition-colors" />
+                <div className="absolute inset-0 group-hover:bg-primary/40 transition-colors" />
               </div>
             )}
           </Sidebar>
 
           <SidebarInset className="flex flex-col flex-1 overflow-hidden">
-            <header className="flex h-14 items-center gap-4 border-b px-6 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-              <SidebarTrigger />
-              <Separator orientation="vertical" className="h-6" />
+            <header className="flex h-14 items-center gap-4 border-b border-border/60 dark:border-white/[0.06] px-6 bg-background/80 dark:bg-background/95 backdrop-blur-md supports-[backdrop-filter]:bg-background/60 dark:supports-[backdrop-filter]:bg-background/80">
+              <SidebarTrigger className="text-muted-foreground hover:text-foreground" />
+              <Separator orientation="vertical" className="h-5 dark:bg-white/10" />
               <div className="flex-1" />
               <Button
                 variant="outline"
                 size="sm"
-                className="gap-2 text-xs"
+                className="gap-2 text-xs rounded-full border-border/60 dark:border-white/[0.08] dark:bg-muted/30 dark:hover:bg-muted/50"
                 onClick={() => setIsCommandPaletteOpen(true)}
               >
                 <Search className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Search...</span>
-                <kbd className="pointer-events-none hidden h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 sm:flex">
+                <span className="hidden sm:inline text-muted-foreground">Search...</span>
+                <kbd className="pointer-events-none hidden h-5 select-none items-center gap-1 rounded-md border dark:border-white/10 bg-muted/50 px-1.5 font-mono text-[10px] font-medium opacity-70 sm:flex">
                   <span className="text-xs">⌘</span>K
                 </kbd>
               </Button>

@@ -5,17 +5,17 @@
 @custom-variant dark (&:is(.dark *));
 
 /* ============================================================================
-   SINTRA PRIME - MILITARY-GRADE INTELLIGENCE PLATFORM
-   Design System: Sophisticated, Spacious, Purposeful
+   SINTRA PRIME — AI PLATFORM
+   Design System: Manus/Tasklet-inspired, Minimal, Task-First
    ============================================================================ */
 
 @theme inline {
-  /* === Radius System === */
-  --radius-sm: 0.25rem;   /* 4px */
-  --radius: 0.5rem;       /* 8px */
-  --radius-md: 0.75rem;   /* 12px */
-  --radius-lg: 1rem;      /* 16px */
-  --radius-xl: 1.5rem;    /* 24px */
+  /* === Radius System — pill-forward === */
+  --radius-sm: 0.375rem;  /* 6px */
+  --radius: 0.75rem;      /* 12px */
+  --radius-md: 1rem;      /* 16px */
+  --radius-lg: 1.25rem;   /* 20px */
+  --radius-xl: 1.75rem;   /* 28px */
   
   /* === Color Mappings === */
   --color-background: var(--background);
@@ -50,69 +50,69 @@
 }
 
 :root {
-  /* === Light Theme (Tactical Light Mode) === */
-  --primary: oklch(0.55 0.22 220);           /* Tactical blue */
-  --primary-foreground: oklch(0.985 0 0);
+  /* === Light Theme (Clean, task-first) === */
+  --primary: oklch(0.58 0.16 185);           /* Manus teal — light mode */
+  --primary-foreground: oklch(0.99 0 0);
   --success: oklch(0.65 0.18 145);           /* Success green */
   --warning: oklch(0.75 0.15 85);            /* Warning amber */
-  --background: oklch(0.98 0.002 264);       /* Light gray */
-  --foreground: oklch(0.15 0.01 264);        /* Dark text */
+  --background: oklch(0.98 0 0);             /* Off-white */
+  --foreground: oklch(0.12 0 0);             /* Near-black text */
   --card: oklch(1 0 0);                      /* White cards */
-  --card-foreground: oklch(0.15 0.01 264);
+  --card-foreground: oklch(0.12 0 0);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.15 0.01 264);
-  --secondary: oklch(0.92 0.005 264);
-  --secondary-foreground: oklch(0.2 0.01 264);
-  --muted: oklch(0.95 0.003 264);
-  --muted-foreground: oklch(0.5 0.01 264);
-  --accent: oklch(0.55 0.22 220);
-  --accent-foreground: oklch(0.985 0 0);
+  --popover-foreground: oklch(0.12 0 0);
+  --secondary: oklch(0.93 0 0);
+  --secondary-foreground: oklch(0.20 0 0);
+  --muted: oklch(0.95 0 0);
+  --muted-foreground: oklch(0.50 0 0);
+  --accent: oklch(0.58 0.16 185);
+  --accent-foreground: oklch(0.99 0 0);
   --destructive: oklch(0.60 0.24 25);
-  --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.88 0.005 264);
-  --input: oklch(0.88 0.005 264);
-  --ring: oklch(0.55 0.22 220);
-  --sidebar: oklch(1 0 0);
-  --sidebar-foreground: oklch(0.15 0.01 264);
-  --sidebar-primary: oklch(0.55 0.22 220);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.95 0.003 264);
-  --sidebar-accent-foreground: oklch(0.15 0.01 264);
-  --sidebar-border: oklch(0.88 0.005 264);
-  --sidebar-ring: oklch(0.55 0.22 220);
+  --destructive-foreground: oklch(0.99 0 0);
+  --border: oklch(0.88 0 0);
+  --input: oklch(0.88 0 0);
+  --ring: oklch(0.58 0.16 185);
+  --sidebar: oklch(0.97 0 0);
+  --sidebar-foreground: oklch(0.12 0 0);
+  --sidebar-primary: oklch(0.58 0.16 185);
+  --sidebar-primary-foreground: oklch(0.99 0 0);
+  --sidebar-accent: oklch(0.93 0 0);
+  --sidebar-accent-foreground: oklch(0.12 0 0);
+  --sidebar-border: oklch(0.88 0 0);
+  --sidebar-ring: oklch(0.58 0.16 185);
 }
 
 .dark {
-  /* === Dark Theme (Military-Grade Tactical) === */
-  --primary: oklch(0.70 0.20 200);           /* Bright tactical blue #00d4ff */
-  --primary-foreground: oklch(0.10 0.01 264);
-  --success: oklch(0.75 0.22 145);           /* Bright green #00ff88 */
-  --warning: oklch(0.80 0.18 85);            /* Bright amber #ffb800 */
-  --background: oklch(0.10 0.01 264);        /* Deep charcoal #0a0e14 */
-  --foreground: oklch(0.97 0.002 264);       /* Crisp white */
-  --card: oklch(0.16 0.01 264);              /* Panel background #1a1f2e */
-  --card-foreground: oklch(0.97 0.002 264);
-  --popover: oklch(0.16 0.01 264);
-  --popover-foreground: oklch(0.97 0.002 264);
-  --secondary: oklch(0.30 0.01 264);         /* Muted slate */
-  --secondary-foreground: oklch(0.97 0.002 264);
-  --muted: oklch(0.20 0.01 264);             /* Subtle gray */
-  --muted-foreground: oklch(0.65 0.01 264);  /* Muted text */
-  --accent: oklch(0.70 0.20 200);
-  --accent-foreground: oklch(0.10 0.01 264);
+  /* === Dark Theme (Manus/Tasklet — neutral deep dark + teal accent) === */
+  --primary: oklch(0.76 0.136 170);          /* Manus teal #00D4AA */
+  --primary-foreground: oklch(0.09 0 0);
+  --success: oklch(0.76 0.17 158);           /* Emerald green */
+  --warning: oklch(0.80 0.18 85);            /* Amber */
+  --background: oklch(0.09 0 0);             /* Near-black #0F0F0F */
+  --foreground: oklch(0.97 0 0);             /* Pure white */
+  --card: oklch(0.14 0 0);                   /* Panel #1A1A1A */
+  --card-foreground: oklch(0.97 0 0);
+  --popover: oklch(0.14 0 0);
+  --popover-foreground: oklch(0.97 0 0);
+  --secondary: oklch(0.22 0 0);              /* Elevated surface #2A2A2A */
+  --secondary-foreground: oklch(0.97 0 0);
+  --muted: oklch(0.17 0 0);                  /* Subtle surface */
+  --muted-foreground: oklch(0.61 0 0);       /* #9A9A9A muted text */
+  --accent: oklch(0.76 0.136 170);           /* Teal accent */
+  --accent-foreground: oklch(0.09 0 0);
   --destructive: oklch(0.65 0.25 25);        /* Alert red */
-  --destructive-foreground: oklch(0.97 0.002 264);
-  --border: oklch(0.30 0.01 264);
-  --input: oklch(0.30 0.01 264);
-  --ring: oklch(0.70 0.20 200);
-  --sidebar: oklch(0.14 0.01 264);
-  --sidebar-foreground: oklch(0.97 0.002 264);
-  --sidebar-primary: oklch(0.70 0.20 200);
-  --sidebar-primary-foreground: oklch(0.10 0.01 264);
-  --sidebar-accent: oklch(0.20 0.01 264);
-  --sidebar-accent-foreground: oklch(0.97 0.002 264);
-  --sidebar-border: oklch(0.30 0.01 264);
-  --sidebar-ring: oklch(0.70 0.20 200);
+  --destructive-foreground: oklch(0.97 0 0);
+  --border: oklch(0.20 0 0);                 /* Very subtle borders */
+  --input: oklch(0.20 0 0);
+  --ring: oklch(0.76 0.136 170);
+  --sidebar: oklch(0.11 0 0);                /* Slightly lighter than bg */
+  --sidebar-foreground: oklch(0.97 0 0);
+  --sidebar-primary: oklch(0.76 0.136 170);
+  --sidebar-primary-foreground: oklch(0.09 0 0);
+  --sidebar-accent: oklch(0.17 0 0);
+  --sidebar-accent-foreground: oklch(0.97 0 0);
+  --sidebar-border: oklch(0.18 0 0);
+  --sidebar-ring: oklch(0.76 0.136 170);
 }
 
 @layer base {
@@ -140,7 +140,7 @@
     font-weight: 600;
     line-height: 1.2;
     letter-spacing: -0.02em;
-    color: hsl(var(--foreground));
+    @apply text-foreground;
   }
 
   h1 {
@@ -241,12 +241,12 @@
 
   /* === Panel System === */
   .panel {
-    @apply bg-card border border-border rounded-xl shadow-lg transition-all duration-300;
-    padding: 2.5rem; /* 40px - increased from 32px */
+    @apply bg-card border border-border rounded-2xl shadow-md transition-all duration-200;
+    padding: 2rem; /* 32px */
   }
 
   .panel:hover {
-    @apply shadow-xl border-primary/30;
+    @apply shadow-lg border-primary/20;
   }
 
   .panel-header {
@@ -320,18 +320,48 @@
     background-size: 20px 20px;
   }
 
-  /* === Glow Effect === */
+  /* === Glow Effects === */
   .glow {
-    box-shadow: 0 0 20px hsl(var(--primary) / 0.3);
+    box-shadow: 0 0 20px oklch(0.76 0.136 170 / 0.3);
   }
 
-  /* === Smooth Transitions === */
+  .glow-teal {
+    box-shadow: 0 0 24px oklch(0.76 0.136 170 / 0.35), 0 0 8px oklch(0.76 0.136 170 / 0.2);
+  }
+
+  /* === Glassmorphism === */
+  .glass {
+    background: rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .dark .glass {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.06);
+  }
+
+  .glass-card {
+    @apply rounded-2xl shadow-md transition-all duration-200;
+    background: rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .dark .glass-card {
+    background: rgba(255, 255, 255, 0.03);
+    border-color: rgba(255, 255, 255, 0.05);
+  }
+
+  /* === Smooth Transitions (200ms — Manus-style snappy) === */
   button, a, [role="button"] {
-    @apply transition-all duration-300 ease-in-out;
+    @apply transition-all duration-200 ease-out;
   }
 
   button:hover, a:hover, [role="button"]:hover {
-    @apply -translate-y-0.5;
+    @apply -translate-y-px;
   }
 
   button:active, a:active, [role="button"]:active {
