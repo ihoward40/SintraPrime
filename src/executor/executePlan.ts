@@ -124,6 +124,9 @@ export type ExecutionRunLog = {
   >;
   policy_denied?: { code: string; reason: string };
   approval_required?: unknown;
+  context_mode?: string;
+  context_tokens_estimate?: number;
+  memory_policy_threshold_mb?: number;
   steps: StepRunLog[];
 };
 
