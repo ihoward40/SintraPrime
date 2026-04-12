@@ -1,6 +1,10 @@
 {
   "name": "agent-mode-engine",
   "private": true,
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
   "type": "module",
   "engines": {
     "node": ">=20"
