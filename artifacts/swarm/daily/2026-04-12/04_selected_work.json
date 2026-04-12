@@ -1,0 +1,12 @@
+{
+  "date": "2026-04-12",
+  "unit": "unit_01",
+  "selected_issue": "AI memory extraction parse guards + log redaction boundary",
+  "priority_target_tags": [
+    "malformed input guards",
+    "redaction boundaries in logs/errors",
+    "silent failure patterns"
+  ],
+  "selection_reason": "Single-file reliability weakness with direct evidence in production code and a practical regression-test seam.",
+  "status": "patched_on_branch_pending_ci_status"
+}
