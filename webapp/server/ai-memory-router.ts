@@ -4,16 +4,117 @@ import { getDb } from "./db";
 import { aiMemory } from "../drizzle/schema-ai-memory";
 import { eq, and, desc } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
-import { invokeLLM } from "./_core/llm";
+import { invokeLLM, type InvokeResult } from "./_core/llm";
+
+const memoryCategorySchema = z.enum([
+  "user_preference",
+  "case_fact",
+  "legal_strategy",
+  "general_context",
+]);
+
+const extractedMemoryArraySchema = z.array(
+  z.object({
+    category: memoryCategorySchema,
+    key: z.string().min(1),
+    value: z.string().min(1),
+    importance: z.number().int().min(1).max(5).optional(),
+  })
+);
+
+type ExtractedMemory = z.infer<typeof extractedMemoryArraySchema>[number];
+type LlmMessageContent = InvokeResult["choices"][number]["message"]["content"];
+
+type MemoryParseResult =
+  | {
+      ok: true;
+      memories: ExtractedMemory[];
+    }
+  | {
+      ok: false;
+      reason: "missing_content" | "invalid_json" | "invalid_shape";
+      logContext: {
+        contentLength: number;
+        hasJsonArray: boolean;
+        startsWithCodeFence: boolean;
+      };
+    };
+
+export function coerceMemoryExtractionContent(
+  content: LlmMessageContent | undefined
+): string | null {
+  if (typeof content === "string") {
+    return content;
+  }
+
+  if (!Array.isArray(content)) {
+    return null;
+  }
+
+  const textContent = content
+    .filter((part): part is Extract<LlmMessageContent[number], { type: "text" }> => part.type === "text")
+    .map(part => part.text.trim())
+    .filter(Boolean);
+
+  return textContent.length > 0 ? textContent.join("\n") : null;
+}
+
+export function summarizeMemoryExtractionContent(content: string | null) {
+  return {
+    contentLength: content?.length ?? 0,
+    hasJsonArray: typeof content === "string" && /\[[\s\S]*\]/.test(content),
+    startsWithCodeFence: typeof content === "string" && content.trimStart().startsWith("```"),
+  };
+}
+
+export function parseExtractedMemories(content: string | null): MemoryParseResult {
+  const logContext = summarizeMemoryExtractionContent(content);
+
+  if (!content) {
+    return {
+      ok: false,
+      reason: "missing_content",
+      logContext,
+    };
+  }
+
+  const candidate = content.match(/\[[\s\S]*\]/)?.[0] ?? content;
+
+  let parsedJson: unknown;
+  try {
+    parsedJson = JSON.parse(candidate);
+  } catch {
+    return {
+      ok: false,
+      reason: "invalid_json",
+      logContext,
+    };
+  }
+
+  const parsed = extractedMemoryArraySchema.safeParse(parsedJson);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      reason: "invalid_shape",
+      logContext,
+    };
+  }
+
+  return {
+    ok: true,
+    memories: parsed.data,
+  };
+}
 
 export const aiMemoryRouter = router({
-  // List all memories for the current user
   list: protectedProcedure
     .input(
-      z.object({
-        caseId: z.number().optional(),
-        category: z.enum(["user_preference", "case_fact", "legal_strategy", "general_context"]).optional(),
-      }).optional()
+      z
+        .object({
+          caseId: z.number().optional(),
+          category: memoryCategorySchema.optional(),
+        })
+        .optional()
     )
     .query(async ({ ctx, input }) => {
       const db = await getDb();
@@ -21,12 +122,12 @@ export const aiMemoryRouter = router({
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
       }
 
-      let conditions = [eq(aiMemory.userId, ctx.user.id)];
-      
+      const conditions = [eq(aiMemory.userId, ctx.user.id)];
+
       if (input?.caseId) {
         conditions.push(eq(aiMemory.caseId, input.caseId));
       }
-      
+
       if (input?.category) {
         conditions.push(eq(aiMemory.category, input.category));
       }
@@ -38,12 +139,11 @@ export const aiMemoryRouter = router({
         .orderBy(desc(aiMemory.importance), desc(aiMemory.updatedAt));
     }),
 
-  // Add a new memory manually
   add: protectedProcedure
     .input(
       z.object({
         caseId: z.number().optional(),
-        category: z.enum(["user_preference", "case_fact", "legal_strategy", "general_context"]),
+        category: memoryCategorySchema,
         key: z.string().min(1),
         value: z.string().min(1),
         importance: z.number().min(1).max(5).default(3),
@@ -68,12 +168,11 @@ export const aiMemoryRouter = router({
       return { success: true, id: result.insertId };
     }),
 
-  // Update an existing memory
   update: protectedProcedure
     .input(
       z.object({
         id: z.number(),
-        category: z.enum(["user_preference", "case_fact", "legal_strategy", "general_context"]).optional(),
+        category: memoryCategorySchema.optional(),
         key: z.string().optional(),
         value: z.string().optional(),
         importance: z.number().min(1).max(5).optional(),
@@ -85,7 +184,6 @@ export const aiMemoryRouter = router({
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
       }
 
-      // Verify ownership
       const [memory] = await db
         .select()
         .from(aiMemory)
@@ -95,7 +193,7 @@ export const aiMemoryRouter = router({
         throw new TRPCError({ code: "NOT_FOUND", message: "Memory not found" });
       }
 
-      const updateData: any = { updatedAt: new Date() };
+      const updateData: Record<string, unknown> = { updatedAt: new Date() };
       if (input.category) updateData.category = input.category;
       if (input.key) updateData.key = input.key;
       if (input.value) updateData.value = input.value;
@@ -109,7 +207,6 @@ export const aiMemoryRouter = router({
       return { success: true };
     }),
 
-  // Delete a memory
   delete: protectedProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ ctx, input }) => {
@@ -118,7 +215,6 @@ export const aiMemoryRouter = router({
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
       }
 
-      // Verify ownership and delete
       await db
         .delete(aiMemory)
         .where(and(eq(aiMemory.id, input.id), eq(aiMemory.userId, ctx.user.id)));
@@ -126,7 +222,6 @@ export const aiMemoryRouter = router({
       return { success: true };
     }),
 
-  // Extract memory from chat message using LLM
   extractFromMessage: protectedProcedure
     .input(
       z.object({
@@ -165,51 +260,45 @@ Return a JSON array of objects with the following schema:
         const response = await invokeLLM({
           messages: [
             { role: "system", content: systemPrompt },
-            { role: "user", content: input.message }
-          ]
+            { role: "user", content: input.message },
+          ],
         });
 
-        const content = response.choices[0]?.message?.content || "[]";
-        
-        // Try to parse the JSON response
-        let extractedMemories = [];
-        try {
-          // Find JSON array in the response (in case the LLM added markdown formatting)
-          const jsonMatch = content.match(/\[[\s\S]*\]/);
-          if (jsonMatch) {
-            extractedMemories = JSON.parse(jsonMatch[0]);
-          } else {
-            extractedMemories = JSON.parse(content);
-          }
-        } catch (e) {
-          console.error("Failed to parse memory extraction JSON:", content);
+        const parsed = parseExtractedMemories(
+          coerceMemoryExtractionContent(response.choices[0]?.message?.content)
+        );
+
+        if (!parsed.ok) {
+          console.error("Failed to parse memory extraction payload", {
+            reason: parsed.reason,
+            ...parsed.logContext,
+          });
           return { success: false, extracted: 0 };
         }
 
-        if (!Array.isArray(extractedMemories) || extractedMemories.length === 0) {
+        if (parsed.memories.length === 0) {
           return { success: true, extracted: 0 };
         }
 
-        // Insert the extracted memories
         let insertedCount = 0;
-        for (const memory of extractedMemories) {
-          if (memory.category && memory.key && memory.value) {
-            await db.insert(aiMemory).values({
-              userId: ctx.user.id,
-              caseId: input.caseId,
-              category: memory.category,
-              key: memory.key,
-              value: memory.value,
-              importance: memory.importance || 3,
-              source: "chat_extraction",
-            });
-            insertedCount++;
-          }
+        for (const memory of parsed.memories) {
+          await db.insert(aiMemory).values({
+            userId: ctx.user.id,
+            caseId: input.caseId,
+            category: memory.category,
+            key: memory.key,
+            value: memory.value,
+            importance: memory.importance ?? 3,
+            source: "chat_extraction",
+          });
+          insertedCount++;
         }
 
         return { success: true, extracted: insertedCount };
       } catch (error) {
-        console.error("Memory extraction error:", error);
+        console.error("Memory extraction error", {
+          errorType: error instanceof Error ? error.name : typeof error,
+        });
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: "Failed to extract memory",

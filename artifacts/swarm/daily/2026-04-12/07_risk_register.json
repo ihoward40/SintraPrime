@@ -1,0 +1,22 @@
+{
+  "residual_risks": [
+    {
+      "id": "R-UNIT-01-001",
+      "title": "Router-level regression tests may not execute if repository test selection excludes the new file",
+      "severity": "medium",
+      "mitigation": "Check remote status and, if needed, wire the new test file into the current test invocation strategy."
+    },
+    {
+      "id": "R-UNIT-01-002",
+      "title": "Provider may return valid JSON in non-text multimodal parts that are intentionally ignored by the new coercion logic",
+      "severity": "low",
+      "mitigation": "Prefer explicit text output for memory extraction prompts; extend coercion only if a provider is confirmed to embed structured output elsewhere."
+    },
+    {
+      "id": "R-UNIT-01-003",
+      "title": "No in-workspace local runner was available for execution verification",
+      "severity": "medium",
+      "mitigation": "Rely on GitHub combined status and follow up on any failed or missing checks before merge."
+    }
+  ]
+}

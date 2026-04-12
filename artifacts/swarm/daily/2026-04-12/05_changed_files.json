@@ -1,0 +1,39 @@
+{
+  "files_changed": [
+    {
+      "path": "webapp/server/ai-memory-router.ts",
+      "change_type": "modified",
+      "why": "Add content coercion, schema validation, and redacted parse/error logging for AI memory extraction."
+    },
+    {
+      "path": "webapp/server/ai-memory-router.test.ts",
+      "change_type": "added",
+      "why": "Regression coverage for fenced JSON parsing, text-array coercion, invalid-shape rejection, and non-text multimodal payload handling."
+    },
+    {
+      "path": "artifacts/swarm/daily/2026-04-12/unit_01.md",
+      "change_type": "added",
+      "why": "Required change proposal and execution note."
+    },
+    {
+      "path": "artifacts/swarm/daily/2026-04-12/04_selected_work.json",
+      "change_type": "added",
+      "why": "Required selected-work record."
+    },
+    {
+      "path": "artifacts/swarm/daily/2026-04-12/05_changed_files.json",
+      "change_type": "added",
+      "why": "Required changed-files record."
+    },
+    {
+      "path": "artifacts/swarm/daily/2026-04-12/06_verification_results.json",
+      "change_type": "added",
+      "why": "Required verification record."
+    },
+    {
+      "path": "artifacts/swarm/daily/2026-04-12/07_risk_register.json",
+      "change_type": "added",
+      "why": "Required residual-risk record."
+    }
+  ]
+}
