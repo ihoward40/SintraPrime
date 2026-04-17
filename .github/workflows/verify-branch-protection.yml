@@ -23,7 +23,7 @@ jobs:
       BP_TOKEN: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Generate branch protection drift summary JSON
         id: bp_summary
