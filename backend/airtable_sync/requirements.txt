@@ -1,0 +1,8 @@
+# Airtable CRM Sync Dependencies
+# Install with: pip install -r requirements.txt
+
+requests>=2.31.0          # HTTP library for Airtable API
+python-dotenv>=1.0.0      # Load environment variables from .env
+stripe>=5.8.0             # Stripe API client (optional, for payment sync)
+pytest>=7.4.0             # Testing framework
+pytest-cov>=4.1.0         # Code coverage
