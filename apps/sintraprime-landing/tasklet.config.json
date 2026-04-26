@@ -1,0 +1,95 @@
+{
+  "name": "SintraPrime — Landing Page",
+  "version": "1.0.0",
+  "displayName": "SintraPrime — Landing Page",
+  "description": "High-conversion SEO-optimized landing page for SintraPrime AI Legal & Financial Services",
+  "icon": "✦",
+  "category": "marketing",
+  "type": "website",
+  "author": {
+    "name": "SintraPrime",
+    "email": "dev@sintraprime.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sintraprime/landing-page.git"
+  },
+  "entry": "app.tsx",
+  "features": {
+    "responsive": true,
+    "darkMode": true,
+    "seo": true,
+    "analytics": true
+  },
+  "seo": {
+    "title": "SintraPrime — Your AI Legal & Financial Strategist | 24/7 Autonomous Services",
+    "description": "From trust law to credit optimization to autonomous filing. Sovereign AI for your life. 24/7 AI-powered legal and financial strategy.",
+    "keywords": [
+      "AI legal services",
+      "trust restructuring",
+      "credit repair",
+      "business incorporation",
+      "autonomous filing",
+      "legal tech",
+      "financial strategy"
+    ],
+    "ogImage": "https://sintraprime.com/og-image.png",
+    "twitterHandle": "@sintraprime"
+  },
+  "theme": {
+    "primary": "#0f172a",
+    "secondary": "#1e293b",
+    "accent": "#fbbf24",
+    "text": "#e2e8f0"
+  },
+  "sections": {
+    "hero": {
+      "enabled": true,
+      "description": "Bold headline with CTA buttons"
+    },
+    "caseStudies": {
+      "enabled": true,
+      "count": 3
+    },
+    "features": {
+      "enabled": true,
+      "count": 6
+    },
+    "pricing": {
+      "enabled": true,
+      "tiers": 3
+    },
+    "faq": {
+      "enabled": true,
+      "count": 10
+    },
+    "footer": {
+      "enabled": true
+    }
+  },
+  "cta": {
+    "primary": {
+      "text": "Explore Demo",
+      "url": "/demo"
+    },
+    "secondary": {
+      "text": "Request Full Demo",
+      "url": "/intake"
+    }
+  },
+  "analytics": {
+    "googleAnalyticsId": "G-XXXXXXXXXX",
+    "enabled": true
+  },
+  "performance": {
+    "targetLighthouseScore": 95,
+    "maxPageLoadTime": 2000,
+    "minLighthousePerformance": 90
+  },
+  "compliance": {
+    "gdprCompliant": true,
+    "ccpaCompliant": true,
+    "sslRequired": true,
+    "disclaimer": "SintraPrime provides AI-powered legal and financial guidance for informational purposes only and does not constitute legal advice."
+  }
+}
