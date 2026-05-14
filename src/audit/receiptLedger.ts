@@ -1,3 +1,19 @@
+/*
+Receipt ledger (PR1 stub)
+
+Schema notes:
+- runId: string - unique run identifier
+- command: string - human-readable command/operator label
+- startedAt/completedAt: ISO timestamps
+- context_mode: one of ContextMode - selected context strategy
+- context_tokens_estimate: numeric token estimate (chars/4 heuristic)
+- memory_policy_threshold_mb: policy-configured memory threshold (NOT a measured runtime estimate)
+
+IMPORTANT: This file currently maintains an in-memory ledger plus best-effort file writes for
+PR1 testing and review. Replace or harden this with durable persistence in a follow-up PR before
+relying on receipts for governance, approvals, or audit. See PR checklist follow-ups.
+*/
+
 /**
  * Receipt Ledger - Immutable audit trail for all actions
  * 
@@ -13,6 +29,20 @@ import { ActionReceipt } from '../types/index.js';
 import * as crypto from 'crypto';
 import * as fs from 'fs/promises';
 import * as path from 'path';
+
+function getOptionalContextMetadata(receipt: ActionReceipt) {
+  const r = receipt as ActionReceipt & {
+    context_mode?: string;
+    context_tokens_estimate?: number;
+    memory_policy_threshold_mb?: number;
+  };
+
+  return {
+    context_mode: r.context_mode,
+    context_tokens_estimate: r.context_tokens_estimate,
+    memory_policy_threshold_mb: r.memory_policy_threshold_mb,
+  };
+}
 
 export interface ReceiptLedgerConfig {
   storageDir: string;
@@ -60,6 +90,7 @@ export class ReceiptLedger {
       action: receipt.action,
       timestamp: receipt.timestamp,
       result: receipt.result,
+      ...getOptionalContextMetadata(receipt),
       previousHash: this.config.enableChaining ? this.lastHash : undefined
     });
 
@@ -162,6 +193,7 @@ export class ReceiptLedger {
         action: receipt.action,
         timestamp: receipt.timestamp,
         result: receipt.result,
+        ...getOptionalContextMetadata(receipt),
         previousHash
       });
 

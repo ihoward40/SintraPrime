@@ -23,7 +23,8 @@ import { writeNotionLiveReadArtifact } from "../artifacts/writeNotionLiveReadArt
 import { loadAgentRegistry, findAgentsProvidingCapability } from "../agents/agentRegistry.js";
 import { resolveCapabilities, resolvedCapabilitiesToReceiptMap } from "../agents/resolveCapabilities.js";
 import { runtimeSkillGate } from "../skills/runtime-skill-gate.js";
-import { checkPolicy, checkPolicyWithMeta } from "../policy/checkPolicy.js";
+import { checkPolicy, checkPolicyWithMeta, checkContextBudget } from "../policy/checkPolicy.js";
+import { selectContextMode } from "../runtime/context/contextModeSelector.js";
 import { checkPlanPolicy } from "../policy/checkPolicy.js";
 import { enforceMaxRunsPerDay } from "../autonomy/budget.js";
 import { autoSuspendDelegationsForCommand } from "../delegated/autoSuspend.js";
@@ -669,6 +670,26 @@ function enforceCommandUsage(command: string) {
 function computeReceiptHashForLog(runLog: unknown) {
   const payload = JSON.stringify(runLog);
   return crypto.createHash("sha256").update(payload).digest("hex");
+}
+
+function normalizePlannerSteps(plannerOut: any): any[] {
+  const topLevel = Array.isArray(plannerOut?.steps) ? plannerOut.steps : [];
+  const phased = Array.isArray(plannerOut?.phases)
+    ? plannerOut.phases.flatMap((p: any) => (Array.isArray(p?.steps) ? p.steps : []))
+    : [];
+  return [...topLevel, ...phased];
+}
+
+function estimateContextTokensForRun(command: string, plannerOut: any): number {
+  const commandTokens = Math.ceil(String(command ?? "").length / 4);
+  const goalTokens = Math.ceil(String(plannerOut?.goal ?? "").length / 4);
+  const normalizedSteps = normalizePlannerSteps(plannerOut);
+  const stepTokens = normalizedSteps.reduce((sum: number, s: any) => {
+    const action = Math.ceil(String(s?.action ?? "").length / 4);
+    const url = Math.ceil(String(s?.url ?? "").length / 4);
+    return sum + action + url;
+  }, 0);
+  return commandTokens + goalTokens + stepTokens;
 }
 
 async function retryPlannerOnce(params: {
@@ -4512,6 +4533,57 @@ async function run() {
     process.exitCode = 4;
     return;
   }
+
+  const contextMode = await selectContextMode({ prompt: command });
+  const contextTokensEstimate = estimateContextTokensForRun(command, plannerOut);
+  const contextBudget = await checkContextBudget({
+    contextMode,
+    estimatedTokens: contextTokensEstimate,
+  });
+  const memoryBudgetMb = Number(process.env.SINTRA_MEMORY_PRESSURE_MB || "");
+  const contextMemoryPolicyThresholdMb = Number.isFinite(memoryBudgetMb) ? memoryBudgetMb : undefined;
+
+  if (!contextBudget.allowed) {
+    const now = new Date().toISOString();
+    await persistRun({
+      execution_id: plannerOut.execution_id,
+      threadId: plannerOut.threadId,
+      goal: plannerOut.goal,
+      dry_run: plannerOut.dry_run,
+      started_at: now,
+      finished_at: now,
+      status: "denied",
+      error: contextBudget.reason || "Context budget denied execution",
+      agent_versions: plannerOut.agent_versions,
+      resolved_capabilities: resolvedCapabilities,
+      policy_denied: {
+        code: "CONTEXT_BUDGET_DENIED",
+        reason: contextBudget.reason || "Context budget denied execution",
+      },
+      context_mode: contextMode,
+      context_tokens_estimate: contextTokensEstimate,
+      memory_policy_threshold_mb: contextMemoryPolicyThresholdMb,
+      steps: [],
+    } as any);
+
+    console.log(
+      JSON.stringify(
+        {
+          kind: "PolicyDenied",
+          code: "CONTEXT_BUDGET_DENIED",
+          reason: contextBudget.reason || "Context budget denied execution",
+          context_mode: contextMode,
+          context_tokens_estimate: contextTokensEstimate,
+          memory_policy_threshold_mb: contextMemoryPolicyThresholdMb,
+        },
+        null,
+        2
+      )
+    );
+    process.exitCode = 3;
+    return;
+  }
+
   if (!policy.allowed) {
     if (!("denied" in policy)) {
       throw new Error("Policy not allowed but no denial details");
@@ -4643,6 +4715,9 @@ async function run() {
       agent_versions: plannerOut.agent_versions,
       resolved_capabilities: resolvedCapabilities,
       policy_denied: { code: denied.code, reason: denied.reason },
+      context_mode: contextMode,
+      context_tokens_estimate: contextTokensEstimate,
+      memory_policy_threshold_mb: contextMemoryPolicyThresholdMb,
       steps: [],
     });
 
@@ -4660,6 +4735,9 @@ async function run() {
   (runLog as any).promotion_fingerprint = (policy as any).promotion_fingerprint ?? null;
   (runLog as any).delegation = (policy as any).delegation ?? null;
   (runLog as any).delegation_active = Boolean((runLog as any).delegation?.active);
+  (runLog as any).context_mode = contextMode;
+  (runLog as any).context_tokens_estimate = contextTokensEstimate;
+  (runLog as any).memory_policy_threshold_mb = contextMemoryPolicyThresholdMb;
 
   // Include pinned versions on receipts/run metadata.
   runLog.agent_versions = plannerOut.agent_versions;
