@@ -344,6 +344,13 @@
       "when": 1771964346258,
       "tag": "0048_phase3_2_ike_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "version": "5",
+      "when": 1781903771339,
+      "tag": "0052_pr0005_chat_agent_persistence_gap",
+      "breakpoints": true
     }
   ]
 }
