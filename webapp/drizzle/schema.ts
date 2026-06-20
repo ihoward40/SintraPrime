@@ -148,6 +148,7 @@ export * from './schema-ike-bot';
 // AI MEMORY (Persistent Context)
 // ============================================================================
 export * from './schema-ai-memory';
+export * from './schema-chat';
 
 // ============================================================================
 // COMPREHENSIVE FEATURES (2FA, Time Tracking, Doc Intelligence, etc.)
