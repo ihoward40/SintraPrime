@@ -18,7 +18,7 @@ SintraPrime has **two chat/agent message systems** with **divergent persistence 
 
 Additionally, the WebSocket chat layer and the Agent Orchestrator store message/history state entirely in runtime memory.
 
-**Bottom line**: There is effectively **no durable chat-agent message storage** in the base `master` branch (the tables are not in the Drizzle schema). This PR defines them.
+**Bottom line**: The DB tables `chat_conversations` / `chat_messages` already exist from `0016_colossal_chameleon.sql`, but they were not exported/declared in the active Drizzle schema until this PR. As a result, the `ai-chat` router’s Drizzle-based persistence would not have had matching schema exports/types on `master`.
 
 ---
 
@@ -29,10 +29,10 @@ Additionally, the WebSocket chat layer and the Agent Orchestrator store message/
 | Aspect | Finding |
 |--------|---------|
 | **Storage target** | `chatConversations` and `chatMessages` tables via `chat-conversation-helpers.ts` |
-| **Schema exists?** | **YES** in this PR — `schema-chat.ts` defines them; previously they were phantom. |
+| **Schema exists?** | **YES** now — `schema-chat.ts` adds the missing Drizzle exports/types. The underlying DB tables already exist from `0016_colossal_chameleon.sql`. |
 | **Runtime behavior** | `sendMessage` mutation calls `chatConvHelpers.addMessage()` for both user and assistant messages. If the tables existed, this would be persistent. |
 | **Conversation history** | Passed client→server as `conversationHistory` array in the request body (last 10 messages). Not fetched from DB. |
-| **Conversation CRUD** | `createConversation`, `getConversations`, `getConversationMessages`, `updateConversationTitle`, `deleteConversation` all delegate to `chat-conversation-helpers.ts`, which references phantom tables. |
+| **Conversation CRUD** | `createConversation`, `getConversations`, `getConversationMessages`, `updateConversationTitle`, `deleteConversation` all delegate to `chat-conversation-helpers.ts`. This PR adds the missing Drizzle schema exports/types those helpers compile against (the underlying tables come from `0016`). |
 
 **Evidence**:
 - `webapp/server/db/chat-conversation-helpers.ts:1` imports `chatConversations, chatMessages` from `../../drizzle/schema`.
@@ -92,8 +92,8 @@ Note: this repository currently uses `webapp/server/autonomous/router.ts` instea
 |-----------|-----------|--------|
 | Agent Zero | Active sessions, task history, agent memory, progress streams | Users cannot resume interrupted autonomous tasks. No audit trail of agent actions. |
 | Agent Orchestrator | Execution history per task | No step-level replay or debugging of multi-step agent tasks. |
-| WebSocket Chat | Presence map, in-flight chat messages | Chat messages broadcast during a session are never stored. Users see empty chat on refresh. |
-| AI Chat (phantom tables) | Would lose messages if tables existed, but currently the writes fail silently or throw at runtime | **No persistent chat history at all** for the primary AI Chat feature. |
+|| WebSocket Chat | Presence map, in-flight chat messages | Chat messages broadcast during a session are never stored. Users see empty chat on refresh. |
+|| AI Chat (Drizzle schema exports) | `chat_conversations` / `chat_messages` already exist from `0016`, but `master` was missing matching Drizzle schema exports/types. Writes/reads via `chat-conversation-helpers.ts` were therefore not reliably persistent until this PR adds the missing exports. | **Chat history becomes persistent** once schema exports/types are in place. |
 
 ---
 
@@ -102,8 +102,8 @@ Note: this repository currently uses `webapp/server/autonomous/router.ts` instea
 | Table | Schema File | Purpose | Reusable for Chat? |
 |-------|-------------|---------|-------------------|
 | `ai_memory` | `schema-ai-memory.ts` | Key-value agent memory (preferences, facts, strategy) | **Partially** — could store conversation summaries, but not full message threads. |
-| `agentMemory` | *Imported in `db.ts` but schema undefined* | N/A | **No** — same phantom-table problem. |
-| `agentExecutions` | *Imported in `db.ts` but schema undefined* | N/A | **No** — same phantom-table problem. |
+| `agentMemory` | `schema-agent-memory.ts` | Key-value agent memory (preferences, facts, strategy) | **Partially** — could store conversation summaries, but not full message threads. |
+| `agentExecutions` | `schema-agent-executions.ts` | Execution history metadata | N/A — not designed for threaded message persistence. |
 
 **Conclusion**: There is no existing chat-specific persistent table. The `ai_memory` table is the only durable AI-context store, but it is not designed for ordered message threads.
 
@@ -124,10 +124,10 @@ Note: this repository currently uses `webapp/server/autonomous/router.ts` instea
 
 | Risk | Assessment |
 |------|------------|
-| No existing chat data to migrate | **Low risk** — phantom tables mean zero historical data exists. |
+| No existing chat data to migrate | **Low risk** — migration is additive (adds columns + enum expansion), but `chat_conversations` / `chat_messages` may already have rows from `0016_colossal_chameleon.sql`. Phase 1 keeps `chat_messages.user_id` nullable. |
 | Schema addition is additive only | **Low risk** — creating new tables does not break existing tables. |
 | Code paths already reference tables | `ai-chat/router.ts` and `chat-conversation-helpers.ts` already expect these tables. Adding the schema is a **fix**, not a breaking change. |
-| `aiChats` legacy table | The `aiChats` table is now defined in `schema-core-tables.ts`, so it is no longer phantom. Decision needed: migrate legacy records to `chatConversations`/`chatMessages`, or deprecate `aiChats` writes and standardize all new chat on the new tables. |
+| `aiChats` legacy table | The `aiChats` table is now defined in `schema-core-tables.ts`. Decision needed: migrate legacy records to `chatConversations`/`chatMessages`, or deprecate `aiChats` writes and standardize all new chat on the new tables. |
 
 ---
 
@@ -151,12 +151,12 @@ export const chatConversations = mysqlTable("chat_conversations", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("user_id").notNull(),
   caseId: int("case_id"), // optional case linkage
-  title: varchar("title", { length: 255 }).notNull().default("New Conversation"),
+  title: varchar("title", { length: 500 }),
   model: varchar("model", { length: 64 }).default("gemini-2.5-flash"),
   status: mysqlEnum("status", ["active", "archived", "deleted"]).default("active").notNull(),
   lastMessageAt: timestamp("last_message_at").defaultNow(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().
 });
 
 // Added since migration 0016:
@@ -173,7 +173,7 @@ export const chatMessages = mysqlTable("chat_messages", {
   id: int("id").autoincrement().primaryKey(),
   conversationId: int("conversation_id").notNull(),
   userId: int("user_id"), // nullable in Phase 1; enforce NOT NULL after backfill
-  role: mysqlEnum("role", ["system", "user", "assistant", "tool"]).notNull(),
+  role: mysqlEnum("role", ["user", "assistant", "system", "tool"]).notNull(),
   content: text("content").notNull(),
   attachments: json("attachments"), // fileContext, images, etc.
   model: varchar("model", { length: 64 }), // which model generated this (for assistant)
@@ -182,8 +182,8 @@ export const chatMessages = mysqlTable("chat_messages", {
   receiptId: varchar("receipt_id", { length: 64 }), // links to PR-0004 receipt
   idempotencyKey: varchar("idempotency_key", { length: 128 }).unique(), // dedupe guard
   status: mysqlEnum("status", ["visible", "edited", "deleted"]).default("visible").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().
 });
 
 export type ChatMessage = typeof chatMessages.$inferSelect;
@@ -266,13 +266,11 @@ This makes `chatConversations` and `chatMessages` available to `chat-conversatio
 3. **Verify** that `ai-chat/router.ts` operations now succeed without runtime errors.
 
 ### 6.4 Rollback Plan
+Rollback should **not** drop these tables: `chat_conversations` and `chat_messages` already exist from `0016_colossal_chameleon.sql`.
 
-```sql
-DROP TABLE IF EXISTS chat_messages;
-DROP TABLE IF EXISTS chat_conversations;
-```
+For a rollback, revert only the additive column/enum changes introduced by `0052_pr0005_chat_agent_persistence_gap.sql` (and the corresponding Drizzle schema exports/types) rather than dropping tables.
 
-**Risk**: Zero data loss because tables are net-new. Rollback is safe.
+(Implementation detail intentionally omitted in this Phase-1 document.)
 
 ### 6.5 Idempotency Strategy
 
@@ -326,7 +324,7 @@ If Agent Zero sessions should persist across restarts:
 ## 7. Acceptance Criteria
 
 - [ ] `docs/chat-agent-persistence-gap.md` exists (this document)
-- [ ] All in-memory message points identified (Agent Zero, Orchestrator, WebSocket, phantom tables)
+- [ ] All in-memory message points identified (Agent Zero, Orchestrator, WebSocket).
 - [ ] Preferred persistence path selected (Option B — new chat tables)
 - [ ] Proposed schema documented
 - [ ] Migration and rollback plans documented

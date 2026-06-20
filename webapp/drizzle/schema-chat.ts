@@ -16,14 +16,14 @@ export const chatConversations = mysqlTable("chat_conversations", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("user_id").notNull(),
   caseId: int("case_id"), // optional case linkage
-  title: varchar("title", { length: 255 }).notNull().default("New Conversation"),
+  title: varchar("title", { length: 500 }),
   model: varchar("model", { length: 64 }).default("gemini-2.5-flash"),
   status: mysqlEnum("status", ["active", "archived", "deleted"])
     .default("active")
     .notNull(),
   lastMessageAt: timestamp("last_message_at").defaultNow(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
 });
 
 export type ChatConversation = typeof chatConversations.$inferSelect;
@@ -38,7 +38,7 @@ export const chatMessages = mysqlTable("chat_messages", {
   id: int("id").autoincrement().primaryKey(),
   conversationId: int("conversation_id").notNull(),
   userId: int("user_id"), // nullable until old rows are backfilled; enforce NOT NULL after backfill
-  role: mysqlEnum("role", ["system", "user", "assistant", "tool"]).notNull(),
+  role: mysqlEnum("role", ["user", "assistant", "system", "tool"]).notNull(),
   content: text("content").notNull(),
   attachments: json("attachments"), // fileContext, images, tool call args/results
   model: varchar("model", { length: 64 }), // model that generated assistant/tool messages

@@ -28,4 +28,4 @@ ALTER TABLE `chat_messages`
 -- Expand role enum to include system/tool roles.
 -- MySQL allows enum expansion without table rebuild.
 ALTER TABLE `chat_messages`
-  MODIFY COLUMN `role` ENUM('system','user','assistant','tool') NOT NULL;
+  MODIFY COLUMN `role` ENUM('user','assistant','system','tool') NOT NULL;
