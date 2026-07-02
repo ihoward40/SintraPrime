@@ -1,5 +1,12 @@
 # Governance (Index)
 
+## Constitutional Governance (Tier 1)
+
+- [Constitutional directory](./constitutional/) — Tier 1 ADRs and constitutional review artifacts
+  - [ADR-0002: Constitutional Review Protocol](./constitutional/ADR-0002.constitutional-review-protocol.md) — Mandatory review methodology for all Tier 1 artifacts
+
+## Operational Governance
+
 - [Boot posture](./boot-posture.md)
 - [Authority ladder](./authority-ladder.md)
 - [Single-run toggle procedure](./single-run-toggle-procedure.md)
