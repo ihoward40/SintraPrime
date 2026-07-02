@@ -1,5 +1,11 @@
 # Governance (Index)
 
+- [CONST-002 Organizational Charter](./CONST-002-organizational-charter.md)
+- [ADR-0001 Tier 1 Constitutional Freeze](./ADR-0001-tier1-constitutional-freeze.md)
+- [GRF Process](./GRF-process.md)
+- [GOV-000 Governance Traceability Matrix](./GOV-000-traceability-matrix.md)
+- [Constitutional Maturity Model](./constitutional-maturity-model.md)
+
 - [Boot posture](./boot-posture.md)
 - [Authority ladder](./authority-ladder.md)
 - [Single-run toggle procedure](./single-run-toggle-procedure.md)
