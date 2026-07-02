@@ -27,6 +27,9 @@
 - **Governance Index (v1)**  
   [`governance-index.v1.md`](./governance-index.v1.md)
 
+- **Constitutional Review Package — CONST-002 (C1)**  
+  [`governance/constitutional/CONST-002.review-package.c1.md`](./governance/constitutional/CONST-002.review-package.c1.md)
+
 - **Example — Merkle Leaves (Sample JSON)**  
   [`examples/merkle.leaves.sample.v1.json`](./examples/merkle.leaves.sample.v1.json)
 

@@ -14,6 +14,11 @@
 - [Governance release: SintraPrime_Mode_Governance_v1.0](./releases/SintraPrime_Mode_Governance_v1.0.md)
 - [Governance release: SintraPrime_Mode_Governance_v1.1](./releases/SintraPrime_Mode_Governance_v1.1.md)
 - [Authority ladder (diagram)](./authority-ladder.svg)
+- [Constitutional review package: CONST-002 (C1)](./constitutional/CONST-002.review-package.c1.md)
+- [CONST-002 Organizational Charter (C1 Draft)](./constitutional/CONST-002.organizational-charter.c1.draft.md)
+- [GOV-000 Governance Traceability Matrix (v0.1)](./constitutional/GOV-000.governance-traceability-matrix.v0.1.md)
+- [GRF Register: CONST-002 Round 1](./constitutional/GRF-REGISTER.CONST-002.round-1.md)
+- [Hermes Constitutional Readiness Dashboard (Founding Week)](./constitutional/HERMES-constitutional-readiness-dashboard.founding-week.md)
 
 ## Agent Operation Policies
 

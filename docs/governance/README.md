@@ -22,6 +22,15 @@ It is **not** enforcement, **not** wiring, and **not** runtime behavior.
 - [docs/governance/external-evidence-addons.md](external-evidence-addons.md) — Docs-only add-ons (mailing records, FOIA packet variants, public verifier concept).
 - [docs/governance/public-verifier/manifest.template.json](public-verifier/manifest.template.json) — Integrity-only manifest template (no interpretation).
 
+## Constitutional implementation package (Tier 1)
+
+- [docs/governance/constitutional/CONST-002.review-package.c1.md](constitutional/CONST-002.review-package.c1.md) — Governance assurance package for CONST-002 C1 review preparation.
+- [docs/governance/constitutional/CONST-002.organizational-charter.c1.draft.md](constitutional/CONST-002.organizational-charter.c1.draft.md) — Structural-only organizational charter draft.
+- [docs/governance/constitutional/ADR-0001.tier1-constitutional-freeze.md](constitutional/ADR-0001.tier1-constitutional-freeze.md) — Tier 1 constitutional freeze decision record.
+- [docs/governance/constitutional/GOV-000.governance-traceability-matrix.v0.1.md](constitutional/GOV-000.governance-traceability-matrix.v0.1.md) — Constitutional traceability bridge initialization.
+- [docs/governance/constitutional/GRF-REGISTER.CONST-002.round-1.md](constitutional/GRF-REGISTER.CONST-002.round-1.md) — Governance Review Findings register for CONST-002.
+- [docs/governance/constitutional/HERMES-constitutional-readiness-dashboard.founding-week.md](constitutional/HERMES-constitutional-readiness-dashboard.founding-week.md) — Current constitutional readiness snapshot.
+
 ## Review guardrails (PR-time only)
 
 - [.github/pull_request_template.md](../../.github/pull_request_template.md) — Governance wiring review checklist.
