@@ -19,6 +19,14 @@ DELTA:
 - Formalized governance history tracking
 - Clarified ledger storage in `runs/` for immutability of sources
 
+v1.2 — Constitutional Readiness Handoff Baseline
+DATE: 2026-07-02
+DELTA:
+- Added ADR-0001 freeze preservation directive for CONST-001 baseline
+- Added CONST-002 C1 authority-first draft for Constitutional Reviewer handoff
+- Initialized GRF register for routed constitutional improvements
+- Added GOV-000 constitutional traceability register and Hermes readiness dashboard
+
 NOTES
 - Each governance release is cumulative unless explicitly stated.
 - No release expands execution authority unless explicitly declared.

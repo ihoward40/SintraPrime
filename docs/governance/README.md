@@ -22,6 +22,14 @@ It is **not** enforcement, **not** wiring, and **not** runtime behavior.
 - [docs/governance/external-evidence-addons.md](external-evidence-addons.md) — Docs-only add-ons (mailing records, FOIA packet variants, public verifier concept).
 - [docs/governance/public-verifier/manifest.template.json](public-verifier/manifest.template.json) — Integrity-only manifest template (no interpretation).
 
+## Constitutional readiness handoff artifacts (docs-only)
+
+- [docs/governance/constitutional/ADR-0001-const-001-freeze.md](constitutional/ADR-0001-const-001-freeze.md) — Freeze rule preserving CONST-001 baseline and GRF-only improvement routing.
+- [docs/governance/constitutional/CONST-002-c1-draft.md](constitutional/CONST-002-c1-draft.md) — CONST-002 authority-first C1 handoff draft.
+- [docs/governance/constitutional/GRF-register.md](constitutional/GRF-register.md) — Initialized Governance Request Form register.
+- [docs/governance/constitutional/GOV-000-traceability.md](constitutional/GOV-000-traceability.md) — Constitutional traceability baseline.
+- [docs/governance/constitutional/Hermes-constitutional-readiness-dashboard.md](constitutional/Hermes-constitutional-readiness-dashboard.md) — Hermes readiness status snapshot.
+
 ## Review guardrails (PR-time only)
 
 - [.github/pull_request_template.md](../../.github/pull_request_template.md) — Governance wiring review checklist.

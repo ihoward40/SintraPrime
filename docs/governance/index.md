@@ -22,3 +22,11 @@
 ## Reports (Read-Only)
 
 - [Mode transparency report (Q2 2026)](./mode-transparency-report.q2-2026.v1.md)
+
+## Constitutional Readiness (Read-Only)
+
+- [ADR-0001 — CONST-001 Freeze and Improvement Routing](./constitutional/ADR-0001-const-001-freeze.md)
+- [CONST-002 C1 Draft — Organizational Charter](./constitutional/CONST-002-c1-draft.md)
+- [GRF Register](./constitutional/GRF-register.md)
+- [GOV-000 — Constitutional Traceability Register](./constitutional/GOV-000-traceability.md)
+- [Hermes Constitutional Readiness Dashboard](./constitutional/Hermes-constitutional-readiness-dashboard.md)
