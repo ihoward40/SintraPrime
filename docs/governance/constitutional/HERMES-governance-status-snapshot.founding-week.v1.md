@@ -5,6 +5,8 @@ PURPOSE: Provide the executive governance disposition and maturity snapshot for 
 
 ## Maturity Assessment
 
+Maturity note: `C2` indicates the layer is implemented and under governance control; `C2-` indicates the layer is proceeding under governance control but still carries a defined validation gap before broader expansion.
+
 | Layer | Assessment | Qualification |
 | --- | --- | --- |
 | Governance Layer | C2 | Verified governance controls and governance reporting are in place for the current review cycle. |
