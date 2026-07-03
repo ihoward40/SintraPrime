@@ -6,9 +6,9 @@ Capture objective Track B runtime evidence during the no-scope-expansion observa
 
 | Event | Expected | Actual | Result | Receipt / Evidence |
 | --- | --- | --- | --- | --- |
+| 6 AM Research | Posted to `#research` |  |  |  |
 | 8 AM Company Pulse | Posted to `#executive` |  |  |  |
 | 9 AM Funnel Analysis | Posted to `#alerts` |  |  |  |
-| 6 AM Research | Posted to `#research` |  |  |  |
 | 11 PM Revenue Audit | Posted to `#executive` |  |  |  |
 
 ## Validation rules
