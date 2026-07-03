@@ -11,6 +11,7 @@
 - [Demo blank mode sheet (v1)](./mode-declaration-sheet.demo.blank.v1.md)
 - [Mode governance runtime hook (v1)](./mode-governance-runtime-hook.v1.md)
 - [Governance history (v1)](./governance-history.v1.md)
+- [Founding Week constitutional governance index](./constitutional/README.md)
 - [Governance release: SintraPrime_Mode_Governance_v1.0](./releases/SintraPrime_Mode_Governance_v1.0.md)
 - [Governance release: SintraPrime_Mode_Governance_v1.1](./releases/SintraPrime_Mode_Governance_v1.1.md)
 - [Authority ladder (diagram)](./authority-ladder.svg)
