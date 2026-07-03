@@ -1,10 +1,12 @@
 # ADR-0002 — Constitutional Review Protocol
 
-**Status:** C1 Draft — Pending Ratification  
+**Status:** C2 — Review Candidate  
+**Version:** 1.1.0  
 **Date:** 2026-07-02  
 **Authority:** Derived from CONST-001, CONST-003  
 **Namespace:** ADR-0002  
-**Cannot Override:** Constitution, Organizational Charter, Governance Charter
+**Cannot Override:** Constitution, Organizational Charter, Governance Charter  
+**Review Record:** GOV-001-ADR-0002-R1 (Score: 99.5/100 — Approved with Findings)
 
 ---
 
@@ -51,6 +53,21 @@ Implements:
 - Reviews may be challenged by any registered SintraPrime Enterprise agent
 - Disputed findings escalate to Isiah Howard (Founder) for final disposition
 - Reviewers must have no stake in the artifact under review (independence constraint)
+
+### 4a. Reviewer Qualification Requirements
+
+A reviewer must meet all of the following before conducting a formal governance review:
+
+```
+Reviewer must:
+  - Understand the Tier hierarchy (Tier 1–4 artifact structure)
+  - Understand constitutional scope (what Tier 1 does and does not authorize)
+  - Be independent (no authorship stake in the artifact under review)
+  - Have completed governance onboarding (reviewed CONST-001, GOV-000, ADR-0001, ADR-0002)
+  - Possess review authority (delegated by Founder or designated by prior ADR)
+```
+
+*Applied per GRF-C-001 from GOV-001-ADR-0002-R1.*
 
 ---
 
@@ -100,6 +117,22 @@ Every artifact submitted for review must include:
 - GOV-000 traceability mapping
 - Prior review records (if any)
 - Change log (for revisions)
+
+### 7a. Evidence Classification
+
+Evidence is weighted by tier. Reviewers must treat higher-tier evidence as more authoritative:
+
+| Tier | Classification | Examples |
+|------|---------------|---------|
+| 1 | Primary | The Constitution (CONST-001 through CONST-004) |
+| 2 | Secondary | Governance Artifacts (ADR, GOV series, REF-001) |
+| 3 | Supporting | Implementation artifacts (MAN, PLAY, code, scripts) |
+| 4 | Observational | Logs, runtime outputs, monitoring data |
+| 5 | Historical | Previous review records, prior GOV-001 entries |
+
+*A lower-tier evidence source cannot override a higher-tier source. Conflicts are resolved by ascending to the highest applicable tier.*
+
+*Applied per GRF-C-002 from GOV-001-ADR-0002-R1.*
 
 ---
 
@@ -204,11 +237,21 @@ Recommendation:
 
 Next Action:
 
+Audit Trail (immutable):
+  Review-Hash:
+  Evidence-Hash:
+  Cross-Reference-Version:
+  Reviewer-Version:
+  Protocol-Version:
+  Timestamp:
+
 Signatures:
   Reviewer:
   Author:
   Approver:
 ```
+
+*Audit trail block applied per GRF-C-003 from GOV-001-ADR-0002-R1.*
 
 ---
 
@@ -270,3 +313,4 @@ Artifact Maturity
 | Version | Date | Change | Author |
 |---------|------|--------|--------|
 | 1.0.0 | 2026-07-02 | Initial draft from Founding Week governance session | SintraPrime Governance |
+| 1.1.0 | 2026-07-02 | Applied GRF-C-001 (reviewer qualifications), GRF-C-002 (evidence classification), GRF-C-003 (audit trail). Status advanced C1 → C2 per GOV-001-ADR-0002-R1 | Viktor |
