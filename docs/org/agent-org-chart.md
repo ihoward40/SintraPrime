@@ -1,6 +1,8 @@
-# SintraPrime Enterprise — Agent Organization Chart
+# SintraPrime Enterprise — Enterprise Governance Topology
 
-**Last Updated:** 2026-07-02  
+*Formerly: Agent Organization Chart. Renamed per GOV-001-ADR-0002-R1 reviewer recommendation — this document defines authority flow, information flow, review flow, event flow, and accountability. It is richer than a traditional org chart.*
+
+**Last Updated:** 2026-07-02 (v1.1 — renamed, Twin role clarified)  
 **Source:** ChatGPT Founding Week Governance Session  
 **Authority:** Isiah Howard (Founder)
 
@@ -39,7 +41,7 @@
 | Production | Manus | Manus AI | Documents, presentations, websites, polished deliverables |
 | Infrastructure | Space Agent | Sintra AI | Servers, Docker, GitHub, deployments, CI/CD |
 | Local Automation | Agent Zero | Agent Zero | Windows filesystem, local AI, scripts, command execution |
-| Quality Assurance | Twin | SintraPrime Twin | Post-production review — "What did we miss?" |
+| Independent Verification | Twin | SintraPrime Twin | *Not QA. Independent verification.* QA asks "Does it work?" — Twin asks "What did we miss?" |
 
 ---
 
