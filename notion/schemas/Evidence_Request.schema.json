@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "sintraprime://schemas/evidence_request.schema.json",
+  "title": "Evidence Request Register",
+  "description": "Tracks outstanding requests for evidence items. All requests require human approval before transmission.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["case_id", "register_version", "generated", "requests"],
+  "properties": {
+    "case_id": {
+      "type": "string",
+      "description": "Parent case identifier (e.g., CASE-666234B709)."
+    },
+    "register_version": {
+      "type": "string",
+      "description": "Semantic version of this register document."
+    },
+    "generated": {
+      "type": "string",
+      "format": "date",
+      "description": "ISO 8601 date when this register snapshot was generated."
+    },
+    "requests": {
+      "type": "array",
+      "minItems": 0,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "request_id",
+          "case_id",
+          "requested_item",
+          "requested_from",
+          "status"
+        ],
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "pattern": "^REQ-[0-9]{3,}$",
+            "description": "Unique request identifier (e.g., REQ-001)."
+          },
+          "case_id": {
+            "type": "string",
+            "description": "Parent case identifier — must match the register's case_id."
+          },
+          "requested_item": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000,
+            "description": "Description of the specific document or evidence being requested."
+          },
+          "requested_from": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 240,
+            "description": "Organization or individual from whom the item is requested."
+          },
+          "date_requested": {
+            "type": ["string", "null"],
+            "format": "date",
+            "description": "ISO 8601 date the request was sent. Null if not yet sent."
+          },
+          "request_method": {
+            "type": "string",
+            "enum": [
+              "certified_mail",
+              "email",
+              "fax",
+              "portal",
+              "verbal",
+              "not_sent"
+            ],
+            "description": "Method used to transmit the request."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "pending_approval",
+              "sent",
+              "received",
+              "overdue",
+              "withdrawn"
+            ],
+            "description": "draft = prepared but not approved; pending_approval = awaiting human approval; sent = transmitted, awaiting response; received = response received; overdue = past deadline with no response; withdrawn = cancelled or superseded."
+          },
+          "deadline": {
+            "type": ["string", "null"],
+            "format": "date",
+            "description": "ISO 8601 date by which a response is legally required or expected. Null if not applicable."
+          },
+          "response_date": {
+            "type": ["string", "null"],
+            "format": "date",
+            "description": "ISO 8601 date the response was received. Null if not yet received."
+          },
+          "received_evidence_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^EV-[0-9]{4}-[0-9]{5}$"
+            },
+            "description": "EV-{ID} items registered as a result of the response to this request."
+          },
+          "related_claim_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^CLAIM-[0-9]{3,}$"
+            },
+            "description": "CLAIM-{ID} entries that this request is intended to support."
+          },
+          "notes": {
+            "type": "string",
+            "maxLength": 4000,
+            "description": "Free-text notes on the request."
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "outstanding_statuses": {
+      "description": "Requests with these statuses require attention: draft, pending_approval, sent (check deadline), overdue.",
+      "type": "string",
+      "enum": ["draft", "pending_approval", "sent", "overdue"]
+    }
+  }
+}

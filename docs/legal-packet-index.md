@@ -29,6 +29,24 @@ This page lists the court-/clerk-facing documents intended to be copied into fil
 
 - Verification handoff template: `templates/verification_handoff/`
 
+## Evidence-First Litigation Workflow
+
+- Workflow overview: `docs/litigation/README.md`
+- Master workflow: `docs/litigation/evidence-first-workflow.v1.md`
+- Litigation readiness metrics (Repository Completeness + Evidentiary Strength): `docs/litigation/litigation-readiness-metrics.v1.md`
+- Claim ledger model: `docs/litigation/claim-ledger-model.v1.md`
+- Evidence request register: `docs/litigation/evidence-request-register.v1.md`
+- Document versioning policy: `docs/litigation/document-versioning-policy.v1.md`
+- Reference implementation (CASE-666234B709): `docs/litigation/CASE-666234B709/README.md`
+
+### Evidence-First Schemas
+
+- Evidence item provenance: `notion/schemas/Evidence_Item.schema.json`
+- Claim ledger: `notion/schemas/Claim_Ledger.schema.json`
+- Evidence request register: `notion/schemas/Evidence_Request.schema.json`
+- Document version manifest: `notion/schemas/Document_Version.schema.json`
+- Litigation readiness: `notion/schemas/Litigation_Readiness.schema.json`
+
 ## Suggestions (keep posture clean)
 
 - Replace bracketed placeholders (e.g., `[State]`) and swap citations to the applicable jurisdiction before use.

@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "sintraprime://schemas/claim_ledger.schema.json",
+  "title": "Claim Ledger",
+  "description": "Maps factual and legal claims to supporting evidence within the evidence-first litigation workflow. Claims without supported status must not appear in external submissions.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["case_id", "ledger_version", "generated", "claims"],
+  "properties": {
+    "case_id": {
+      "type": "string",
+      "description": "Parent case identifier (e.g., CASE-666234B709)."
+    },
+    "ledger_version": {
+      "type": "string",
+      "description": "Semantic version of this ledger document (e.g., '1', '2')."
+    },
+    "generated": {
+      "type": "string",
+      "format": "date",
+      "description": "ISO 8601 date when this ledger snapshot was generated."
+    },
+    "claims": {
+      "type": "array",
+      "minItems": 0,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "claim_id",
+          "case_id",
+          "claim_statement",
+          "claim_category",
+          "supporting_evidence_ids",
+          "support_status",
+          "added_date",
+          "last_updated"
+        ],
+        "properties": {
+          "claim_id": {
+            "type": "string",
+            "pattern": "^CLAIM-[0-9]{3,}$",
+            "description": "Unique claim identifier (e.g., CLAIM-001)."
+          },
+          "case_id": {
+            "type": "string",
+            "description": "Parent case identifier — must match the ledger's case_id."
+          },
+          "claim_statement": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000,
+            "description": "A single, unambiguous factual or legal assertion."
+          },
+          "claim_category": {
+            "type": "string",
+            "enum": ["fact", "legal_conclusion", "calculation", "timeline_event"],
+            "description": "Category of the claim: fact = factual assertion; legal_conclusion = legal inference; calculation = numeric/financial; timeline_event = event that occurred at a specific time."
+          },
+          "supporting_evidence_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^EV-[0-9]{4}-[0-9]{5}$"
+            },
+            "description": "EV-{ID} items that support this claim. Empty array means the claim is currently unsupported."
+          },
+          "support_status": {
+            "type": "string",
+            "enum": ["supported", "partially_supported", "unsupported"],
+            "description": "supported = claim is fully established by authenticated evidence; partially_supported = evidence exists but is incomplete or unauthenticated; unsupported = no supporting evidence exists."
+          },
+          "support_notes": {
+            "type": "string",
+            "maxLength": 4000,
+            "description": "Explanation of the current support status assignment."
+          },
+          "missing_evidence": {
+            "type": "array",
+            "items": { "type": "string", "maxLength": 500 },
+            "description": "Description of evidence items needed to promote this claim's support status."
+          },
+          "evidence_request_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^REQ-[0-9]{3,}$"
+            },
+            "description": "REQ-{ID} entries in the evidence request register for outstanding items needed by this claim."
+          },
+          "added_date": {
+            "type": "string",
+            "format": "date",
+            "description": "ISO 8601 date when this claim was first added to the ledger."
+          },
+          "last_updated": {
+            "type": "string",
+            "format": "date",
+            "description": "ISO 8601 date of the last status update to this claim."
+          }
+        }
+      }
+    }
+  }
+}

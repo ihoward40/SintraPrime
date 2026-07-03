@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "sintraprime://schemas/document_version.schema.json",
+  "title": "Document Version Manifest",
+  "description": "Version manifest for drafted documents in the litigation workflow. Enforces no-overwrite: each revision creates a new version entry with its own hash and metadata.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["case_id", "manifest_version", "generated", "documents"],
+  "properties": {
+    "case_id": {
+      "type": "string",
+      "description": "Parent case identifier (e.g., CASE-666234B709)."
+    },
+    "manifest_version": {
+      "type": "string",
+      "description": "Version of this manifest document."
+    },
+    "generated": {
+      "type": "string",
+      "format": "date",
+      "description": "ISO 8601 date when this manifest snapshot was generated."
+    },
+    "documents": {
+      "type": "array",
+      "minItems": 0,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "document_id",
+          "version",
+          "case_id",
+          "document_type",
+          "filename",
+          "sha256",
+          "created_at",
+          "created_by",
+          "status"
+        ],
+        "properties": {
+          "document_id": {
+            "type": "string",
+            "description": "Stable identifier shared across all versions of the same document (e.g., DOC-CASE666234B709-NOTICE-001). All versions of the same document share this ID."
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Sequential version number starting at 1. No skipping permitted."
+          },
+          "case_id": {
+            "type": "string",
+            "description": "Parent case identifier — must match the manifest's case_id."
+          },
+          "document_type": {
+            "type": "string",
+            "enum": [
+              "notice",
+              "demand_letter",
+              "case_packet",
+              "exhibit",
+              "chronology",
+              "evidence_index",
+              "claim_ledger",
+              "request_register",
+              "cover_sheet",
+              "other"
+            ],
+            "description": "Category of drafted document."
+          },
+          "filename": {
+            "type": "string",
+            "pattern": "^.+_v[0-9]+\\..+$",
+            "maxLength": 512,
+            "description": "Exact filename including version suffix (e.g., Notice_v1.pdf, CasePacket_v3.pdf). Must include _v{N} suffix."
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-fA-F0-9]{64}$",
+            "description": "SHA-256 hex hash of this version of the document, computed at time of creation."
+          },
+          "created_at": {
+            "type": ["string", "null"],
+            "format": "date-time",
+            "description": "ISO 8601 UTC timestamp when this version was created. Null for planned future versions."
+          },
+          "created_by": {
+            "type": ["string", "null"],
+            "maxLength": 240,
+            "description": "Name or system identifier of the author. Null for planned future versions."
+          },
+          "supersedes_version": {
+            "type": ["integer", "null"],
+            "minimum": 1,
+            "description": "Version number of the prior version this version supersedes. Null for version 1."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "pending_approval",
+              "approved",
+              "submitted",
+              "superseded",
+              "archived"
+            ],
+            "description": "draft = being authored; pending_approval = awaiting human approval; approved = approved for use; submitted = externally transmitted (immutable); superseded = replaced by a newer version; archived = retained for record, no longer active."
+          },
+          "notes": {
+            "type": "string",
+            "maxLength": 4000,
+            "description": "Description of changes from the prior version, or rationale for this version."
+          }
+        }
+      }
+    }
+  }
+}

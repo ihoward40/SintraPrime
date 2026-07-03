@@ -1,0 +1,207 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "sintraprime://schemas/evidence_item.schema.json",
+  "title": "Evidence Item",
+  "description": "Provenance and metadata for a single piece of evidence in the evidence-first litigation workflow.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "evidence_id",
+    "case_id",
+    "description",
+    "sha256",
+    "acquisition_method",
+    "acquisition_date",
+    "obtained_from",
+    "authenticity_status",
+    "verification_status",
+    "registered_at",
+    "custodian"
+  ],
+  "properties": {
+    "evidence_id": {
+      "type": "string",
+      "pattern": "^EV-[0-9]{4}-[0-9]{5}$",
+      "description": "Unique evidence identifier in format EV-YYYY-NNNNN (e.g., EV-2026-00001)."
+    },
+    "case_id": {
+      "type": "string",
+      "description": "Parent case identifier (e.g., CASE-666234B709)."
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 1000,
+      "description": "Human-readable description of this evidence item."
+    },
+    "source_category": {
+      "type": "string",
+      "enum": [
+        "government",
+        "banking",
+        "credit",
+        "auto",
+        "housing",
+        "courts",
+        "personal",
+        "correspondence",
+        "other"
+      ],
+      "description": "High-level category for the Master Evidence Index."
+    },
+    "source_entity": {
+      "type": "string",
+      "maxLength": 240,
+      "description": "Name of the organization or entity that originated this document."
+    },
+    "document_type": {
+      "type": "string",
+      "maxLength": 120,
+      "description": "Type of document (e.g., deficiency_notice, credit_report, account_statement, letter)."
+    },
+    "filename": {
+      "type": "string",
+      "maxLength": 512,
+      "description": "Filename of the evidence file as stored in the case directory."
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-fA-F0-9]{64}$",
+      "description": "SHA-256 hex hash of the evidence file."
+    },
+    "acquisition_method": {
+      "type": "string",
+      "enum": [
+        "received_by_mail",
+        "received_by_email",
+        "downloaded_from_portal",
+        "screenshot",
+        "foia_request",
+        "subpoena",
+        "purchase",
+        "self_generated",
+        "third_party_provided",
+        "other"
+      ],
+      "description": "How this evidence was acquired."
+    },
+    "acquisition_date": {
+      "type": "string",
+      "format": "date",
+      "description": "ISO 8601 date on which the evidence was acquired (received, downloaded, photographed, etc.)."
+    },
+    "obtained_from": {
+      "type": "string",
+      "maxLength": 240,
+      "description": "Name of the person, organization, or system from which the evidence was obtained."
+    },
+    "authenticity_status": {
+      "type": "string",
+      "enum": [
+        "verified",
+        "pending",
+        "questioned",
+        "unverifiable"
+      ],
+      "description": "Current authenticity assessment: verified = document has been confirmed as genuine; pending = verification not yet performed; questioned = authenticity is in doubt; unverifiable = cannot be authenticated with available means."
+    },
+    "verification_status": {
+      "type": "string",
+      "enum": [
+        "verified",
+        "pending",
+        "failed",
+        "not_applicable"
+      ],
+      "description": "Hash/integrity verification status: verified = SHA-256 has been independently confirmed; pending = not yet verified; failed = hash mismatch detected; not_applicable = original digital file unavailable."
+    },
+    "verification": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Structured verification record. Populated when verification_status is verified or failed.",
+      "properties": {
+        "verified_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "UTC timestamp when verification was performed."
+        },
+        "verified_by": {
+          "type": "string",
+          "maxLength": 240,
+          "description": "Name or system identifier of the verifier."
+        },
+        "verification_method": {
+          "type": "string",
+          "enum": [
+            "sha256_hash_check",
+            "notarization",
+            "certified_mail_receipt",
+            "fre_902_self_authentication",
+            "third_party_attestation",
+            "other"
+          ],
+          "description": "Method used to verify authenticity or integrity."
+        },
+        "verification_notes": {
+          "type": "string",
+          "maxLength": 2000,
+          "description": "Additional notes from the verification process."
+        },
+        "verification_artifact_sha256": {
+          "type": "string",
+          "pattern": "^[a-fA-F0-9]{64}$",
+          "description": "Optional: SHA-256 of a verification receipt or attestation document."
+        }
+      }
+    },
+    "registered_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "UTC timestamp when this evidence item was registered in the system."
+    },
+    "custodian": {
+      "type": "string",
+      "maxLength": 240,
+      "description": "Name or role of the person responsible for maintaining this evidence item."
+    },
+    "related_claim_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^CLAIM-[0-9]{3,}$"
+      },
+      "description": "CLAIM-{ID} entries supported by this evidence item."
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 4000,
+      "description": "Free-text notes about this evidence item."
+    }
+  },
+  "examples": [
+    {
+      "evidence_id": "EV-2026-00001",
+      "case_id": "CASE-666234B709",
+      "description": "Deficiency notice from Resurgent Capital Services LP regarding LVNV account",
+      "source_category": "credit",
+      "source_entity": "Resurgent Capital Services LP",
+      "document_type": "deficiency_notice",
+      "filename": "EV-2026-00001_deficiency-notice.pdf",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "acquisition_method": "received_by_mail",
+      "acquisition_date": "2026-06-15",
+      "obtained_from": "Resurgent Capital Services LP",
+      "authenticity_status": "pending",
+      "verification_status": "pending",
+      "verification": {
+        "verified_at": null,
+        "verified_by": null,
+        "verification_method": null,
+        "verification_notes": "Awaiting hash verification against original received document."
+      },
+      "registered_at": "2026-07-03T10:00:00Z",
+      "custodian": "Howard",
+      "related_claim_ids": ["CLAIM-001"],
+      "notes": "Original letter received via USPS. PDF scan created from original."
+    }
+  ]
+}

@@ -1,0 +1,158 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "sintraprime://schemas/litigation_readiness.schema.json",
+  "title": "Litigation Readiness",
+  "description": "Two-metric litigation readiness record: Repository Completeness (workflow/document completeness) and Evidentiary Strength (claim support quality). These scores are workflow indicators ONLY — they do not predict legal outcomes.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "case_id",
+    "as_of",
+    "repository_completeness",
+    "evidentiary_strength",
+    "disclaimer"
+  ],
+  "properties": {
+    "case_id": {
+      "type": "string",
+      "description": "Parent case identifier (e.g., CASE-666234B709)."
+    },
+    "as_of": {
+      "type": "string",
+      "format": "date",
+      "description": "ISO 8601 date of this readiness snapshot."
+    },
+    "disclaimer": {
+      "type": "string",
+      "description": "Required disclaimer clarifying that scores are workflow indicators, not legal outcome predictions. Must be present in every instance.",
+      "const": "These scores reflect workflow completeness and evidence quality only. They are not legal outcome predictions and do not constitute legal advice."
+    },
+    "repository_completeness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["score", "label", "categories"],
+      "description": "Checklist-based score measuring whether workflow components, documents, and structural elements are present and organized.",
+      "properties": {
+        "score": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Aggregate repository completeness score (0–100)."
+        },
+        "label": {
+          "type": "string",
+          "enum": ["Complete", "Near Complete", "Partial", "Incomplete"],
+          "description": "Human-readable label: Complete (90–100), Near Complete (70–89), Partial (50–69), Incomplete (<50)."
+        },
+        "categories": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Per-category completeness breakdown.",
+          "properties": {
+            "case_directory_structure": {
+              "type": "integer", "minimum": 0, "maximum": 10,
+              "description": "Score out of 10: all required folders exist."
+            },
+            "evidence_index": {
+              "type": "integer", "minimum": 0, "maximum": 15,
+              "description": "Score out of 15: evidence items registered with required metadata."
+            },
+            "chain_of_custody_metadata": {
+              "type": "integer", "minimum": 0, "maximum": 15,
+              "description": "Score out of 15: provenance fields populated on all evidence items."
+            },
+            "claim_ledger": {
+              "type": "integer", "minimum": 0, "maximum": 15,
+              "description": "Score out of 15: claims stated and mapped to evidence IDs."
+            },
+            "evidence_request_register": {
+              "type": "integer", "minimum": 0, "maximum": 10,
+              "description": "Score out of 10: outstanding requests logged."
+            },
+            "chronology": {
+              "type": "integer", "minimum": 0, "maximum": 10,
+              "description": "Score out of 10: timeline populated with evidence-sourced events."
+            },
+            "correspondence_log": {
+              "type": "integer", "minimum": 0, "maximum": 10,
+              "description": "Score out of 10: inbound and outbound correspondence recorded."
+            },
+            "deadlines_tracker": {
+              "type": "integer", "minimum": 0, "maximum": 10,
+              "description": "Score out of 10: known deadlines logged."
+            },
+            "audit_trail": {
+              "type": "integer", "minimum": 0, "maximum": 5,
+              "description": "Score out of 5: Audit/ folder contains generation receipts."
+            }
+          }
+        },
+        "gaps": {
+          "type": "array",
+          "items": { "type": "string", "maxLength": 500 },
+          "description": "List of identified workflow gaps reducing the completeness score."
+        }
+      }
+    },
+    "evidentiary_strength": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["score", "label", "categories"],
+      "description": "Substantive assessment of how well the case claims are supported by documented, authenticated evidence.",
+      "properties": {
+        "score": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Aggregate evidentiary strength score (0–100)."
+        },
+        "label": {
+          "type": "string",
+          "enum": ["Strong", "Moderate", "Developing", "Insufficient"],
+          "description": "Human-readable label: Strong (85–100), Moderate (65–84), Developing (45–64), Insufficient (<45)."
+        },
+        "categories": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Per-category evidentiary strength breakdown.",
+          "properties": {
+            "claims_supported": {
+              "type": "integer", "minimum": 0, "maximum": 30,
+              "description": "Score out of 30: percentage of claims with supported status."
+            },
+            "claims_partially_supported": {
+              "type": "integer", "minimum": 0, "maximum": 15,
+              "description": "Score out of 15: partial credit for partially supported claims."
+            },
+            "evidence_authenticity": {
+              "type": "integer", "minimum": 0, "maximum": 20,
+              "description": "Score out of 20: percentage of evidence with authenticity_status: verified."
+            },
+            "evidence_verification": {
+              "type": "integer", "minimum": 0, "maximum": 15,
+              "description": "Score out of 15: percentage of evidence with verification_status: verified."
+            },
+            "missing_evidence_resolved": {
+              "type": "integer", "minimum": 0, "maximum": 10,
+              "description": "Score out of 10: percentage of missing evidence gaps that have been filled."
+            },
+            "source_diversity": {
+              "type": "integer", "minimum": 0, "maximum": 10,
+              "description": "Score out of 10: evidence draws from multiple independent sources."
+            }
+          }
+        },
+        "gaps": {
+          "type": "array",
+          "items": { "type": "string", "maxLength": 500 },
+          "description": "List of identified evidentiary gaps reducing the strength score."
+        }
+      }
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 4000,
+      "description": "Additional context or narrative for this readiness snapshot."
+    }
+  }
+}
