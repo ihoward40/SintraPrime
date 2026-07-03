@@ -38,6 +38,18 @@ This flow is declarative and integrity-focused; it does not imply execution auth
 
 ---
 
+## Founding Week Constitutional Assurance (Tier 1)
+- **Assurance index**
+  - `governance/constitutional/README.md`
+- **Lifecycle vocabulary (normative)**
+  - `governance/constitutional/governance-lifecycle-vocabulary.v1.md`
+- **Hierarchy and command authority placement guidance**
+  - `governance/constitutional/hierarchy-and-command-authority-guidance.v1.md`
+- **Hermes status snapshot**
+  - `governance/constitutional/HERMES-governance-status-snapshot.founding-week.v1.md`
+
+---
+
 ## Core Specifications
 - **Watch Mode Spec → Implementation Map (v1)**
   - `watch-mode-spec-implementation-map.v1.md`

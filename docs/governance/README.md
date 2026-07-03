@@ -22,6 +22,13 @@ It is **not** enforcement, **not** wiring, and **not** runtime behavior.
 - [docs/governance/external-evidence-addons.md](external-evidence-addons.md) — Docs-only add-ons (mailing records, FOIA packet variants, public verifier concept).
 - [docs/governance/public-verifier/manifest.template.json](public-verifier/manifest.template.json) — Integrity-only manifest template (no interpretation).
 
+## Founding Week constitutional governance assurance (Tier 1)
+
+- [docs/governance/constitutional/README.md](constitutional/README.md) — Tier 1 constitutional assurance index and constraints.
+- [docs/governance/constitutional/governance-lifecycle-vocabulary.v1.md](constitutional/governance-lifecycle-vocabulary.v1.md) — Normative lifecycle vocabulary (`Draft`, `Review`, `Approved`, `Ratified`, `Enforced`, `Archived`).
+- [docs/governance/constitutional/hierarchy-and-command-authority-guidance.v1.md](constitutional/hierarchy-and-command-authority-guidance.v1.md) — Canonical hierarchy and command-authority placement.
+- [docs/governance/constitutional/HERMES-governance-status-snapshot.founding-week.v1.md](constitutional/HERMES-governance-status-snapshot.founding-week.v1.md) — Hermes-ready status snapshot for current constitutional mission state.
+
 ## Review guardrails (PR-time only)
 
 - [.github/pull_request_template.md](../../.github/pull_request_template.md) — Governance wiring review checklist.
