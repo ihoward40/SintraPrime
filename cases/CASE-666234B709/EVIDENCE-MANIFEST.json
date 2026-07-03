@@ -1,0 +1,105 @@
+{
+  "schema_version": "1.0.0",
+  "case_id": "CASE-666234B709",
+  "generated_at": "2026-07-03T09:55:00Z",
+  "generated_by": "SintraPrime Governance Engine — Phase 3 Evidence-First Initialization",
+  "total_items": 1,
+  "items": [
+    {
+      "evidence_id": "EV-CASE666234B709-001",
+      "timestamp": "2026-07-03T09:55:00Z",
+      "sha256_hash": "PLACEHOLDER_COMPUTE_HASH_ON_IMPORT",
+      "source": "Deficiency Notice — Issuing Party TBD (see document)",
+      "custodian": "SintraPrime Governance Engine",
+      "description": "Deficiency notice received for CASE-666234B709. Imported into evidence repository as intake document. Awaiting human custodian review and hash verification against original document.",
+      "section": "01-intake",
+      "file_path": "cases/CASE-666234B709/01-intake/EV-001-DEFICIENCY-NOTICE.md",
+      "status": "READY FOR USER REVIEW",
+      "external_action_locked": true,
+      "approval_reference": null,
+      "tags": ["deficiency-notice", "intake", "primary-document"],
+      "intake_notes": "Repository was created before this import per evidence-first protocol. Hash placeholder must be replaced with actual SHA-256 of the original document when the physical/digital file is provided by the human custodian.",
+      "chain_of_custody_seq": 1
+    }
+  ],
+  "sections": {
+    "01-intake": {
+      "label": "01 Intake",
+      "description": "Initial documents received — deficiency notices, account statements, intake records",
+      "item_count": 1
+    },
+    "02-credit-reports": {
+      "label": "02 Credit Reports",
+      "description": "Credit bureau reports from all three major bureaus",
+      "item_count": 0
+    },
+    "03-original-creditor": {
+      "label": "03 Original Creditor",
+      "description": "Account agreements, statements, origination documents",
+      "item_count": 0
+    },
+    "04-collection-agency": {
+      "label": "04 Collection Agency",
+      "description": "Collection notices, validation letters, agency communications",
+      "item_count": 0
+    },
+    "05-correspondence": {
+      "label": "05 Correspondence",
+      "description": "All written correspondence with creditors, agencies, and bureaus",
+      "item_count": 0
+    },
+    "06-evidence": {
+      "label": "06 Evidence",
+      "description": "Core evidentiary exhibits — authenticated documents, affidavits, verifications",
+      "item_count": 0
+    },
+    "07-legal-research": {
+      "label": "07 Legal Research",
+      "description": "Applicable statutes, case law, regulatory guidance",
+      "item_count": 0
+    },
+    "08-drafts": {
+      "label": "08 Drafts",
+      "description": "Working drafts of responses, disputes, and filings — NOT SUBMITTED",
+      "item_count": 0
+    },
+    "09-submitted": {
+      "label": "09 Submitted",
+      "description": "Documents sent to external parties (requires prior approval log entry)",
+      "item_count": 0
+    },
+    "10-responses": {
+      "label": "10 Responses",
+      "description": "Responses received from external parties",
+      "item_count": 0
+    },
+    "11-deadlines": {
+      "label": "11 Deadlines",
+      "description": "Deadline registry and compliance calendar",
+      "item_count": 0
+    }
+  },
+  "metadata_schema": {
+    "required_fields": [
+      "evidence_id",
+      "timestamp",
+      "sha256_hash",
+      "source",
+      "custodian",
+      "description",
+      "section",
+      "status",
+      "external_action_locked"
+    ],
+    "evidence_id_pattern": "^EV-CASE666234B709-\\d{3}$",
+    "valid_statuses": [
+      "READY FOR USER REVIEW",
+      "UNDER REVIEW",
+      "AUTHENTICATED",
+      "SUBMITTED",
+      "RESPONSE RECEIVED"
+    ],
+    "timestamp_format": "ISO 8601 UTC",
+    "hash_format": "SHA-256 hex (64 characters)"
+  }
+}

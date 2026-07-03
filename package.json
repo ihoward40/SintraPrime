@@ -50,7 +50,11 @@
     "skills:revoke": "node scripts/skills-revoke-one.mjs",
     "skills:check": "node scripts/skills-check-revoked.mjs",
     "skills:status": "node scripts/skills-status.mjs",
-    "check:agents": "node ./tools/check-agents.mjs"
+    "check:agents": "node ./tools/check-agents.mjs",
+    "case:packet": "node scripts/case/generate-case-packet.mjs",
+    "case:score": "node scripts/case/readiness-score.mjs",
+    "case:verify-chain": "node scripts/case/verify-custody-chain.mjs",
+    "case:hash": "node scripts/case/hash-evidence.mjs"
   },
   "dependencies": {
     "express": "^5.2.1",

@@ -1,0 +1,214 @@
+{
+  "schema_version": "1.0.0",
+  "case_id": "CASE-666234B709",
+  "generated_at": "2026-07-03T10:04:32.563Z",
+  "scoring_model": "LitigationReadinessModel-v1",
+  "categories": {
+    "evidence": {
+      "label": "Evidence",
+      "description": "Completeness, authenticity, and integrity of evidentiary documents",
+      "score": 10,
+      "max_score": 100,
+      "weight": 0.25,
+      "notes": "1 total items; 0 authenticated; 0 hash-verified.",
+      "contributing_factors": [
+        {
+          "factor": "Intake documents",
+          "points": 10,
+          "max": 10
+        },
+        {
+          "factor": "Credit reports (3 bureaus)",
+          "points": 0,
+          "max": 20
+        },
+        {
+          "factor": "Original creditor documents",
+          "points": 0,
+          "max": 20
+        },
+        {
+          "factor": "Collection agency records",
+          "points": 0,
+          "max": 10
+        },
+        {
+          "factor": "Authenticated core evidence",
+          "points": 0,
+          "max": 20
+        },
+        {
+          "factor": "Authenticated items",
+          "points": 0,
+          "max": 20
+        }
+      ]
+    },
+    "timeline": {
+      "label": "Timeline",
+      "description": "Completeness of the case chronology and key event documentation",
+      "score": 20,
+      "max_score": 100,
+      "weight": 0.15,
+      "notes": "Response deadline NOT confirmed — action required.",
+      "contributing_factors": [
+        {
+          "factor": "Intake date recorded",
+          "points": 10,
+          "max": 10
+        },
+        {
+          "factor": "Response deadline confirmed",
+          "points": 0,
+          "max": 30
+        },
+        {
+          "factor": "Correspondence timeline",
+          "points": 0,
+          "max": 25
+        },
+        {
+          "factor": "Deadline registry populated",
+          "points": 0,
+          "max": 10
+        }
+      ]
+    },
+    "authentication": {
+      "label": "Authentication",
+      "description": "Cryptographic and procedural authentication of evidence items",
+      "score": 25,
+      "max_score": 100,
+      "weight": 0.2,
+      "notes": "2 custody log entries; 0/1 items hash-verified.",
+      "contributing_factors": [
+        {
+          "factor": "Chain-of-custody log active",
+          "points": 15,
+          "max": 15
+        },
+        {
+          "factor": "SHA-256 hashes verified",
+          "points": 0,
+          "max": 40
+        },
+        {
+          "factor": "Hash chain integrity entries",
+          "points": 10,
+          "max": 10
+        },
+        {
+          "factor": "Items authenticated",
+          "points": 0,
+          "max": 25
+        }
+      ]
+    },
+    "correspondence": {
+      "label": "Correspondence",
+      "description": "Completeness of documented communications with all parties",
+      "score": 0,
+      "max_score": 100,
+      "weight": 0.15,
+      "notes": "0 correspondence items; 0 submitted; 0 responses received.",
+      "contributing_factors": [
+        {
+          "factor": "Incoming/outgoing correspondence",
+          "points": 0,
+          "max": 30
+        },
+        {
+          "factor": "Submitted documents",
+          "points": 0,
+          "max": 20
+        },
+        {
+          "factor": "Responses received",
+          "points": 0,
+          "max": 50
+        }
+      ]
+    },
+    "preservation": {
+      "label": "Preservation",
+      "description": "Evidence preservation measures and integrity safeguards",
+      "score": 80,
+      "max_score": 100,
+      "weight": 0.15,
+      "notes": "Audit log: 2 entries. External locks: all locked.",
+      "contributing_factors": [
+        {
+          "factor": "Append-only audit log established",
+          "points": 20,
+          "max": 20
+        },
+        {
+          "factor": "External action locks enforced",
+          "points": 20,
+          "max": 20
+        },
+        {
+          "factor": "Hash integrity monitoring",
+          "points": 0,
+          "max": 20
+        },
+        {
+          "factor": "Governance constraints documented",
+          "points": 20,
+          "max": 20
+        },
+        {
+          "factor": "Audit receipt maintained",
+          "points": 20,
+          "max": 20
+        }
+      ]
+    },
+    "missing_documents": {
+      "label": "Missing Documents",
+      "description": "Count of identified missing or outstanding documents (lower count = higher score)",
+      "count": 7,
+      "penalty_per_missing": 5,
+      "score": 65,
+      "max_score": 100,
+      "weight": 0.1,
+      "notes": "7 missing document categories identified.",
+      "missing_items": [
+        "Credit bureau reports (all three bureaus)",
+        "Original creditor account agreement",
+        "Original creditor account statements",
+        "Collection agency debt validation letter",
+        "Proof of debt ownership/assignment",
+        "FDCPA/FCRA relevant statute excerpts",
+        "Prior dispute correspondence"
+      ]
+    }
+  },
+  "overall": {
+    "weighted_score": 29,
+    "max_score": 100,
+    "grade": "F",
+    "readiness_level": "NOT READY — Substantial evidence work required",
+    "notes": "Score computed from 1 evidence items across all sections."
+  },
+  "scoring_formula": {
+    "description": "weighted_score = sum(category.score * category.weight) for all categories",
+    "weights": {
+      "evidence": 0.25,
+      "timeline": 0.15,
+      "authentication": 0.2,
+      "correspondence": 0.15,
+      "preservation": 0.15,
+      "missing_documents": 0.1
+    },
+    "grade_thresholds": {
+      "A": "90-100 — Ready for immediate action (approval still required)",
+      "B": "80-89 — Substantially ready, minor gaps",
+      "C": "70-79 — Conditionally ready, review required",
+      "D": "60-69 — Significant gaps, not recommended for action",
+      "F": "0-59 — Not ready, substantial evidence work required"
+    }
+  },
+  "last_computed": "2026-07-03T10:04:32.563Z",
+  "next_review_trigger": "After each evidence import or status change"
+}
