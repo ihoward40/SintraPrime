@@ -22,3 +22,10 @@
 ## Reports (Read-Only)
 
 - [Mode transparency report (Q2 2026)](./mode-transparency-report.q2-2026.v1.md)
+
+## Constitutional Governance
+
+- [Constitutional governance artifacts](./constitutional/README.md)
+- [HERMES governance status snapshot](./constitutional/HERMES-governance-status-snapshot.founding-week.v1.md)
+- [MISSION-0001 Tier 1 governance mission](./constitutional/MISSION-0001.tier1-governance-mission.v1.md)
+- [GOV-AUD-001 governance assessment baseline](./constitutional/GOV-AUD-001.governance-assessment-baseline.v1.md)
