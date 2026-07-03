@@ -107,16 +107,42 @@ All four events must be ✅ PASS before Track B is promoted to *Operational*.
 
 ## Failure Protocol
 
+No production failures may be silently corrected. Every failed scheduled event must generate a formal incident record.
+
 If any event fails:
 
 1. Record actual behavior in the Notes field above
-2. Do NOT add new features or crons to fix it
-3. Diagnose root cause in the existing implementation
-4. Fix only what failed
-5. Re-run the failed event on the next scheduled cycle
-6. Record the re-run result
+2. Open a Failure Incident (see template below)
+3. Do NOT add new features or crons to fix it
+4. Diagnose root cause in the existing implementation
+5. Fix only what failed
+6. Re-run the failed event on the next scheduled cycle
+7. Record the re-run result and close the incident
 
 *Track B feature freeze remains in effect throughout this validation period.*
+
+### Failure Incident Template
+
+```
+Incident-ID:      INC-{{SEQ}}-{{YYYY-MM-DD}}
+Event:            (which of the 4 events failed)
+Failure-Mode:     (what happened vs what was expected)
+Root-Cause:       (why it happened)
+Corrective-Action:(what was changed to fix it)
+Verification:     (how the repair was confirmed)
+Closed-By:        Hermes
+Closed-Date:
+```
+
+Each incident is an immutable record. It is not deleted even after resolution.
+
+---
+
+## Incident Register
+
+| Incident-ID | Event | Date | Status | Resolution |
+|-------------|-------|------|--------|------------|
+| *(none yet)* | | | | |
 
 ---
 
