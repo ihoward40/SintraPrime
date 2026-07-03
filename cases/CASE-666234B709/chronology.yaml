@@ -1,0 +1,81 @@
+# Chronology — CASE-666234B709
+# Purpose: Ordered timeline of case events with evidence linkage.
+# Role: Provides temporal backbone for packet cover sheets and litigation preparation.
+
+schema_version: "1.0.0"
+artifact_type: chronology
+case_id: CASE-666234B709
+case_name: "Halsted / LVNV / Resurgent — Deficiency Notice Defense"
+chronology_created_utc: "2026-07-03T10:15:00Z"
+last_updated_utc: "2026-07-03T10:15:00Z"
+custodian: "ihoward40"
+
+events:
+  - event_id: "EVT-666234-001"
+    date: "PENDING — to be determined from EV-666234-003"
+    description: "Account originated with Halsted (original creditor)."
+    evidence_refs:
+      - "EV-666234-003"
+    verified: false
+    notes: "Date to be established once original creditor record is obtained."
+
+  - event_id: "EVT-666234-002"
+    date: "PENDING — to be determined from EV-666234-003"
+    description: "Account charged off by original creditor (Halsted)."
+    evidence_refs:
+      - "EV-666234-003"
+    verified: false
+    notes: "Charge-off date is critical for statute of limitations analysis."
+
+  - event_id: "EVT-666234-003"
+    date: "PENDING — to be determined from EV-666234-004"
+    description: "Account assigned or sold to LVNV Funding LLC."
+    evidence_refs:
+      - "EV-666234-004"
+    verified: false
+    notes: "Assignment date establishes LVNV ownership chain start."
+
+  - event_id: "EVT-666234-004"
+    date: "PENDING — to be determined from EV-666234-002"
+    description: "LVNV Funding LLC begins reporting tradeline to consumer reporting agencies."
+    evidence_refs:
+      - "EV-666234-002"
+    verified: false
+    notes: "First reporting date relevant to FCRA accuracy analysis."
+
+  - event_id: "EVT-666234-005"
+    date: "2026-07-03"
+    description: "Deficiency notice received from Resurgent Capital Services on behalf of LVNV Funding LLC."
+    evidence_refs:
+      - "EV-666234-001"
+    verified: true
+    notes: "Trigger event. Starts FDCPA § 1692g 30-day validation window."
+
+  - event_id: "EVT-666234-006"
+    date: "PENDING — within 30 days of EVT-666234-005"
+    description: "Deadline: Written debt validation demand must be sent to preserve FDCPA rights."
+    evidence_refs: []
+    verified: false
+    is_deadline: true
+    deadline_urgency: Critical
+    notes: >
+      APPROVAL REQUIRED before any written communication is sent.
+      Missing this window eliminates FDCPA § 1692g cease-collection right.
+
+  - event_id: "EVT-666234-007"
+    date: "2026-07-03"
+    description: "Case opened in SintraPrime platform. Evidence repository initialized."
+    evidence_refs: []
+    verified: true
+    notes: "Platform event — internal record."
+
+deadlines:
+  - deadline_id: "DL-666234-001"
+    description: "FDCPA § 1692g written validation demand"
+    event_ref: "EVT-666234-006"
+    trigger_event: "EVT-666234-005"
+    window: "30 days from receipt of deficiency notice"
+    urgency: Critical
+    status: Pending
+    external_action_locked: true
+    notes: "APPROVAL REQUIRED before submission."

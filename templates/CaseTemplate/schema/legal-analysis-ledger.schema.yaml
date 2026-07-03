@@ -1,0 +1,105 @@
+# Legal Analysis Ledger Schema — CaseTemplate
+# JSON Schema (YAML representation) for legal analysis ledger files.
+# Enforces: legal conclusions only, confidence required, authority references required.
+
+"$schema": "https://json-schema.org/draft/2020-12/schema"
+"$id": "sintraprime://templates/CaseTemplate/schema/legal-analysis-ledger.schema.yaml"
+title: "Legal Analysis Ledger"
+description: >
+  Register of legal conclusions and interpretations only. Factual assertions belong
+  in fact-ledger. Confidence level and authority references are required on every entry.
+type: object
+required:
+  - schema_version
+  - artifact_type
+  - case_id
+  - legal_analyses
+additionalProperties: true
+
+properties:
+  schema_version:
+    type: string
+  artifact_type:
+    type: string
+    const: legal_analysis_ledger
+  case_id:
+    type: string
+  case_name:
+    type: string
+  ledger_created_utc:
+    type: string
+  last_updated_utc:
+    type: string
+  custodian:
+    type: string
+
+  governance:
+    type: object
+    properties:
+      separation_from:
+        type: string
+        const: fact_ledger
+      note:
+        type: string
+      external_action_gate:
+        type: string
+
+  legal_analyses:
+    type: array
+    items:
+      type: object
+      required:
+        - analysis_id
+        - legal_conclusion
+        - confidence
+        - confidence_rationale
+        - authority_references
+        - supporting_facts
+        - supporting_evidence
+        - gaps
+        - support_status
+        - recommended_action
+      additionalProperties: true
+      properties:
+        analysis_id:
+          type: string
+          pattern: "^LA-[A-Z0-9]+-[0-9]+$"
+        legal_conclusion:
+          type: string
+          description: "Legal conclusion or interpretation only — no raw factual observations."
+        confidence:
+          type: string
+          enum:
+            - High
+            - Moderate
+            - Low
+        confidence_rationale:
+          type: string
+        authority_references:
+          type: array
+          items:
+            type: string
+          description: "AUTH IDs from authority-ledger.yaml."
+        supporting_facts:
+          type: array
+          items:
+            type: string
+          description: "FACT IDs from fact-ledger.yaml."
+        supporting_evidence:
+          type: array
+          items:
+            type: string
+          description: "EV IDs from evidence-registry.yaml."
+        gaps:
+          type: array
+          items:
+            type: string
+        support_status:
+          type: string
+          enum:
+            - Supported
+            - Partially_Supported
+            - Unsupported
+        recommended_action:
+          type: string
+          description: "Must include APPROVAL REQUIRED if any external action is involved."

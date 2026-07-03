@@ -1,0 +1,210 @@
+# Evidence Dependency Graph — CASE-666234B709
+# Purpose: For each claim/fact, explicitly tracks Required Evidence, Current Evidence,
+#          and Outstanding Requests. Gaps are machine-readable.
+# Role: Drives gap analysis in packet outputs and readiness scoring.
+
+schema_version: "1.0.0"
+artifact_type: evidence_dependency_graph
+case_id: CASE-666234B709
+case_name: "Halsted / LVNV / Resurgent — Deficiency Notice Defense"
+graph_created_utc: "2026-07-03T10:15:00Z"
+last_updated_utc: "2026-07-03T10:15:00Z"
+custodian: "ihoward40"
+
+governance:
+  machine_readable_gaps: true
+  note: >
+    All gap fields are explicitly machine-readable (boolean gap_exists + gap_detail list)
+    to enable automated packet assembly and readiness scoring.
+
+dependency_nodes:
+  - node_id: "DEP-666234-001"
+    ref_type: fact
+    ref_id: "FACT-666234-001"
+    label: "Deficiency notice was received"
+    required_evidence:
+      - evidence_id: "EV-666234-001"
+        purpose: "Establish that notice was received and its contents"
+        mandatory: true
+    current_evidence:
+      - "EV-666234-001"
+    outstanding_requests: []
+    gap_exists: false
+    gap_detail: []
+
+  - node_id: "DEP-666234-002"
+    ref_type: fact
+    ref_id: "FACT-666234-002"
+    label: "Resurgent authority as servicer for LVNV"
+    required_evidence:
+      - evidence_id: "EV-666234-001"
+        purpose: "Notice asserting Resurgent role"
+        mandatory: true
+      - evidence_id: "EV-666234-005"
+        purpose: "Custodian affidavit independently verifying servicer authority"
+        mandatory: true
+    current_evidence:
+      - "EV-666234-001"
+    outstanding_requests:
+      - request_id: "REQ-666234-001"
+        requested_item: "Custodian Affidavit from Resurgent"
+        requested_from: "Resurgent Capital Services"
+        request_date: "PENDING"
+        status: Not_Sent
+        external_action_locked: true
+    gap_exists: true
+    gap_detail:
+      - "EV-666234-005 (Custodian Affidavit) has not been requested or received."
+
+  - node_id: "DEP-666234-003"
+    ref_type: fact
+    ref_id: "FACT-666234-003"
+    label: "LVNV ownership of the account"
+    required_evidence:
+      - evidence_id: "EV-666234-001"
+        purpose: "Notice asserting LVNV ownership"
+        mandatory: true
+      - evidence_id: "EV-666234-004"
+        purpose: "Chain-of-assignment documentation proving LVNV legal ownership"
+        mandatory: true
+      - evidence_id: "EV-666234-003"
+        purpose: "Original creditor account record"
+        mandatory: true
+    current_evidence:
+      - "EV-666234-001"
+    outstanding_requests:
+      - request_id: "REQ-666234-002"
+        requested_item: "Chain of Assignment Documentation"
+        requested_from: "LVNV Funding LLC"
+        request_date: "PENDING"
+        status: Not_Sent
+        external_action_locked: true
+      - request_id: "REQ-666234-003"
+        requested_item: "Original Creditor Account Record"
+        requested_from: "Halsted (Original Creditor)"
+        request_date: "PENDING"
+        status: Not_Sent
+        external_action_locked: true
+    gap_exists: true
+    gap_detail:
+      - "EV-666234-004 (Chain of Assignment) has not been requested or received."
+      - "EV-666234-003 (Original Creditor Record) has not been requested or received."
+
+  - node_id: "DEP-666234-004"
+    ref_type: fact
+    ref_id: "FACT-666234-004"
+    label: "Halsted is the original creditor"
+    required_evidence:
+      - evidence_id: "EV-666234-001"
+        purpose: "Notice naming original creditor"
+        mandatory: true
+      - evidence_id: "EV-666234-003"
+        purpose: "Original creditor account record confirming identity"
+        mandatory: true
+    current_evidence:
+      - "EV-666234-001"
+    outstanding_requests:
+      - request_id: "REQ-666234-003"
+        requested_item: "Original Creditor Account Record"
+        requested_from: "Halsted (Original Creditor)"
+        request_date: "PENDING"
+        status: Not_Sent
+        external_action_locked: true
+    gap_exists: true
+    gap_detail:
+      - "EV-666234-003 (Original Creditor Record) has not been requested or received."
+
+  - node_id: "DEP-666234-005"
+    ref_type: fact
+    ref_id: "FACT-666234-005"
+    label: "Signed credit agreement existed"
+    required_evidence:
+      - evidence_id: "EV-666234-006"
+        purpose: "Signed credit agreement establishing consumer obligation"
+        mandatory: true
+    current_evidence: []
+    outstanding_requests:
+      - request_id: "REQ-666234-004"
+        requested_item: "Signed Credit Agreement"
+        requested_from: "Halsted (Original Creditor) or LVNV Funding LLC"
+        request_date: "PENDING"
+        status: Not_Sent
+        external_action_locked: true
+    gap_exists: true
+    gap_detail:
+      - "EV-666234-006 (Signed Credit Agreement) has not been requested or received."
+      - "No current evidence supports this fact."
+
+  - node_id: "DEP-666234-006"
+    ref_type: fact
+    ref_id: "FACT-666234-006"
+    label: "LVNV is reporting to consumer reporting agencies"
+    required_evidence:
+      - evidence_id: "EV-666234-001"
+        purpose: "Notice referencing credit reporting"
+        mandatory: true
+      - evidence_id: "EV-666234-002"
+        purpose: "Credit report pull confirming tradeline and accuracy"
+        mandatory: true
+    current_evidence:
+      - "EV-666234-001"
+    outstanding_requests:
+      - request_id: "REQ-666234-005"
+        requested_item: "Credit Bureau Report — All Three Bureaus"
+        requested_from: "Consumer self-pull from AnnualCreditReport.com"
+        request_date: "PENDING"
+        status: Not_Sent
+        external_action_locked: false
+        notes: "Consumer-initiated pull does not require external approval gate."
+    gap_exists: true
+    gap_detail:
+      - "EV-666234-002 (Credit Bureau Report) has not yet been obtained."
+
+  - node_id: "DEP-666234-007"
+    ref_type: legal_analysis
+    ref_id: "LA-666234-001"
+    label: "LVNV ownership legally unverified — affirmative defense basis"
+    required_evidence:
+      - evidence_id: "EV-666234-004"
+        purpose: "Chain of assignment — must be absent or deficient to sustain this position"
+        mandatory: true
+    current_evidence: []
+    outstanding_requests:
+      - request_id: "REQ-666234-002"
+        requested_item: "Chain of Assignment Documentation"
+        requested_from: "LVNV Funding LLC"
+        request_date: "PENDING"
+        status: Not_Sent
+        external_action_locked: true
+    gap_exists: true
+    gap_detail:
+      - "Chain of assignment documentation has not been demanded; request required to establish gap on record."
+
+# Summary of all outstanding requests (machine-readable)
+outstanding_request_summary:
+  total_outstanding: 5
+  requests:
+    - request_id: "REQ-666234-001"
+      item: "Custodian Affidavit — Resurgent"
+      from: "Resurgent Capital Services"
+      external_action_locked: true
+    - request_id: "REQ-666234-002"
+      item: "Chain of Assignment"
+      from: "LVNV Funding LLC"
+      external_action_locked: true
+    - request_id: "REQ-666234-003"
+      item: "Original Creditor Account Record"
+      from: "Halsted (Original Creditor)"
+      external_action_locked: true
+    - request_id: "REQ-666234-004"
+      item: "Signed Credit Agreement"
+      from: "Halsted or LVNV"
+      external_action_locked: true
+    - request_id: "REQ-666234-005"
+      item: "Credit Bureau Report"
+      from: "Consumer self-pull"
+      external_action_locked: false
+
+# Total gap count (machine-readable for readiness scoring)
+gap_count: 5
+gap_exists: true

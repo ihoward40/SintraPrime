@@ -1,0 +1,247 @@
+# Case Packet v001 — CASE-666234B709
+# Versioning: Packets are immutable. This file is never overwritten.
+# Next version: case_packet_v002.yaml (created on next regeneration)
+# Version history is preserved as sequential files: v001, v002, v003...
+#
+# Packet assembly policy:
+#   - Generated from evidence-registry.yaml, fact-ledger.yaml,
+#     legal-analysis-ledger.yaml, authority-ledger.yaml,
+#     evidence-dependency-graph.yaml, chronology.yaml, readiness.yaml
+#   - SHA-256 of this file recorded below after generation
+#   - NEVER overwrite; emit new version instead
+
+schema_version: "1.0.0"
+artifact_type: case_packet
+packet_version: "v001"
+case_id: CASE-666234B709
+case_name: "Halsted / LVNV / Resurgent — Deficiency Notice Defense"
+generated_utc: "2026-07-03T10:19:41Z"
+generated_from_sources:
+  - evidence-registry.yaml
+  - fact-ledger.yaml
+  - legal-analysis-ledger.yaml
+  - authority-ledger.yaml
+  - evidence-dependency-graph.yaml
+  - chronology.yaml
+  - readiness.yaml
+packet_sha256: "PENDING — compute SHA-256 of this file after finalization"
+custodian: "ihoward40"
+immutable: true
+
+governance:
+  overwrite_policy: prohibited
+  versioning: sequential_immutable
+  next_version_policy: >
+    When packet is regenerated, emit cases/CASE-666234B709/packets/case_packet_v002.yaml.
+    Never modify or delete case_packet_v001.yaml.
+  external_action_gate: >
+    This packet is for internal review only. No external submission, filing,
+    or service is authorized from this packet without explicit human approval.
+
+# ─────────────────────────────────────────────────────────────
+# SECTION 1: COVER SHEET
+# ─────────────────────────────────────────────────────────────
+cover_sheet:
+  case_id: CASE-666234B709
+  case_name: "Halsted / LVNV / Resurgent — Deficiency Notice Defense"
+  priority: High
+  legal_urgency_rank: 1
+  packet_version: v001
+  status: Active
+  packet_generated: "2026-07-03T10:19:41Z"
+  custodian: "ihoward40"
+  repository_completeness_percent: 17
+  evidentiary_strength_percent: 44
+  critical_deadlines: 1
+  external_submission: LOCKED — approval required
+
+# ─────────────────────────────────────────────────────────────
+# SECTION 2: CASE SUMMARY
+# ─────────────────────────────────────────────────────────────
+case_summary:
+  parties:
+    consumer: "[REDACTED — custodian identity withheld from packet for privacy]"
+    original_creditor: "Halsted"
+    debt_buyer: "LVNV Funding LLC"
+    servicer: "Resurgent Capital Services"
+  trigger: "Written deficiency notice received from Resurgent on behalf of LVNV."
+  primary_legal_theories:
+    - "FDCPA § 1692g debt validation rights"
+    - "Unverified chain of assignment (ownership challenge)"
+    - "Potential FCRA § 1681s-2(b) furnisher violation (conditional on credit report)"
+  case_phase: "Evidence Collection / Validation Demand Preparation"
+
+# ─────────────────────────────────────────────────────────────
+# SECTION 3: TIMELINE
+# ─────────────────────────────────────────────────────────────
+timeline_summary:
+  - event_id: "EVT-666234-005"
+    date: "2026-07-03"
+    event: "Deficiency notice received — FDCPA 30-day window starts"
+    verified: true
+  - event_id: "EVT-666234-006"
+    date: "Within 30 days of 2026-07-03"
+    event: "DEADLINE: Written validation demand — APPROVAL REQUIRED"
+    verified: false
+    urgency: Critical
+
+# ─────────────────────────────────────────────────────────────
+# SECTION 4: EVIDENCE INDEX
+# ─────────────────────────────────────────────────────────────
+evidence_index:
+  - evidence_id: "EV-666234-001"
+    title: "Resurgent Deficiency Notice"
+    status: Obtained
+    sha256: "PENDING"
+  - evidence_id: "EV-666234-002"
+    title: "Credit Bureau Report — LVNV Tradeline"
+    status: Outstanding
+    sha256: null
+  - evidence_id: "EV-666234-003"
+    title: "Original Creditor Account Documentation (Halsted)"
+    status: Outstanding
+    sha256: null
+  - evidence_id: "EV-666234-004"
+    title: "Chain of Assignment — LVNV Ownership"
+    status: Outstanding
+    sha256: null
+  - evidence_id: "EV-666234-005"
+    title: "Custodian Affidavit — Resurgent"
+    status: Outstanding
+    sha256: null
+  - evidence_id: "EV-666234-006"
+    title: "Signed Credit Agreement"
+    status: Outstanding
+    sha256: null
+
+# ─────────────────────────────────────────────────────────────
+# SECTION 5: FACT LEDGER SUMMARY
+# ─────────────────────────────────────────────────────────────
+fact_ledger_summary:
+  - fact_id: "FACT-666234-001"
+    assertion: "Deficiency notice received from Resurgent."
+    confidence: High
+    support_status: Supported
+  - fact_id: "FACT-666234-002"
+    assertion: "Resurgent acting as servicer for LVNV."
+    confidence: Moderate
+    support_status: Partially_Supported
+  - fact_id: "FACT-666234-003"
+    assertion: "LVNV claims account ownership."
+    confidence: Moderate
+    support_status: Partially_Supported
+  - fact_id: "FACT-666234-004"
+    assertion: "Halsted is the original creditor."
+    confidence: Moderate
+    support_status: Partially_Supported
+  - fact_id: "FACT-666234-005"
+    assertion: "Signed credit agreement existed."
+    confidence: Low
+    support_status: Unsupported
+  - fact_id: "FACT-666234-006"
+    assertion: "LVNV reporting to consumer reporting agencies."
+    confidence: Moderate
+    support_status: Partially_Supported
+
+# ─────────────────────────────────────────────────────────────
+# SECTION 6: LEGAL ANALYSIS SUMMARY
+# ─────────────────────────────────────────────────────────────
+legal_analysis_summary:
+  - analysis_id: "LA-666234-001"
+    conclusion: "LVNV ownership legally unverified — affirmative defense basis."
+    confidence: High
+    support_status: Supported
+  - analysis_id: "LA-666234-002"
+    conclusion: "Consumer FDCPA § 1692g validation rights are intact."
+    confidence: High
+    support_status: Supported
+  - analysis_id: "LA-666234-003"
+    conclusion: "Potential FCRA § 1681s-2(b) furnisher violation (conditional)."
+    confidence: Moderate
+    support_status: Partially_Supported
+  - analysis_id: "LA-666234-004"
+    conclusion: "Resurgent servicer authority requires independent verification."
+    confidence: Moderate
+    support_status: Partially_Supported
+
+# ─────────────────────────────────────────────────────────────
+# SECTION 7: AUTHORITY INDEX
+# ─────────────────────────────────────────────────────────────
+authority_index:
+  - authority_id: "AUTH-666234-001"
+    reference: "15 U.S.C. § 1692g (FDCPA — Validation of Debts)"
+    applicability: Applicable
+  - authority_id: "AUTH-666234-002"
+    reference: "15 U.S.C. § 1681s-2(b) (FCRA — Duties of Furnishers)"
+    applicability: Conditionally_Applicable
+  - authority_id: "AUTH-666234-003"
+    reference: "15 U.S.C. § 1681e(b) (FCRA — Accuracy of Consumer Reports)"
+    applicability: Conditionally_Applicable
+  - authority_id: "AUTH-666234-004"
+    reference: "15 U.S.C. § 1692e (FDCPA — False or Misleading Representations)"
+    applicability: Conditionally_Applicable
+
+# ─────────────────────────────────────────────────────────────
+# SECTION 8: OUTSTANDING REQUESTS
+# ─────────────────────────────────────────────────────────────
+outstanding_requests:
+  - request_id: "REQ-666234-001"
+    item: "Custodian Affidavit — Resurgent"
+    from: "Resurgent Capital Services"
+    status: Not_Sent
+    approval_required: true
+  - request_id: "REQ-666234-002"
+    item: "Chain of Assignment"
+    from: "LVNV Funding LLC"
+    status: Not_Sent
+    approval_required: true
+  - request_id: "REQ-666234-003"
+    item: "Original Creditor Account Record"
+    from: "Halsted"
+    status: Not_Sent
+    approval_required: true
+  - request_id: "REQ-666234-004"
+    item: "Signed Credit Agreement"
+    from: "Halsted or LVNV"
+    status: Not_Sent
+    approval_required: true
+  - request_id: "REQ-666234-005"
+    item: "Credit Bureau Report"
+    from: "Consumer self-pull"
+    status: Not_Sent
+    approval_required: false
+
+# ─────────────────────────────────────────────────────────────
+# SECTION 9: NEXT DEADLINES
+# ─────────────────────────────────────────────────────────────
+next_deadlines:
+  - deadline_id: "DL-666234-001"
+    description: "FDCPA § 1692g — Written validation demand"
+    window: "Within 30 days of 2026-07-03"
+    urgency: Critical
+    status: Pending
+    approval_required: true
+
+# ─────────────────────────────────────────────────────────────
+# SECTION 10: READINESS SCORES
+# ─────────────────────────────────────────────────────────────
+readiness_scores:
+  repository_completeness_percent: 17
+  evidentiary_strength_percent: 44
+  gap_count: 5
+  outstanding_deadlines: 1
+  status_label: "Active — Evidence Collection Required"
+
+# ─────────────────────────────────────────────────────────────
+# SECTION 11: AUDIT RECEIPT
+# ─────────────────────────────────────────────────────────────
+audit_receipt:
+  packet_version: v001
+  generated_utc: "2026-07-03T10:19:41Z"
+  generated_by: "Copilot cloud agent — CASE-666234B709 refinement run"
+  source_commit: "HEAD — copilot/case-666234b709-apply-latest-refinement-recommenda"
+  governance_state: "Documentation freeze enforced — no external actions"
+  external_submission: "LOCKED — human approval required for any submission"
+  integrity_note: >
+    This file is immutable. SHA-256 must be computed after finalization
+    and recorded in packets/packet-manifest.yaml for integrity verification.

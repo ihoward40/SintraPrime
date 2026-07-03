@@ -1,0 +1,94 @@
+# Authority Ledger — CASE-666234B709
+# Purpose: Track legal authorities (statutes, regulations, case law, agency guidance)
+#          that support or oppose positions taken in this case.
+# Role: Referenced by legal-analysis-ledger entries. Drives authority index in packet output.
+
+schema_version: "1.0.0"
+artifact_type: authority_ledger
+case_id: CASE-666234B709
+case_name: "Halsted / LVNV / Resurgent — Deficiency Notice Defense"
+ledger_created_utc: "2026-07-03T10:15:00Z"
+last_updated_utc: "2026-07-03T10:15:00Z"
+custodian: "ihoward40"
+
+governance:
+  note: >
+    Authorities listed here are cited in legal-analysis-ledger.yaml entries.
+    This ledger does not authorize external action; it is a reference index only.
+
+authorities:
+  - authority_id: "AUTH-666234-001"
+    authority_reference: "15 U.S.C. § 1692g — Fair Debt Collection Practices Act (FDCPA), Validation of Debts"
+    authority_type: federal_statute
+    jurisdiction: federal
+    supports_fact_ids:
+      - "FACT-666234-001"
+      - "FACT-666234-003"
+    supports_analysis_ids:
+      - "LA-666234-001"
+      - "LA-666234-002"
+      - "LA-666234-004"
+    applicability_status: Applicable
+    quoted: true
+    quoted_text: >
+      "If the consumer notifies the debt collector in writing within the thirty-day period
+      described in subsection (a) that the debt, or any portion thereof, is disputed, or
+      that the consumer requests the name and address of the original creditor, the debt
+      collector shall cease collection of the debt, or any disputed portion thereof, until
+      the debt collector obtains verification of the debt or a copy of a judgment, or the
+      name and address of the original creditor, and a copy of such verification or judgment,
+      or name and address of the original creditor, is mailed to the consumer by the debt
+      collector."
+    notes: "Core validation right. Consumer must exercise in writing within 30-day window."
+
+  - authority_id: "AUTH-666234-002"
+    authority_reference: "15 U.S.C. § 1681s-2(b) — Fair Credit Reporting Act (FCRA), Duties of Furnishers"
+    authority_type: federal_statute
+    jurisdiction: federal
+    supports_fact_ids:
+      - "FACT-666234-006"
+    supports_analysis_ids:
+      - "LA-666234-001"
+      - "LA-666234-003"
+    applicability_status: Conditionally_Applicable
+    quoted: true
+    quoted_text: >
+      "After receiving notice pursuant to section 1681i(a)(2) of this title of a dispute
+      with regard to the completeness or accuracy of any information provided by a person
+      to a consumer reporting agency, the person shall investigate the dispute..."
+    notes: >
+      Applicable if LVNV is confirmed as furnisher and CRA dispute is filed.
+      Condition: credit report pull (EV-666234-002) required first.
+
+  - authority_id: "AUTH-666234-003"
+    authority_reference: "15 U.S.C. § 1681e(b) — FCRA, Accuracy of Consumer Reports"
+    authority_type: federal_statute
+    jurisdiction: federal
+    supports_fact_ids:
+      - "FACT-666234-006"
+    supports_analysis_ids:
+      - "LA-666234-003"
+    applicability_status: Conditionally_Applicable
+    quoted: false
+    quoted_text: null
+    notes: >
+      CRA obligation to follow reasonable procedures for accuracy.
+      Supports dispute basis if tradeline is shown to be inaccurate.
+
+  - authority_id: "AUTH-666234-004"
+    authority_reference: "15 U.S.C. § 1692e — FDCPA, False or Misleading Representations"
+    authority_type: federal_statute
+    jurisdiction: federal
+    supports_fact_ids:
+      - "FACT-666234-002"
+      - "FACT-666234-003"
+    supports_analysis_ids:
+      - "LA-666234-001"
+      - "LA-666234-004"
+    applicability_status: Conditionally_Applicable
+    quoted: false
+    quoted_text: null
+    notes: >
+      Applies if collector makes false representations about character,
+      amount, or legal status of the debt. Triggered if ownership
+      or authority claims cannot be substantiated.

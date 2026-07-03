@@ -1,0 +1,33 @@
+# Packet Manifest — CASE-666234B709
+# Purpose: Immutable version registry for all case packets.
+#          Never overwrite existing packet entries.
+# Policy: Each regeneration appends a new entry and a new file (case_packet_v002.yaml, etc.)
+
+schema_version: "1.0.0"
+artifact_type: packet_manifest
+case_id: CASE-666234B709
+manifest_created_utc: "2026-07-03T10:19:41Z"
+last_updated_utc: "2026-07-03T10:19:41Z"
+custodian: "ihoward40"
+
+versioning_policy:
+  pattern: "case_packet_v{NNN}.yaml"
+  padding: 3
+  next_version: "v002"
+  overwrite: prohibited
+  history: preserved
+
+packets:
+  - version: v001
+    filename: "case_packet_v001.yaml"
+    generated_utc: "2026-07-03T10:19:41Z"
+    sha256: "PENDING — compute and record after file finalization"
+    sources_snapshot:
+      evidence_registry: "evidence-registry.yaml"
+      fact_ledger: "fact-ledger.yaml"
+      legal_analysis_ledger: "legal-analysis-ledger.yaml"
+      authority_ledger: "authority-ledger.yaml"
+      evidence_dependency_graph: "evidence-dependency-graph.yaml"
+      chronology: "chronology.yaml"
+      readiness: "readiness.yaml"
+    notes: "Initial packet — case opened 2026-07-03."

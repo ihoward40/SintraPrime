@@ -1,5 +1,20 @@
 {
   "templates": {
+    "CaseTemplate": {
+      "description": "Canonical case architecture template (evidence registry, fact ledger, legal analysis ledger, authority ledger, dependency graph, versioned packets). Reference implementation: CASE-666234B709.",
+      "version": "1.0.0",
+      "location": "templates/CaseTemplate/",
+      "schema_root": "templates/CaseTemplate/schema/",
+      "instantiation_manifest": "templates/CaseTemplate/TEMPLATE.yaml",
+      "reference_implementation": "cases/CASE-666234B709/",
+      "governance": {
+        "ledger_separation": "enforced",
+        "confidence_levels": "required",
+        "packet_versioning": "immutable_sequential",
+        "evidence_registry": "append_only",
+        "external_action_gate": "approval_required"
+      }
+    },
     "close_case": {
       "description": "Close a case page with status and reason",
       "plan": {

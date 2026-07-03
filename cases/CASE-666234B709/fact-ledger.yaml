@@ -1,0 +1,103 @@
+# Fact Ledger — CASE-666234B709
+# Purpose: Machine-readable register of factual assertions only.
+#          Legal conclusions and interpretations belong in legal-analysis-ledger.yaml.
+# Role: Each entry maps a factual claim to specific evidence IDs.
+#       Gaps surface explicitly for packet and report generation.
+# Confidence levels: High | Moderate | Low
+
+schema_version: "1.0.0"
+artifact_type: fact_ledger
+case_id: CASE-666234B709
+case_name: "Halsted / LVNV / Resurgent — Deficiency Notice Defense"
+ledger_created_utc: "2026-07-03T10:15:00Z"
+last_updated_utc: "2026-07-03T10:15:00Z"
+custodian: "ihoward40"
+
+governance:
+  separation_from: legal_analysis_ledger
+  note: >
+    This ledger records only factual assertions — what happened, what was sent,
+    what documents exist, and what is verifiable. It does not contain legal
+    interpretation, legal conclusions, or strategy.
+
+facts:
+  - fact_id: "FACT-666234-001"
+    assertion: "A written deficiency notice was received from Resurgent Capital Services."
+    confidence: High
+    confidence_rationale: "Physical document in possession (EV-666234-001)."
+    support_status: Supported
+    supporting_evidence:
+      - "EV-666234-001"
+    outstanding_evidence: []
+    gaps: []
+
+  - fact_id: "FACT-666234-002"
+    assertion: "Resurgent Capital Services is acting as servicer or agent for LVNV Funding LLC."
+    confidence: Moderate
+    confidence_rationale: >
+      Stated in deficiency notice (EV-666234-001), but no executed servicing
+      agreement has been obtained to independently verify the relationship.
+    support_status: Partially_Supported
+    supporting_evidence:
+      - "EV-666234-001"
+    outstanding_evidence:
+      - "EV-666234-005"
+    gaps:
+      - "Custodian affidavit from Resurgent establishing authority not yet received."
+
+  - fact_id: "FACT-666234-003"
+    assertion: "LVNV Funding LLC claims ownership of the account at issue."
+    confidence: Moderate
+    confidence_rationale: >
+      Claimed in deficiency notice (EV-666234-001). No chain-of-assignment
+      documentation has been received to independently verify ownership.
+    support_status: Partially_Supported
+    supporting_evidence:
+      - "EV-666234-001"
+    outstanding_evidence:
+      - "EV-666234-004"
+      - "EV-666234-003"
+    gaps:
+      - "Chain of assignment from original creditor (Halsted) to LVNV not documented."
+      - "Original creditor account record not yet received."
+
+  - fact_id: "FACT-666234-004"
+    assertion: "The original creditor for the account at issue is Halsted."
+    confidence: Moderate
+    confidence_rationale: >
+      Referenced in deficiency notice (EV-666234-001). Original creditor
+      account documentation has not yet been produced.
+    support_status: Partially_Supported
+    supporting_evidence:
+      - "EV-666234-001"
+    outstanding_evidence:
+      - "EV-666234-003"
+    gaps:
+      - "Original creditor account documentation from Halsted not yet received."
+
+  - fact_id: "FACT-666234-005"
+    assertion: "A signed credit agreement establishing the consumer's obligation existed."
+    confidence: Low
+    confidence_rationale: >
+      Presumed from the existence of a deficiency notice, but no signed
+      agreement has been produced or obtained.
+    support_status: Unsupported
+    supporting_evidence: []
+    outstanding_evidence:
+      - "EV-666234-006"
+    gaps:
+      - "Signed credit agreement has not been obtained from Halsted or LVNV."
+
+  - fact_id: "FACT-666234-006"
+    assertion: "LVNV Funding LLC is reporting this account to consumer reporting agencies."
+    confidence: Moderate
+    confidence_rationale: >
+      Stated in deficiency notice; credit report tradeline not yet pulled
+      and verified independently.
+    support_status: Partially_Supported
+    supporting_evidence:
+      - "EV-666234-001"
+    outstanding_evidence:
+      - "EV-666234-002"
+    gaps:
+      - "Independent credit report pull required to verify tradeline accuracy and reporting dates."

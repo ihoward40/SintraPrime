@@ -1,0 +1,264 @@
+# Case Packet Schema — CaseTemplate
+# JSON Schema (YAML representation) for immutable versioned case packet files.
+# Enforces versioning policy and required sections.
+
+"$schema": "https://json-schema.org/draft/2020-12/schema"
+"$id": "sintraprime://templates/CaseTemplate/schema/case-packet.schema.yaml"
+title: "Case Packet"
+description: >
+  Immutable versioned case packet. Each packet file is never overwritten;
+  regeneration produces a new file (case_packet_v002.yaml, etc.).
+type: object
+required:
+  - schema_version
+  - artifact_type
+  - packet_version
+  - case_id
+  - generated_utc
+  - generated_from_sources
+  - immutable
+  - governance
+  - cover_sheet
+  - evidence_index
+  - fact_ledger_summary
+  - legal_analysis_summary
+  - authority_index
+  - outstanding_requests
+  - next_deadlines
+  - readiness_scores
+  - audit_receipt
+additionalProperties: true
+
+properties:
+  schema_version:
+    type: string
+  artifact_type:
+    type: string
+    const: case_packet
+  packet_version:
+    type: string
+    pattern: "^v[0-9]+$"
+  case_id:
+    type: string
+  case_name:
+    type: string
+  generated_utc:
+    type: string
+  generated_from_sources:
+    type: array
+    items:
+      type: string
+    minItems: 5
+  packet_sha256:
+    type: string
+  custodian:
+    type: string
+  immutable:
+    type: boolean
+    const: true
+
+  governance:
+    type: object
+    required:
+      - overwrite_policy
+      - versioning
+      - external_action_gate
+    properties:
+      overwrite_policy:
+        type: string
+        const: prohibited
+      versioning:
+        type: string
+        const: sequential_immutable
+      external_action_gate:
+        type: string
+
+  cover_sheet:
+    type: object
+    required:
+      - case_id
+      - packet_version
+      - status
+      - packet_generated
+      - external_submission
+    properties:
+      case_id:
+        type: string
+      packet_version:
+        type: string
+      status:
+        type: string
+      packet_generated:
+        type: string
+      external_submission:
+        type: string
+
+  evidence_index:
+    type: array
+    items:
+      type: object
+      required:
+        - evidence_id
+        - title
+        - status
+      properties:
+        evidence_id:
+          type: string
+        title:
+          type: string
+        status:
+          type: string
+          enum:
+            - Obtained
+            - Outstanding
+            - Pending_Review
+        sha256:
+          oneOf:
+            - type: string
+            - type: "null"
+
+  fact_ledger_summary:
+    type: array
+    items:
+      type: object
+      required:
+        - fact_id
+        - assertion
+        - confidence
+        - support_status
+      properties:
+        fact_id:
+          type: string
+        assertion:
+          type: string
+        confidence:
+          type: string
+          enum: [High, Moderate, Low]
+        support_status:
+          type: string
+
+  legal_analysis_summary:
+    type: array
+    items:
+      type: object
+      required:
+        - analysis_id
+        - conclusion
+        - confidence
+        - support_status
+      properties:
+        analysis_id:
+          type: string
+        conclusion:
+          type: string
+        confidence:
+          type: string
+          enum: [High, Moderate, Low]
+        support_status:
+          type: string
+
+  authority_index:
+    type: array
+    items:
+      type: object
+      required:
+        - authority_id
+        - reference
+        - applicability
+      properties:
+        authority_id:
+          type: string
+        reference:
+          type: string
+        applicability:
+          type: string
+
+  outstanding_requests:
+    type: array
+    items:
+      type: object
+      required:
+        - request_id
+        - item
+        - from
+        - status
+        - approval_required
+      properties:
+        request_id:
+          type: string
+        item:
+          type: string
+        from:
+          type: string
+        status:
+          type: string
+        approval_required:
+          type: boolean
+
+  next_deadlines:
+    type: array
+    items:
+      type: object
+      required:
+        - deadline_id
+        - description
+        - urgency
+        - status
+        - approval_required
+      properties:
+        deadline_id:
+          type: string
+        description:
+          type: string
+        window:
+          type: string
+        urgency:
+          type: string
+          enum: [Critical, High, Medium, Low]
+        status:
+          type: string
+        approval_required:
+          type: boolean
+
+  readiness_scores:
+    type: object
+    required:
+      - repository_completeness_percent
+      - evidentiary_strength_percent
+      - gap_count
+      - status_label
+    properties:
+      repository_completeness_percent:
+        type: integer
+        minimum: 0
+        maximum: 100
+      evidentiary_strength_percent:
+        type: integer
+        minimum: 0
+        maximum: 100
+      gap_count:
+        type: integer
+      status_label:
+        type: string
+
+  audit_receipt:
+    type: object
+    required:
+      - packet_version
+      - generated_utc
+      - external_submission
+    properties:
+      packet_version:
+        type: string
+      generated_utc:
+        type: string
+      generated_by:
+        type: string
+      source_commit:
+        type: string
+      governance_state:
+        type: string
+      external_submission:
+        type: string
+      integrity_note:
+        type: string

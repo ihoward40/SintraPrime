@@ -1,0 +1,127 @@
+# Evidence Registry Schema — CaseTemplate
+# JSON Schema (YAML representation) for evidence registry files.
+
+"$schema": "https://json-schema.org/draft/2020-12/schema"
+"$id": "sintraprime://templates/CaseTemplate/schema/evidence-registry.schema.yaml"
+title: "Evidence Registry"
+description: "Immutable source-of-truth for all physical and digital evidence artifacts in a case."
+type: object
+required:
+  - schema_version
+  - artifact_type
+  - case_id
+  - evidence_items
+additionalProperties: true
+
+properties:
+  schema_version:
+    type: string
+  artifact_type:
+    type: string
+    const: evidence_registry
+  case_id:
+    type: string
+  case_name:
+    type: string
+  registry_created_utc:
+    type: string
+  last_appended_utc:
+    type: string
+  custodian:
+    type: string
+
+  governance:
+    type: object
+    properties:
+      approval_required_for_external_action:
+        type: boolean
+      append_only:
+        type: boolean
+      overwrite_policy:
+        type: string
+        const: prohibited
+
+  evidence_items:
+    type: array
+    items:
+      type: object
+      required:
+        - evidence_id
+        - title
+        - category
+        - source
+        - acquisition_method
+        - authenticity_status
+        - verification_status
+        - sha256
+        - storage_path
+        - external_submission_locked
+      additionalProperties: true
+      properties:
+        evidence_id:
+          type: string
+          pattern: "^EV-[A-Z0-9]+-[0-9]+$"
+        title:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+          enum:
+            - correspondence
+            - credit_report
+            - original_creditor_record
+            - assignment_documentation
+            - affidavit
+            - contract
+            - court_filing
+            - regulatory_record
+            - other
+        source:
+          type: string
+        obtained_from:
+          type: string
+        acquisition_method:
+          type: string
+          enum:
+            - physical_mail
+            - online_portal
+            - pending_request
+            - court_filing
+            - foia_request
+            - self_pull
+            - other
+        acquisition_date:
+          type: string
+        authenticity_status:
+          type: string
+          enum:
+            - original_document
+            - certified_copy
+            - uncertified_copy
+            - pending_review
+            - outstanding
+        verification_status:
+          type: string
+          enum:
+            - hash_verified
+            - manually_verified
+            - unverified
+            - outstanding
+        custodian:
+          type: string
+        sha256:
+          type: string
+        storage_path:
+          type: string
+        format:
+          type: string
+        related_evidence:
+          type: array
+          items:
+            type: string
+        external_submission_locked:
+          type: boolean
+          const: true
+        notes:
+          type: string

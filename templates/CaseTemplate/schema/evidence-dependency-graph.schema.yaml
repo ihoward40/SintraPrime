@@ -1,0 +1,150 @@
+# Evidence Dependency Graph Schema — CaseTemplate
+# JSON Schema (YAML representation) for evidence dependency graph files.
+# Enforces machine-readable gap fields on every node.
+
+"$schema": "https://json-schema.org/draft/2020-12/schema"
+"$id": "sintraprime://templates/CaseTemplate/schema/evidence-dependency-graph.schema.yaml"
+title: "Evidence Dependency Graph"
+description: >
+  For each fact and legal analysis, tracks Required Evidence, Current Evidence,
+  and Outstanding Requests. Gaps are machine-readable (gap_exists boolean + gap_detail list).
+type: object
+required:
+  - schema_version
+  - artifact_type
+  - case_id
+  - dependency_nodes
+  - outstanding_request_summary
+  - gap_count
+  - gap_exists
+additionalProperties: true
+
+properties:
+  schema_version:
+    type: string
+  artifact_type:
+    type: string
+    const: evidence_dependency_graph
+  case_id:
+    type: string
+  case_name:
+    type: string
+  graph_created_utc:
+    type: string
+  last_updated_utc:
+    type: string
+  custodian:
+    type: string
+
+  governance:
+    type: object
+    properties:
+      machine_readable_gaps:
+        type: boolean
+        const: true
+
+  dependency_nodes:
+    type: array
+    items:
+      type: object
+      required:
+        - node_id
+        - ref_type
+        - ref_id
+        - label
+        - required_evidence
+        - current_evidence
+        - outstanding_requests
+        - gap_exists
+        - gap_detail
+      additionalProperties: true
+      properties:
+        node_id:
+          type: string
+          pattern: "^DEP-[A-Z0-9]+-[0-9]+$"
+        ref_type:
+          type: string
+          enum:
+            - fact
+            - legal_analysis
+        ref_id:
+          type: string
+        label:
+          type: string
+        required_evidence:
+          type: array
+          items:
+            type: object
+            required:
+              - evidence_id
+              - purpose
+              - mandatory
+            properties:
+              evidence_id:
+                type: string
+              purpose:
+                type: string
+              mandatory:
+                type: boolean
+        current_evidence:
+          type: array
+          items:
+            type: string
+        outstanding_requests:
+          type: array
+          items:
+            type: object
+            required:
+              - request_id
+              - requested_item
+              - requested_from
+              - status
+              - external_action_locked
+            properties:
+              request_id:
+                type: string
+                pattern: "^REQ-[A-Z0-9]+-[0-9]+$"
+              requested_item:
+                type: string
+              requested_from:
+                type: string
+              request_date:
+                type: string
+              status:
+                type: string
+                enum:
+                  - Not_Sent
+                  - Sent
+                  - Received
+                  - Overdue
+              external_action_locked:
+                type: boolean
+              notes:
+                type: string
+        gap_exists:
+          type: boolean
+          description: "True if any required evidence is not yet in current_evidence."
+        gap_detail:
+          type: array
+          items:
+            type: string
+          description: "Human-readable list of specific gaps for this node."
+
+  outstanding_request_summary:
+    type: object
+    required:
+      - total_outstanding
+      - requests
+    properties:
+      total_outstanding:
+        type: integer
+      requests:
+        type: array
+
+  gap_count:
+    type: integer
+    description: "Total number of nodes with gap_exists: true."
+
+  gap_exists:
+    type: boolean
+    description: "True if any dependency node has gap_exists: true."

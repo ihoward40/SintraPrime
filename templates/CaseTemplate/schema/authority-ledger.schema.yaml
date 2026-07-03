@@ -1,0 +1,87 @@
+# Authority Ledger Schema — CaseTemplate
+# JSON Schema (YAML representation) for authority ledger files.
+
+"$schema": "https://json-schema.org/draft/2020-12/schema"
+"$id": "sintraprime://templates/CaseTemplate/schema/authority-ledger.schema.yaml"
+title: "Authority Ledger"
+description: "Legal authority index — statutes, regulations, case law, agency guidance."
+type: object
+required:
+  - schema_version
+  - artifact_type
+  - case_id
+  - authorities
+additionalProperties: true
+
+properties:
+  schema_version:
+    type: string
+  artifact_type:
+    type: string
+    const: authority_ledger
+  case_id:
+    type: string
+  case_name:
+    type: string
+  ledger_created_utc:
+    type: string
+  last_updated_utc:
+    type: string
+  custodian:
+    type: string
+
+  authorities:
+    type: array
+    items:
+      type: object
+      required:
+        - authority_id
+        - authority_reference
+        - authority_type
+        - jurisdiction
+        - supports_fact_ids
+        - supports_analysis_ids
+        - applicability_status
+        - quoted
+      additionalProperties: true
+      properties:
+        authority_id:
+          type: string
+          pattern: "^AUTH-[A-Z0-9]+-[0-9]+$"
+        authority_reference:
+          type: string
+          description: "Full citation string."
+        authority_type:
+          type: string
+          enum:
+            - federal_statute
+            - state_statute
+            - federal_regulation
+            - state_regulation
+            - case_law
+            - agency_guidance
+            - other
+        jurisdiction:
+          type: string
+        supports_fact_ids:
+          type: array
+          items:
+            type: string
+        supports_analysis_ids:
+          type: array
+          items:
+            type: string
+        applicability_status:
+          type: string
+          enum:
+            - Applicable
+            - Conditionally_Applicable
+            - Not_Applicable
+        quoted:
+          type: boolean
+        quoted_text:
+          oneOf:
+            - type: string
+            - type: "null"
+        notes:
+          type: string

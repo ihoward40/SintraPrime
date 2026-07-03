@@ -1,0 +1,92 @@
+# Fact Ledger Schema — CaseTemplate
+# JSON Schema (YAML representation) for fact ledger files.
+# Enforces: factual assertions only, confidence required, gap machine-readability.
+
+"$schema": "https://json-schema.org/draft/2020-12/schema"
+"$id": "sintraprime://templates/CaseTemplate/schema/fact-ledger.schema.yaml"
+title: "Fact Ledger"
+description: >
+  Register of factual assertions only. Legal conclusions belong in
+  legal-analysis-ledger. Confidence level is required on every entry.
+type: object
+required:
+  - schema_version
+  - artifact_type
+  - case_id
+  - facts
+additionalProperties: true
+
+properties:
+  schema_version:
+    type: string
+  artifact_type:
+    type: string
+    const: fact_ledger
+  case_id:
+    type: string
+  case_name:
+    type: string
+  ledger_created_utc:
+    type: string
+  last_updated_utc:
+    type: string
+  custodian:
+    type: string
+
+  governance:
+    type: object
+    properties:
+      separation_from:
+        type: string
+        const: legal_analysis_ledger
+      note:
+        type: string
+
+  facts:
+    type: array
+    items:
+      type: object
+      required:
+        - fact_id
+        - assertion
+        - confidence
+        - confidence_rationale
+        - support_status
+        - supporting_evidence
+        - outstanding_evidence
+        - gaps
+      additionalProperties: true
+      properties:
+        fact_id:
+          type: string
+          pattern: "^FACT-[A-Z0-9]+-[0-9]+$"
+        assertion:
+          type: string
+          description: "Factual assertion only — no legal conclusions."
+        confidence:
+          type: string
+          enum:
+            - High
+            - Moderate
+            - Low
+        confidence_rationale:
+          type: string
+        support_status:
+          type: string
+          enum:
+            - Supported
+            - Partially_Supported
+            - Unsupported
+        supporting_evidence:
+          type: array
+          items:
+            type: string
+        outstanding_evidence:
+          type: array
+          items:
+            type: string
+        gaps:
+          type: array
+          items:
+            type: string
+          description: "Machine-readable list of evidence gaps for this fact."

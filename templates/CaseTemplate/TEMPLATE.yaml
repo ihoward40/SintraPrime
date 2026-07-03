@@ -1,0 +1,188 @@
+# CaseTemplate — Instantiation Manifest
+# Purpose: Copy this file as a reference when creating a new case.
+#          Replace all {{PLACEHOLDER}} values with case-specific content.
+#          Do NOT modify this template directly.
+
+schema_version: "1.0.0"
+artifact_type: case_template
+template_version: "1.0.0"
+template_source: "CASE-666234B709 reference implementation"
+template_created_utc: "2026-07-03T10:19:41Z"
+
+governance:
+  approval_required_for_external_action: true
+  evidence_registry_policy: append_only
+  packet_versioning_policy: immutable_sequential
+  ledger_separation: enforced
+  confidence_levels_required: true
+
+# ─────────────────────────────────────────────────────────────
+# CASE IDENTITY
+# ─────────────────────────────────────────────────────────────
+case_identity:
+  case_id: "{{CASE_ID}}"                          # e.g., CASE-1C5E6E81EE
+  case_name: "{{CASE_NAME}}"                      # e.g., PayPal Blocked Balance
+  priority: "{{PRIORITY}}"                        # High | Medium | Low
+  legal_urgency_rank: "{{URGENCY_RANK}}"          # integer, 1 = highest
+  case_opened_utc: "{{CASE_OPENED_UTC}}"
+  custodian: "{{CUSTODIAN}}"
+  case_type: "{{CASE_TYPE}}"                      # e.g., debt_collection | FCRA | contract
+
+# ─────────────────────────────────────────────────────────────
+# FILE MANIFEST
+# Each file must be created in cases/{{CASE_ID}}/
+# ─────────────────────────────────────────────────────────────
+files:
+  - filename: "evidence-registry.yaml"
+    schema: "templates/CaseTemplate/schema/evidence-registry.schema.yaml"
+    role: "Immutable source-of-truth for all evidence artifacts"
+    required: true
+
+  - filename: "fact-ledger.yaml"
+    schema: "templates/CaseTemplate/schema/fact-ledger.schema.yaml"
+    role: "Factual assertions only — no legal conclusions"
+    required: true
+
+  - filename: "legal-analysis-ledger.yaml"
+    schema: "templates/CaseTemplate/schema/legal-analysis-ledger.schema.yaml"
+    role: "Legal conclusions and interpretations only — no raw facts"
+    required: true
+
+  - filename: "authority-ledger.yaml"
+    schema: "templates/CaseTemplate/schema/authority-ledger.schema.yaml"
+    role: "Legal authorities (statutes, case law, regulations)"
+    required: true
+
+  - filename: "evidence-dependency-graph.yaml"
+    schema: "templates/CaseTemplate/schema/evidence-dependency-graph.schema.yaml"
+    role: "Evidence gaps per claim — machine-readable"
+    required: true
+
+  - filename: "chronology.yaml"
+    schema: null
+    role: "Ordered timeline of case events with evidence linkage"
+    required: true
+
+  - filename: "readiness.yaml"
+    schema: null
+    role: "Dual readiness scores: repository completeness + evidentiary strength"
+    required: true
+
+  - filename: "packets/packet-manifest.yaml"
+    schema: null
+    role: "Immutable version registry for all packets"
+    required: true
+
+  - filename: "packets/case_packet_v001.yaml"
+    schema: "templates/CaseTemplate/schema/case-packet.schema.yaml"
+    role: "First immutable case packet"
+    required: true
+
+# ─────────────────────────────────────────────────────────────
+# EVIDENCE REGISTRY TEMPLATE (stub — populate per evidence item)
+# ─────────────────────────────────────────────────────────────
+evidence_registry_stub:
+  evidence_id: "{{EV_ID}}"                        # e.g., EV-1C5E6E-001
+  title: "{{EVIDENCE_TITLE}}"
+  category: "{{CATEGORY}}"                        # correspondence | credit_report | contract | affidavit | ...
+  source: "{{SOURCE}}"
+  obtained_from: "{{OBTAINED_FROM}}"
+  acquisition_method: "{{METHOD}}"                # physical_mail | online_portal | pending_request | ...
+  acquisition_date: "{{DATE_OR_PENDING}}"
+  authenticity_status: "{{STATUS}}"               # original_document | pending_review | outstanding
+  verification_status: "{{STATUS}}"               # hash_verified | unverified | outstanding
+  sha256: "{{HASH_OR_PENDING}}"
+  storage_path: "cases/{{CASE_ID}}/evidence/{{EV_ID}}/"
+  related_evidence: []                            # list of related EV IDs
+  external_submission_locked: true
+
+# ─────────────────────────────────────────────────────────────
+# FACT LEDGER TEMPLATE (stub — populate per fact)
+# ─────────────────────────────────────────────────────────────
+fact_stub:
+  fact_id: "{{FACT_ID}}"                          # e.g., FACT-1C5E6E-001
+  assertion: "{{FACTUAL_ASSERTION}}"
+  confidence: "{{High|Moderate|Low}}"
+  confidence_rationale: "{{RATIONALE}}"
+  support_status: "{{Supported|Partially_Supported|Unsupported}}"
+  supporting_evidence: []                         # list of EV IDs
+  outstanding_evidence: []                        # list of EV IDs
+  gaps: []                                        # list of gap descriptions
+
+# ─────────────────────────────────────────────────────────────
+# LEGAL ANALYSIS LEDGER TEMPLATE (stub — populate per analysis)
+# ─────────────────────────────────────────────────────────────
+legal_analysis_stub:
+  analysis_id: "{{LA_ID}}"                        # e.g., LA-1C5E6E-001
+  legal_conclusion: "{{LEGAL_CONCLUSION}}"
+  confidence: "{{High|Moderate|Low}}"
+  confidence_rationale: "{{RATIONALE}}"
+  authority_references: []                        # list of AUTH IDs
+  supporting_facts: []                            # list of FACT IDs
+  supporting_evidence: []                         # list of EV IDs
+  gaps: []
+  support_status: "{{Supported|Partially_Supported|Unsupported}}"
+  recommended_action: "{{ACTION}} — APPROVAL REQUIRED before execution."
+
+# ─────────────────────────────────────────────────────────────
+# AUTHORITY LEDGER TEMPLATE (stub — populate per authority)
+# ─────────────────────────────────────────────────────────────
+authority_stub:
+  authority_id: "{{AUTH_ID}}"                     # e.g., AUTH-1C5E6E-001
+  authority_reference: "{{CITATION}}"
+  authority_type: "{{federal_statute|state_statute|case_law|regulation|agency_guidance}}"
+  jurisdiction: "{{federal|state:XX}}"
+  supports_fact_ids: []
+  supports_analysis_ids: []
+  applicability_status: "{{Applicable|Conditionally_Applicable|Not_Applicable}}"
+  quoted: false
+  quoted_text: null
+
+# ─────────────────────────────────────────────────────────────
+# DEPENDENCY GRAPH NODE TEMPLATE (stub — populate per claim)
+# ─────────────────────────────────────────────────────────────
+dependency_node_stub:
+  node_id: "{{DEP_ID}}"                           # e.g., DEP-1C5E6E-001
+  ref_type: "{{fact|legal_analysis}}"
+  ref_id: "{{FACT_OR_LA_ID}}"
+  label: "{{HUMAN_READABLE_LABEL}}"
+  required_evidence:
+    - evidence_id: "{{EV_ID}}"
+      purpose: "{{PURPOSE}}"
+      mandatory: true
+  current_evidence: []
+  outstanding_requests:
+    - request_id: "{{REQ_ID}}"
+      requested_item: "{{ITEM}}"
+      requested_from: "{{PARTY}}"
+      request_date: "PENDING"
+      status: Not_Sent
+      external_action_locked: true
+  gap_exists: true
+  gap_detail: []
+
+# ─────────────────────────────────────────────────────────────
+# READINESS SCORING TEMPLATE
+# ─────────────────────────────────────────────────────────────
+readiness_template:
+  repository_completeness:
+    total_required_evidence_items: "{{COUNT}}"
+    items_obtained_and_verified: "{{COUNT}}"
+    items_outstanding: "{{COUNT}}"
+    score_percent: "{{PERCENT}}"
+  evidentiary_strength:
+    total_legal_analyses: "{{COUNT}}"
+    fully_supported: "{{COUNT}}"
+    partially_supported: "{{COUNT}}"
+    unsupported: "{{COUNT}}"
+    score_percent: "{{PERCENT}}"
+
+# ─────────────────────────────────────────────────────────────
+# PACKET VERSIONING POLICY
+# ─────────────────────────────────────────────────────────────
+packet_versioning:
+  filename_pattern: "case_packet_v{NNN}.yaml"
+  padding: 3
+  overwrite: prohibited
+  on_regeneration: "Emit next version. Never modify existing packet files."
+  sha256_required: true

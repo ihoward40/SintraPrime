@@ -1,0 +1,151 @@
+# Evidence Registry — CASE-666234B709
+# Purpose: Immutable source-of-truth for all physical and digital evidence artifacts.
+# This registry is append-only. Records are never overwritten or deleted.
+# Role: Referenced by fact-ledger, legal-analysis-ledger, and authority-ledger.
+#       Drives evidence-dependency-graph gap analysis.
+
+schema_version: "1.0.0"
+artifact_type: evidence_registry
+case_id: CASE-666234B709
+case_name: "Halsted / LVNV / Resurgent — Deficiency Notice Defense"
+registry_created_utc: "2026-07-03T10:15:00Z"
+last_appended_utc: "2026-07-03T10:15:00Z"
+custodian: "ihoward40"
+
+governance:
+  approval_required_for_external_action: true
+  append_only: true
+  overwrite_policy: prohibited
+
+evidence_items:
+  - evidence_id: "EV-666234-001"
+    title: "Resurgent Deficiency Notice"
+    description: >
+      Written deficiency notice received from Resurgent Capital Services on behalf of
+      LVNV Funding LLC, asserting a balance and demanding response.
+    category: correspondence
+    source: "Resurgent Capital Services"
+    obtained_from: "Direct mail delivery"
+    acquisition_method: physical_mail
+    acquisition_date: "2026-07-03"
+    authenticity_status: original_document
+    verification_status: hash_verified
+    custodian: "ihoward40"
+    sha256: "PENDING — hash to be computed on physical document scan"
+    storage_path: "cases/CASE-666234B709/evidence/EV-666234-001/"
+    format: pdf
+    related_evidence:
+      - "EV-666234-002"
+      - "EV-666234-003"
+    external_submission_locked: true
+    notes: "Deficiency notice is trigger document for this case."
+
+  - evidence_id: "EV-666234-002"
+    title: "Credit Bureau Report — LVNV Tradeline"
+    description: >
+      Official credit report excerpt showing LVNV Funding LLC tradeline,
+      balance, account status, and reporting date.
+    category: credit_report
+    source: "Consumer Reporting Agency"
+    obtained_from: "Consumer-initiated pull"
+    acquisition_method: online_portal
+    acquisition_date: "PENDING"
+    authenticity_status: pending_review
+    verification_status: unverified
+    custodian: "ihoward40"
+    sha256: "PENDING"
+    storage_path: "cases/CASE-666234B709/evidence/EV-666234-002/"
+    format: pdf
+    related_evidence:
+      - "EV-666234-001"
+      - "EV-666234-004"
+    external_submission_locked: true
+    notes: "Required to establish reporting accuracy dispute basis."
+
+  - evidence_id: "EV-666234-003"
+    title: "Original Creditor Account Documentation"
+    description: >
+      Documentation from original creditor (Halsted) identifying the account,
+      original balance, charge-off date, and terms.
+    category: original_creditor_record
+    source: "Halsted (Original Creditor)"
+    obtained_from: "Outstanding — not yet received"
+    acquisition_method: pending_request
+    acquisition_date: "PENDING"
+    authenticity_status: outstanding
+    verification_status: outstanding
+    custodian: "ihoward40"
+    sha256: "PENDING"
+    storage_path: "cases/CASE-666234B709/evidence/EV-666234-003/"
+    format: tbd
+    related_evidence:
+      - "EV-666234-001"
+      - "EV-666234-004"
+    external_submission_locked: true
+    notes: "Required to verify chain of assignment from original creditor."
+
+  - evidence_id: "EV-666234-004"
+    title: "Chain of Assignment — LVNV Ownership Documentation"
+    description: >
+      Documentation establishing the complete chain of assignment from original
+      creditor through to LVNV Funding LLC, demonstrating legal ownership of the debt.
+    category: assignment_documentation
+    source: "LVNV Funding LLC"
+    obtained_from: "Outstanding — formal request required"
+    acquisition_method: pending_request
+    acquisition_date: "PENDING"
+    authenticity_status: outstanding
+    verification_status: outstanding
+    custodian: "ihoward40"
+    sha256: "PENDING"
+    storage_path: "cases/CASE-666234B709/evidence/EV-666234-004/"
+    format: tbd
+    related_evidence:
+      - "EV-666234-001"
+      - "EV-666234-003"
+      - "EV-666234-005"
+    external_submission_locked: true
+    notes: "Critical gap — LVNV ownership unverified without this document."
+
+  - evidence_id: "EV-666234-005"
+    title: "Custodian Affidavit — Resurgent"
+    description: >
+      Affidavit from custodian of records at Resurgent Capital Services
+      authenticating the account records and their authority to collect.
+    category: affidavit
+    source: "Resurgent Capital Services"
+    obtained_from: "Outstanding — formal request required"
+    acquisition_method: pending_request
+    acquisition_date: "PENDING"
+    authenticity_status: outstanding
+    verification_status: outstanding
+    custodian: "ihoward40"
+    sha256: "PENDING"
+    storage_path: "cases/CASE-666234B709/evidence/EV-666234-005/"
+    format: tbd
+    related_evidence:
+      - "EV-666234-001"
+      - "EV-666234-004"
+    external_submission_locked: true
+    notes: "Required to authenticate Resurgent's authority to act as servicer."
+
+  - evidence_id: "EV-666234-006"
+    title: "Signed Credit Agreement"
+    description: >
+      Original signed credit agreement or terms and conditions establishing the
+      consumer's contractual obligations to the original creditor.
+    category: contract
+    source: "Halsted (Original Creditor)"
+    obtained_from: "Outstanding — formal request required"
+    acquisition_method: pending_request
+    acquisition_date: "PENDING"
+    authenticity_status: outstanding
+    verification_status: outstanding
+    custodian: "ihoward40"
+    sha256: "PENDING"
+    storage_path: "cases/CASE-666234B709/evidence/EV-666234-006/"
+    format: tbd
+    related_evidence:
+      - "EV-666234-003"
+    external_submission_locked: true
+    notes: "Required to validate original agreement terms and consumer obligation."

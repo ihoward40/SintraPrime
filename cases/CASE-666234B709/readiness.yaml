@@ -1,0 +1,127 @@
+# Readiness Assessment — CASE-666234B709
+# Purpose: Dual readiness scores for repository completeness and evidentiary strength.
+#          Derived from evidence-dependency-graph.yaml and ledger entries.
+# NOTE: These scores measure case preparation progress, not litigation outcome probability.
+
+schema_version: "1.0.0"
+artifact_type: readiness_assessment
+case_id: CASE-666234B709
+case_name: "Halsted / LVNV / Resurgent — Deficiency Notice Defense"
+assessment_created_utc: "2026-07-03T10:15:00Z"
+last_updated_utc: "2026-07-03T10:15:00Z"
+custodian: "ihoward40"
+
+governance:
+  score_basis: evidence_dependency_graph
+  note: >
+    Scores are derived mechanically from evidence-dependency-graph.yaml.
+    They reflect preparation completeness, not legal prediction.
+    Scoring must be recalculated each time evidence-dependency-graph.yaml is updated.
+
+# --- Metric 1: Repository Completeness ---
+# Measures whether the evidence file set is complete (all required items obtained).
+repository_completeness:
+  description: "Fraction of required evidence items that have been obtained and verified."
+  scoring_basis:
+    total_required_evidence_items: 6
+    items_obtained_and_verified: 1
+    items_obtained_unverified: 0
+    items_outstanding: 5
+  score_percent: 17
+  score_label: "Early Stage"
+  breakdown:
+    - category: "Trigger Documents"
+      required: 1
+      obtained: 1
+      score_percent: 100
+      items:
+        - { evidence_id: "EV-666234-001", status: "Obtained" }
+    - category: "Credit Reports"
+      required: 1
+      obtained: 0
+      score_percent: 0
+      items:
+        - { evidence_id: "EV-666234-002", status: "Outstanding" }
+    - category: "Original Creditor Records"
+      required: 1
+      obtained: 0
+      score_percent: 0
+      items:
+        - { evidence_id: "EV-666234-003", status: "Outstanding" }
+    - category: "Assignment Documentation"
+      required: 1
+      obtained: 0
+      score_percent: 0
+      items:
+        - { evidence_id: "EV-666234-004", status: "Outstanding" }
+    - category: "Affidavits"
+      required: 1
+      obtained: 0
+      score_percent: 0
+      items:
+        - { evidence_id: "EV-666234-005", status: "Outstanding" }
+    - category: "Contracts"
+      required: 1
+      obtained: 0
+      score_percent: 0
+      items:
+        - { evidence_id: "EV-666234-006", status: "Outstanding" }
+  gap_source: evidence_dependency_graph.yaml
+
+# --- Metric 2: Evidentiary Strength ---
+# Measures how well available evidence supports the specific legal positions being asserted.
+evidentiary_strength:
+  description: "Weighted assessment of how well current evidence supports each legal analysis entry."
+  scoring_basis:
+    total_legal_analyses: 4
+    fully_supported: 1
+    partially_supported: 3
+    unsupported: 0
+  score_percent: 44
+  score_label: "Partially Supported"
+  breakdown:
+    - analysis_id: "LA-666234-001"
+      label: "LVNV ownership legally unverified"
+      confidence: High
+      support_status: Supported
+      weight: 1.0
+      weighted_score: 1.0
+    - analysis_id: "LA-666234-002"
+      label: "Consumer FDCPA validation right"
+      confidence: High
+      support_status: Supported
+      weight: 1.0
+      weighted_score: 1.0
+    - analysis_id: "LA-666234-003"
+      label: "Potential FCRA § 1681s-2(b) furnisher violation"
+      confidence: Moderate
+      support_status: Partially_Supported
+      weight: 0.5
+      weighted_score: 0.5
+    - analysis_id: "LA-666234-004"
+      label: "Resurgent authority challenge"
+      confidence: Moderate
+      support_status: Partially_Supported
+      weight: 0.5
+      weighted_score: 0.5
+  gap_source: evidence_dependency_graph.yaml
+
+# --- Overall Readiness Summary (machine-readable) ---
+overall_readiness:
+  repository_completeness_percent: 17
+  evidentiary_strength_percent: 44
+  outstanding_evidence_items: 5
+  outstanding_requests: 5
+  total_gaps: 5
+  critical_deadlines_pending: 1
+  status_label: "Active — Evidence Collection Required"
+  recommended_next_actions:
+    - action: "Obtain consumer credit report from all three bureaus (self-pull, no approval required)."
+      urgency: High
+      approval_required: false
+    - action: "Prepare written debt validation demand (FDCPA § 1692g) for human review and approval."
+      urgency: Critical
+      approval_required: true
+    - action: "Prepare formal document requests for chain of assignment, custodian affidavit, and signed agreement."
+      urgency: High
+      approval_required: true
