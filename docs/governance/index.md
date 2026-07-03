@@ -19,6 +19,10 @@
 
 - [ClawdBot agent policy snippets (v1)](../policy/clawdbot-agent-policy-snippets.v1.md)
 
+## Founding Week Constitutional Package
+
+- [Founding Week constitutional governance package](./constitutional/README.md)
+
 ## Reports (Read-Only)
 
 - [Mode transparency report (Q2 2026)](./mode-transparency-report.q2-2026.v1.md)

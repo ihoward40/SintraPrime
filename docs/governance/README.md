@@ -16,6 +16,7 @@ It is **not** enforcement, **not** wiring, and **not** runtime behavior.
 - [docs/governance/wiring-scope.md](wiring-scope.md) — Required scope declaration template for any future wiring.
 - [docs/governance/scope-hash-index.md](scope-hash-index.md) — Auditor-diffable index of declared wiring intent over time.
 - [docs/governance/governance-attestation.documentation-only.onepage.md](governance-attestation.documentation-only.onepage.md) — One-page documentation-only governance attestation (for filing packets).
+- [docs/governance/constitutional/README.md](constitutional/README.md) — Founding Week constitutional governance package under documentation freeze.
 
 ## Specs and templates added (stubs-only)
 
