@@ -32,3 +32,9 @@ It is **not** enforcement, **not** wiring, and **not** runtime behavior.
 ## Baseline tag
 
 - `governance-docs-baseline-2026-01` — Annotated tag anchoring the initial “specs/schemas/templates only” baseline.
+
+## Founding Week constitutional governance
+
+- [docs/governance/constitutional/README.md](constitutional/README.md) — Tier 1 constitutional artifact index for Founding Week execution.
+- [docs/governance/constitutional/MISSION-0001.founding-week-execution.v1.md](constitutional/MISSION-0001.founding-week-execution.v1.md) — Mission structure, roles, and exit criteria.
+- [docs/governance/constitutional/HERMES-executive-kpi-dashboard.founding-week.v1.md](constitutional/HERMES-executive-kpi-dashboard.founding-week.v1.md) — Executive KPI dashboard indicators.

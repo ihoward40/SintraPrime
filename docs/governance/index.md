@@ -22,3 +22,9 @@
 ## Reports (Read-Only)
 
 - [Mode transparency report (Q2 2026)](./mode-transparency-report.q2-2026.v1.md)
+
+## Founding Week constitutional execution
+
+- [Constitutional governance index](./constitutional/README.md)
+- [MISSION-0001 Founding Week execution](./constitutional/MISSION-0001.founding-week-execution.v1.md)
+- [HERMES executive KPI dashboard (Founding Week)](./constitutional/HERMES-executive-kpi-dashboard.founding-week.v1.md)
