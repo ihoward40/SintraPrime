@@ -1,0 +1,42 @@
+name: Sigma Gate
+
+# Security gate — runs Bandit static analysis on every push and pull request.
+# All policy decisions are made by scripts/check_bandit.py (single source of truth).
+# Do NOT add Bandit decision logic here; keep it in the Python script.
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+
+jobs:
+  bandit-security-gate:
+    name: Bandit security gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Bandit
+        # Pin to a known-good minor version so the gate is reproducible.
+        # Update the pin here (and regenerate bandit_baseline.json) when upgrading.
+        run: pip install "bandit>=1.9,<2"
+
+      - name: Run Bandit policy check
+        # scripts/check_bandit.py is the single source of truth for:
+        #   - Bandit invocation and exit-code handling
+        #   - Baseline comparison
+        #   - HIGH-finding diagnostics
+        #   - Pass/fail policy
+        env:
+          GITHUB_SHA: ${{ github.sha }}
+        run: python scripts/check_bandit.py

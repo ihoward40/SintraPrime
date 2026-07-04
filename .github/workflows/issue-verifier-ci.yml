@@ -1,0 +1,35 @@
+name: Issue Verifier CI
+
+# Runs on pull requests to verify that any Python changes are security-clean.
+# Bandit policy decisions are delegated to scripts/check_bandit.py.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  bandit-issue-verify:
+    name: Security verify (Bandit)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Bandit
+        run: pip install "bandit>=1.9,<2"
+
+      - name: Run Bandit policy check
+        # scripts/check_bandit.py is the single source of truth for Bandit
+        # policy evaluation. Keep decision logic there, not in this YAML.
+        env:
+          GITHUB_SHA: ${{ github.sha }}
+        run: python scripts/check_bandit.py

@@ -136,3 +136,28 @@ jobs:
           ALLOW_NONLOCAL_WEBHOOK_TESTS: "0"
           NO_PROXY: 127.0.0.1,localhost
         run: pnpm run test:integration
+
+  bandit-security:
+    name: ci/bandit-security
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Bandit
+        run: pip install "bandit>=1.9,<2"
+
+      - name: Run Bandit policy check
+        # All policy logic lives in scripts/check_bandit.py — do not duplicate here.
+        env:
+          GITHUB_SHA: ${{ github.sha }}
+        run: python scripts/check_bandit.py
