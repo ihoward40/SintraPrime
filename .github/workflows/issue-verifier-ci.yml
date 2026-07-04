@@ -1,11 +1,9 @@
 name: Issue Verifier CI
 
-# Runs on new and updated issues to verify linked code is security-clean.
+# Runs on pull requests to verify that any Python changes are security-clean.
 # Bandit policy decisions are delegated to scripts/check_bandit.py.
 
 on:
-  issues:
-    types: [opened, edited, reopened]
   pull_request:
     types: [opened, synchronize, reopened]
 

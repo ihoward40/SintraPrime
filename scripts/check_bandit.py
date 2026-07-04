@@ -146,8 +146,10 @@ def main() -> int:
         text=True,
     )
 
-    # Exit code 2 (or other non-0) means Bandit itself failed to run.
-    if result.returncode not in (0, 1):
+    # With --exit-zero, Bandit exits 0 on successful completion regardless of
+    # findings.  Any non-zero exit code therefore indicates an execution error
+    # (e.g., exit 2 for unrecognised arguments or invocation failures).
+    if result.returncode != 0:
         print(f"[bandit-policy] ERROR: Bandit exited with code {result.returncode}")
         print("[bandit-policy] stderr:", result.stderr)
         return 1
